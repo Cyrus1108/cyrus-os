@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#FDFCF9"/>
+  <text x="256" y="332"
+        font-family="Cormorant Garamond, Georgia, 'Songti SC', 'Noto Serif SC', serif"
+        font-size="300"
+        font-style="italic"
+        font-weight="400"
+        fill="#A88455"
+        text-anchor="middle"
+        letter-spacing="-4">C</text>
+  <text x="256" y="400"
+        font-family="Georgia, serif"
+        font-size="16"
+        letter-spacing="8"
+        fill="#A88455"
+        opacity="0.55"
+        text-anchor="middle">◆ ◆ ◆</text>
+</svg>
