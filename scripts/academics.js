@@ -4,7 +4,7 @@ function toggleAcForm(){acOpen=!acOpen;document.getElementById('ac-form').style.
 function addAcTask(){
   const sub=document.getElementById('f-sub').value.trim(),name=document.getElementById('f-name').value.trim(),date=document.getElementById('f-date').value,time=document.getElementById('f-time').value,pri=document.getElementById('f-pri').value,remind=parseInt(document.getElementById('f-remind').value);
   if(!sub||!name||!date)return;
-  S.ac.push({id:Date.now().toString(),sub,name,date,time,pri,remind,done:false});
+  S.ac.push({id:crypto.randomUUID(),sub,name,date,time,pri,remind,done:false});
   ['f-sub','f-name','f-date','f-time'].forEach(id=>document.getElementById(id).value='');
   toggleAcForm();saveAC();rAC();rMetrics();
 }

@@ -55,7 +55,13 @@ function rMetrics(){
 
 function renderAll(){rDate();rMR();rAC();rJP();rTR();rCats();rTodos();rMetrics();attachRipples();}
 
-function init(){
+function onAuthReady(){
+  /* Called by auth.js once a Supabase session is established.
+     Stage 2a: still reads from localStorage. Stage 2b will swap in Supabase pulls. */
+  init();
+}
+
+async function init(){
   const mr=loadLS('mr',null);
   if(mr){
     if(mr.date===TODAY){
@@ -85,6 +91,14 @@ function init(){
   checkNotifBanner();
   checkReminders();
   setInterval(checkReminders, 30000);
+
+  /* Sync layer (Stage 2b): overlay Supabase data on top of the LS-rendered UI,
+     then subscribe to Realtime for cross-device updates. */
+  if(typeof pullAll === 'function'){
+    await pullAll();
+    renderAll();
+    if(typeof subscribeRealtime === 'function') subscribeRealtime();
+  }
 }
 
-init();
+initAuth();

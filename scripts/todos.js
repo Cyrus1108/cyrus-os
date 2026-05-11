@@ -28,7 +28,7 @@ function addCategory(){
   const inp = document.getElementById('cat-new');
   const name = inp.value.trim();
   if(!name) return;
-  S.cats.push({id:'c'+Date.now(), name});
+  S.cats.push({id:crypto.randomUUID(), name});
   inp.value = '';
   saveCats(); rCats();
 }
@@ -61,7 +61,7 @@ function addTodo(){
   const customDays = parseInt(document.getElementById('td-repeat-custom').value) || 0;
   if(!text) return;
   S.todos.push({
-    id:'tl'+Date.now(),
+    id:crypto.randomUUID(),
     text,cat,date,time,pri,remind,repeat,customDays,done:false,doneAt:null,
     created:TODAY
   });
@@ -210,7 +210,7 @@ function toggleTd(id){
   if(t.done && t.repeat && t.repeat !== 'none' && t.date){
     const nextDate = computeNextRepeatDate(t.date, t.repeat, t.customDays);
     if(nextDate){
-      S.todos.push({...t,id:'tl'+Date.now(),date:nextDate,done:false,doneAt:null,created:TODAY});
+      S.todos.push({...t,id:crypto.randomUUID(),date:nextDate,done:false,doneAt:null,created:TODAY});
     }
   }
   saveTodos(); rTodos(); rMetrics(); updateShowDoneBtn();

@@ -87,11 +87,18 @@ let currentCreedIdx=0, calendarRendered=false;
 let showDone = false;
 
 function loadLS(key,fallback){try{const raw=localStorage.getItem(STORAGE_PREFIX+key);if(raw)return JSON.parse(raw);}catch(e){}return fallback;}
-function saveLS(key,val){try{localStorage.setItem(STORAGE_PREFIX+key,JSON.stringify(val));}catch(e){}}
+/* saveLSRaw: pure local write, used by sync layer when mirroring DB → LS (no re-sync). */
+function saveLSRaw(key,val){try{localStorage.setItem(STORAGE_PREFIX+key,JSON.stringify(val));}catch(e){}}
+/* saveLS: local write + auto-sync if the key is a settings field. */
+const SETTINGS_KEYS = ['creed_idx','creed_open','show_done','symbols','notif_banner_dismissed'];
+function saveLS(key,val){
+  saveLSRaw(key,val);
+  if(SETTINGS_KEYS.includes(key) && typeof syncPushSettings==='function') syncPushSettings();
+}
 
-function saveMR(){saveLS('mr',S.mr);}
-function saveAC(){saveLS('ac',S.ac);}
-function saveTR(){saveLS('tr',S.tr);}
-function saveJP(){saveLS('jp',S.jp);}
-function saveTodos(){saveLS('todos', S.todos);}
-function saveCats(){saveLS('cats', S.cats);}
+function saveMR(){saveLSRaw('mr',S.mr); if(typeof syncPushMorning==='function') syncPushMorning();}
+function saveAC(){saveLSRaw('ac',S.ac); if(typeof syncPushAcademics==='function') syncPushAcademics();}
+function saveTR(){saveLSRaw('tr',S.tr); if(typeof syncPushTrading==='function') syncPushTrading();}
+function saveJP(){saveLSRaw('jp',S.jp); if(typeof syncPushJP==='function') syncPushJP();}
+function saveTodos(){saveLSRaw('todos', S.todos); if(typeof syncPushTodos==='function') syncPushTodos();}
+function saveCats(){saveLSRaw('cats', S.cats); if(typeof syncPushCategories==='function') syncPushCategories();}

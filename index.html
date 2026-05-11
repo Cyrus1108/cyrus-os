@@ -23,9 +23,34 @@
 <link rel="stylesheet" href="./styles/base.css">
 <link rel="stylesheet" href="./styles/components.css">
 <link rel="stylesheet" href="./styles/animations.css">
+
+<!-- Supabase JS SDK (UMD, exposes window.supabase) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 </head>
 <body>
 <h2 class="sr-only">Cyrus 个人仪表板 v6.2</h2>
+
+<!-- Auth overlay — shown when no Supabase session -->
+<div id="auth-overlay" class="auth-overlay">
+  <div class="auth-card">
+    <div class="auth-eyebrow">Cyrus · Personal OS</div>
+    <div id="auth-creed" class="auth-creed"></div>
+    <div id="auth-form">
+      <label class="auth-form-label" for="auth-email">Email</label>
+      <input id="auth-email" type="email" placeholder="your@email.com" autocomplete="email" inputmode="email">
+      <button class="primary fx-btn" id="auth-submit" onclick="signInWithEmail()">Send magic link</button>
+      <div id="auth-error" class="auth-error"></div>
+      <div class="auth-foot">Your data syncs across all your devices.</div>
+    </div>
+    <div id="auth-sent" class="auth-sent" style="display:none;">
+      <div class="auth-sent-title">Check your email</div>
+      <div class="auth-sent-msg">
+        Magic link sent to<br><b id="auth-sent-email"></b>
+      </div>
+      <div class="auth-sent-hint">Click the link to sign in. You can close this tab.</div>
+    </div>
+  </div>
+</div>
 
 <div class="drawer-tab-group">
   <button id="drawer-tab" class="drawer-tab" onclick="openDrawer('reference')">
@@ -349,7 +374,13 @@
 </div>
 </div>
 
-<!-- Module scripts — order matters: state first (defines globals), app last (calls init) -->
+<!-- Module scripts — order matters:
+     1. supabase.js     creates the sb client (needs window.supabase from CDN)
+     2. state.js        defines globals (S, TODAY, constants)
+     3. feature modules just declare functions
+     4. auth.js         provides initAuth + signInWithEmail (referenced by app.js + UI)
+     5. app.js          calls initAuth() at the bottom; init() is deferred until session ready -->
+<script src="./scripts/supabase.js"></script>
 <script src="./scripts/state.js"></script>
 <script src="./scripts/notifications.js"></script>
 <script src="./scripts/creed.js"></script>
@@ -360,6 +391,8 @@
 <script src="./scripts/japanese.js"></script>
 <script src="./scripts/trading.js"></script>
 <script src="./scripts/todos.js"></script>
+<script src="./scripts/sync.js"></script>
+<script src="./scripts/auth.js"></script>
 <script src="./scripts/app.js"></script>
 </body>
 </html>
