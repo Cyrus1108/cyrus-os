@@ -1,0 +1,77 @@
+:root{
+  --brass:#A88455;
+  --brass-soft:#C9A876;
+  --brass-ghost:rgba(168,132,85,0.25);
+  --brass-glow:rgba(168,132,85,0.4);
+
+  --color-background-primary:#FDFCF9;
+  --color-background-secondary:#F5F1EA;
+  --color-background-tertiary:#EDE7DD;
+  --color-background-input:#FBF8F1;
+  --color-background-success:rgba(168,132,85,0.12);
+  --color-background-danger:#F9E8E5;
+  --color-background-warning:#F8EDD8;
+
+  --color-text-primary:#2A241E;
+  --color-text-secondary:#6B5D4F;
+  --color-text-tertiary:#9A8A76;
+  --color-text-success:#7A6340;
+  --color-text-danger:#9A3A2C;
+  --color-text-warning:#9A7528;
+
+  --color-border-tertiary:rgba(42,36,30,0.12);
+  --color-border-secondary:rgba(42,36,30,0.22);
+  --color-border-primary:rgba(42,36,30,0.4);
+  --color-border-danger:rgba(154,58,44,0.4);
+  --color-border-warning:rgba(154,117,40,0.4);
+  --color-border-success:var(--brass);
+
+  --border-radius-md:4px;
+  --border-radius-lg:8px;
+
+  --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","PingFang SC","Hiragino Sans",sans-serif;
+  --font-serif:"Cormorant Garamond",Georgia,"Songti SC","Noto Serif SC",serif;
+  --font-mono:"SF Mono",Menlo,Monaco,Consolas,monospace;
+
+  --hair:var(--color-border-tertiary);
+  --hair-strong:var(--color-border-secondary);
+  --ink:var(--color-text-primary);
+  --mute:var(--color-text-secondary);
+  --ghost:var(--color-text-tertiary);
+  --serif:var(--font-serif);
+  --sans:var(--font-sans);
+  --mono:var(--font-mono);
+
+  --ease-silk: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-press: cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --brass:#C9A876;
+    --brass-soft:#D9BE92;
+    --brass-ghost:rgba(201,168,118,0.2);
+    --brass-glow:rgba(201,168,118,0.35);
+
+    --color-background-primary:#1A1713;
+    --color-background-secondary:#22201B;
+    --color-background-tertiary:#2A2722;
+    --color-background-input:#221F1A;
+    --color-background-success:rgba(201,168,118,0.15);
+    --color-background-danger:#3A1F1B;
+    --color-background-warning:#3A2E1B;
+
+    --color-text-primary:#F0E9DC;
+    --color-text-secondary:#B3A898;
+    --color-text-tertiary:#7C7062;
+    --color-text-success:#D9BE92;
+    --color-text-danger:#E89A8C;
+    --color-text-warning:#E8C878;
+
+    --color-border-tertiary:rgba(240,233,220,0.1);
+    --color-border-secondary:rgba(240,233,220,0.2);
+    --color-border-primary:rgba(240,233,220,0.35);
+    --color-border-danger:rgba(232,154,140,0.4);
+    --color-border-warning:rgba(232,200,120,0.4);
+  }
+}

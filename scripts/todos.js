@@ -1,0 +1,273 @@
+/* General todos + categories */
+function rCats(){
+  const pills = document.getElementById('cat-pills');
+  const allActive = S.activeCat === 'all';
+  let html = `<button class="cat-pill ${allActive?'active':''}" onclick="setActiveCat('all')">全部</button>`;
+  S.cats.forEach(c=>{
+    const isActive = S.activeCat === c.id;
+    html += `<button class="cat-pill ${isActive?'active':''}" onclick="setActiveCat('${c.id}')">${escH(c.name)}</button>`;
+  });
+  html += `<button class="cat-pill cat-pill-manage" onclick="toggleCatManage()">+ 类别</button>`;
+  pills.innerHTML = html;
+
+  const selOptions = S.cats.map(c=>`<option value="${c.id}">${escH(c.name)}</option>`).join('');
+  const sel = document.getElementById('td-cat');
+  if(sel){
+    const currentVal = sel.value;
+    sel.innerHTML = selOptions;
+    if([...sel.options].some(o=>o.value===currentVal)) sel.value = currentVal;
+  }
+
+  document.getElementById('cat-list').innerHTML = S.cats.map(c=>
+    `<div class="cat-item">${escH(c.name)}<button class="cat-del" onclick="delCategory('${c.id}')">×</button></div>`
+  ).join('');
+}
+function setActiveCat(id){S.activeCat=id;rCats();rTodos();}
+function toggleCatManage(){document.getElementById('cat-manage').classList.toggle('open');}
+function addCategory(){
+  const inp = document.getElementById('cat-new');
+  const name = inp.value.trim();
+  if(!name) return;
+  S.cats.push({id:'c'+Date.now(), name});
+  inp.value = '';
+  saveCats(); rCats();
+}
+function delCategory(id){
+  if(S.cats.length <= 1){alert('至少保留一个类别');return;}
+  const remaining = S.cats.filter(c=>c.id!==id);
+  S.todos.forEach(t=>{if(t.cat===id) t.cat = remaining[0].id;});
+  S.cats = remaining;
+  if(S.activeCat === id) S.activeCat = 'all';
+  saveCats(); saveTodos(); rCats(); rTodos();
+}
+
+let tdOpen=false;
+function toggleTdForm(){
+  tdOpen=!tdOpen;
+  document.getElementById('td-form').style.display = tdOpen?'block':'none';
+  if(tdOpen){
+    document.getElementById('td-date').value = TODAY;
+    rCats();
+  }
+}
+function addTodo(){
+  const text = document.getElementById('td-text').value.trim();
+  const cat = document.getElementById('td-cat').value;
+  const date = document.getElementById('td-date').value;
+  const time = document.getElementById('td-time').value;
+  const pri = document.getElementById('td-pri').value;
+  const remind = parseInt(document.getElementById('td-remind').value);
+  const repeat = document.getElementById('td-repeat').value;
+  const customDays = parseInt(document.getElementById('td-repeat-custom').value) || 0;
+  if(!text) return;
+  S.todos.push({
+    id:'tl'+Date.now(),
+    text,cat,date,time,pri,remind,repeat,customDays,done:false,doneAt:null,
+    created:TODAY
+  });
+  document.getElementById('td-text').value='';
+  document.getElementById('td-date').value='';
+  document.getElementById('td-time').value='';
+  document.getElementById('td-repeat-custom').value='';
+  document.getElementById('td-repeat-custom').style.display='none';
+  toggleTdForm();
+  saveTodos(); rTodos();
+}
+
+function toggleShowDone(){
+  showDone = !showDone;
+  saveLS('show_done', showDone);
+  rTodos();
+  updateShowDoneBtn();
+}
+function updateShowDoneBtn(){
+  const btn = document.getElementById('show-done-btn');
+  if(btn){
+    const doneCount = S.todos.filter(t=>t.done).length;
+    btn.textContent = showDone ? `隐藏已完成 (${doneCount})` : `显示已完成 (${doneCount})`;
+  }
+}
+
+function rTodos(){
+  const el = document.getElementById('td-list');
+  let list = S.todos.slice();
+  if(S.activeCat !== 'all') list = list.filter(t=>t.cat===S.activeCat);
+  if(!showDone) list = list.filter(t=>!t.done);
+  list.sort((a,b)=>{
+    if(a.done !== b.done) return a.done?1:-1;
+    if(a.date && !b.date) return -1;
+    if(!a.date && b.date) return 1;
+    if(a.date && b.date){
+      const ta = (a.date+'T'+(a.time||'23:59'));
+      const tb = (b.date+'T'+(b.time||'23:59'));
+      return ta.localeCompare(tb);
+    }
+    return 0;
+  });
+
+  if(!list.length){el.innerHTML='<div class="empty">— 暂无待办 —</div>';return;}
+
+  el.innerHTML = list.map(t=>{
+    if(editingTD === t.id){
+      return `<div style="padding:6px 0;border-bottom:.5px solid var(--hair);">
+        <div class="edit-box">
+          <input id="etd-text" value="${escH(t.text)}" style="width:100%;">
+          <select id="etd-cat" style="width:100%;">
+            ${S.cats.map(c=>`<option value="${c.id}" ${c.id===t.cat?'selected':''}>${escH(c.name)}</option>`).join('')}
+          </select>
+          <div class="field-row">
+            <span class="field-label">截止</span>
+            <input id="etd-date" type="date" value="${t.date||''}" style="flex:1;">
+            <input id="etd-time" type="time" value="${t.time||''}" style="flex:1;">
+          </div>
+          <select id="etd-pri" style="width:100%;">
+            <option value="high" ${t.pri==='high'?'selected':''}>高优先级</option>
+            <option value="mid" ${t.pri==='mid'?'selected':''}>中优先级</option>
+            <option value="low" ${t.pri==='low'?'selected':''}>低优先级</option>
+          </select>
+          <select id="etd-remind" style="width:100%;">
+            <option value="0" ${t.remind===0?'selected':''}>不提醒</option>
+            <option value="5" ${t.remind===5?'selected':''}>截止前 5 分钟</option>
+            <option value="15" ${t.remind===15?'selected':''}>截止前 15 分钟</option>
+            <option value="60" ${t.remind===60?'selected':''}>截止前 1 小时</option>
+            <option value="1440" ${t.remind===1440?'selected':''}>截止前 1 天</option>
+          </select>
+          <select id="etd-repeat" onchange="toggleEtdCustom()" style="width:100%;">
+            <option value="none" ${t.repeat==='none'?'selected':''}>不重复</option>
+            <option value="daily" ${t.repeat==='daily'?'selected':''}>每日</option>
+            <option value="weekdays" ${t.repeat==='weekdays'?'selected':''}>仅工作日</option>
+            <option value="weekends" ${t.repeat==='weekends'?'selected':''}>仅周末</option>
+            <option value="weekly" ${t.repeat==='weekly'?'selected':''}>每周</option>
+            <option value="biweekly" ${t.repeat==='biweekly'?'selected':''}>每两周</option>
+            <option value="monthly" ${t.repeat==='monthly'?'selected':''}>每月</option>
+            <option value="quarterly" ${t.repeat==='quarterly'?'selected':''}>每季</option>
+            <option value="yearly" ${t.repeat==='yearly'?'selected':''}>每年</option>
+            <option value="custom_days" ${t.repeat==='custom_days'?'selected':''}>自定义天数…</option>
+          </select>
+          <input id="etd-custom" type="number" min="1" max="365" value="${t.customDays||''}" placeholder="每隔几天重复" style="width:100%;${t.repeat==='custom_days'?'':'display:none;'}">
+          <div style="display:flex;gap:6px;">
+            <button class="primary fx-btn" onclick="saveTdEdit('${t.id}')" style="flex:1;">保存</button>
+            <button class="ghost fx-btn" onclick="cancelTdEdit()" style="flex:1;">取消</button>
+          </div>
+        </div>
+      </div>`;
+    }
+    const cat = S.cats.find(c=>c.id===t.cat);
+    const priColor = t.pri==='high'?'var(--color-text-danger)':t.pri==='low'?'var(--ghost)':'var(--brass)';
+    let dateStr = '';
+    let tagCls='tag-ok', tagTxt='';
+    if(t.date){
+      const dueTime = t.time ? `${t.date}T${t.time}:00` : `${t.date}T23:59:59`;
+      const diff = new Date(dueTime) - new Date();
+      const hours = Math.ceil(diff/3600000);
+      const days = Math.ceil(diff/86400000);
+      if(t.done){tagCls='tag-done';tagTxt='Done';}
+      else if(diff<0){tagCls='tag-urgent';tagTxt='Overdue';}
+      else if(hours<=24){tagCls='tag-warn';tagTxt=hours+'h';}
+      else{tagCls='tag-ok';tagTxt=days+'d';}
+      dateStr = t.date + (t.time ? ' '+t.time : '');
+    } else {
+      tagTxt = t.done?'Done':'No due';
+      tagCls = t.done?'tag-done':'tag-ok';
+    }
+    return `<div class="todo-row ${t.done?'todo-done':''}" style="${t.done?'opacity:.4;':''}">
+      <div class="todo-main">
+        <input type="checkbox" class="row-cb" ${t.done?'checked':''} onchange="toggleTd('${t.id}')">
+        <span class="ac-pri" style="background:${priColor};"></span>
+        <div class="todo-body">
+          <div class="todo-text">${escH(t.text)}</div>
+          <div class="todo-meta">
+            ${cat?`<span class="tag tag-cat">${escH(cat.name)}</span>`:''}
+            ${dateStr?`<span class="ac-date">${dateStr}</span>`:''}
+            <span class="tag ${tagCls}">${tagTxt}</span>
+            ${t.remind>0?`<span class="ac-bell">⏰ ${formatRemind(t.remind)}</span>`:''}
+            ${t.repeat&&t.repeat!=='none'?`<span class="ac-bell">↻ ${repeatLabel(t.repeat,t.customDays)}</span>`:''}
+          </div>
+        </div>
+        <div class="row-actions">
+          <button class="row-btn" onclick="startTdEdit('${t.id}')">编辑</button>
+          <button class="row-btn" onclick="delTodo('${t.id}')">×</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  attachRipples();
+}
+function formatRemind(m){
+  if(m>=1440) return Math.floor(m/1440)+'d';
+  if(m>=60) return Math.floor(m/60)+'h';
+  return m+'m';
+}
+function repeatLabel(r,customDays){
+  if(r==='custom_days' && customDays) return `每${customDays}天`;
+  return {daily:'每日',weekdays:'工作日',weekends:'周末',weekly:'每周',biweekly:'每两周',monthly:'每月',quarterly:'每季',yearly:'每年'}[r]||'';
+}
+function toggleTd(id){
+  const t = S.todos.find(t=>t.id===id);
+  if(!t) return;
+  t.done = !t.done;
+  if(t.done){t.doneAt = Date.now();}
+  if(t.done && t.repeat && t.repeat !== 'none' && t.date){
+    const nextDate = computeNextRepeatDate(t.date, t.repeat, t.customDays);
+    if(nextDate){
+      S.todos.push({...t,id:'tl'+Date.now(),date:nextDate,done:false,doneAt:null,created:TODAY});
+    }
+  }
+  saveTodos(); rTodos(); rMetrics(); updateShowDoneBtn();
+}
+function computeNextRepeatDate(currentDate, repeat, customDays){
+  const next = new Date(currentDate+'T00:00:00');
+  switch(repeat){
+    case 'daily': next.setDate(next.getDate()+1); break;
+    case 'weekdays':
+      do{ next.setDate(next.getDate()+1); }
+      while(next.getDay()===0 || next.getDay()===6);
+      break;
+    case 'weekends':
+      do{ next.setDate(next.getDate()+1); }
+      while(next.getDay()!==0 && next.getDay()!==6);
+      break;
+    case 'weekly': next.setDate(next.getDate()+7); break;
+    case 'biweekly': next.setDate(next.getDate()+14); break;
+    case 'monthly': next.setMonth(next.getMonth()+1); break;
+    case 'quarterly': next.setMonth(next.getMonth()+3); break;
+    case 'yearly': next.setFullYear(next.getFullYear()+1); break;
+    case 'custom_days':
+      if(!customDays || customDays<1) return null;
+      next.setDate(next.getDate()+customDays);
+      break;
+    default: return null;
+  }
+  return next.toLocaleDateString('sv-SE');
+}
+function delTodo(id){
+  if(editingTD===id) editingTD=null;
+  S.todos = S.todos.filter(t=>t.id!==id);
+  saveTodos(); rTodos(); rMetrics();
+}
+function startTdEdit(id){editingTD=id;rTodos();}
+function cancelTdEdit(){editingTD=null;rTodos();}
+function saveTdEdit(id){
+  const t = S.todos.find(t=>t.id===id);if(!t)return;
+  const text = document.getElementById('etd-text').value.trim();
+  if(!text) return;
+  t.text = text;
+  t.cat = document.getElementById('etd-cat').value;
+  t.date = document.getElementById('etd-date').value;
+  t.time = document.getElementById('etd-time').value;
+  t.pri = document.getElementById('etd-pri').value;
+  t.remind = parseInt(document.getElementById('etd-remind').value);
+  t.repeat = document.getElementById('etd-repeat').value;
+  t.customDays = parseInt(document.getElementById('etd-custom').value) || 0;
+  editingTD=null;saveTodos();rTodos();rMetrics();
+}
+function toggleEtdCustom(){
+  const sel = document.getElementById('etd-repeat');
+  const inp = document.getElementById('etd-custom');
+  if(sel && inp){inp.style.display = sel.value==='custom_days' ? 'block' : 'none';}
+}
+function toggleTdCustom(){
+  const sel = document.getElementById('td-repeat');
+  const inp = document.getElementById('td-repeat-custom');
+  if(sel && inp){inp.style.display = sel.value==='custom_days' ? 'block' : 'none';}
+}

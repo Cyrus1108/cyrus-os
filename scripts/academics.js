@@ -1,0 +1,88 @@
+/* Academics — university coursework with reminders */
+let acOpen=false;
+function toggleAcForm(){acOpen=!acOpen;document.getElementById('ac-form').style.display=acOpen?'block':'none';}
+function addAcTask(){
+  const sub=document.getElementById('f-sub').value.trim(),name=document.getElementById('f-name').value.trim(),date=document.getElementById('f-date').value,time=document.getElementById('f-time').value,pri=document.getElementById('f-pri').value,remind=parseInt(document.getElementById('f-remind').value);
+  if(!sub||!name||!date)return;
+  S.ac.push({id:Date.now().toString(),sub,name,date,time,pri,remind,done:false});
+  ['f-sub','f-name','f-date','f-time'].forEach(id=>document.getElementById(id).value='');
+  toggleAcForm();saveAC();rAC();rMetrics();
+}
+function toggleAC(id){const t=S.ac.find(t=>t.id===id);if(t)t.done=!t.done;saveAC();rAC();rMetrics();}
+function delAC(id){if(editingAC===id)editingAC=null;S.ac=S.ac.filter(t=>t.id!==id);saveAC();rAC();rMetrics();}
+function startAcEdit(id){editingAC=id;rAC();}
+function cancelAcEdit(){editingAC=null;rAC();}
+function saveAcEdit(id){
+  const t=S.ac.find(t=>t.id===id);if(!t)return;
+  const sub=document.getElementById('ea-sub').value.trim();
+  const name=document.getElementById('ea-name').value.trim();
+  const date=document.getElementById('ea-date').value;
+  const time=document.getElementById('ea-time').value;
+  const pri=document.getElementById('ea-pri').value;
+  const remind=parseInt(document.getElementById('ea-remind').value);
+  if(!sub||!name||!date)return;
+  t.sub=sub;t.name=name;t.date=date;t.time=time;t.pri=pri;t.remind=remind;
+  editingAC=null;saveAC();rAC();rMetrics();
+}
+
+function rAC(){
+  const el=document.getElementById('ac-list');
+  const all=[...S.ac].sort((a,b)=>a.done!==b.done?a.done?1:-1:new Date(a.date)-new Date(b.date));
+  if(!all.length){el.innerHTML='<div class="empty">— 暂无待办 —</div>';return;}
+  el.innerHTML=all.map(t=>{
+    if(editingAC===t.id){
+      return `<div style="padding:6px 0;border-bottom:.5px solid var(--hair);">
+        <div class="edit-box">
+          <input id="ea-sub" value="${escH(t.sub)}" placeholder="科目" style="width:100%;">
+          <input id="ea-name" value="${escH(t.name)}" placeholder="内容" style="width:100%;">
+          <div class="field-row">
+            <span class="field-label">截止</span>
+            <input id="ea-date" type="date" value="${t.date}" style="flex:1;">
+            <input id="ea-time" type="time" value="${t.time||''}" style="flex:1;">
+          </div>
+          <select id="ea-pri" style="width:100%;">
+            <option value="high" ${t.pri==='high'?'selected':''}>高优先级</option>
+            <option value="mid" ${t.pri==='mid'?'selected':''}>中优先级</option>
+            <option value="low" ${t.pri==='low'?'selected':''}>低优先级</option>
+          </select>
+          <select id="ea-remind" style="width:100%;">
+            <option value="0" ${t.remind===0?'selected':''}>不提醒</option>
+            <option value="15" ${t.remind===15?'selected':''}>截止前 15 分钟</option>
+            <option value="60" ${t.remind===60?'selected':''}>截止前 1 小时</option>
+            <option value="240" ${t.remind===240?'selected':''}>截止前 4 小时</option>
+            <option value="1440" ${t.remind===1440?'selected':''}>截止前 1 天</option>
+            <option value="2880" ${t.remind===2880?'selected':''}>截止前 2 天</option>
+          </select>
+          <div style="display:flex;gap:6px;">
+            <button class="primary fx-btn" onclick="saveAcEdit('${t.id}')" style="flex:1;">保存</button>
+            <button class="ghost fx-btn" onclick="cancelAcEdit()" style="flex:1;">取消</button>
+          </div>
+        </div>
+      </div>`;
+    }
+    const days=Math.ceil((new Date(t.date+'T23:59:59')-new Date())/86400000);
+    let tagCls='tag-ok',tagTxt=days+' days';
+    if(t.done){tagCls='tag-done';tagTxt='Done';}
+    else if(days<=0){tagCls='tag-urgent';tagTxt='Overdue';}
+    else if(days<=3){tagCls='tag-warn';tagTxt=days+' days';}
+    const priColor=t.pri==='high'?'var(--color-text-danger)':t.pri==='low'?'var(--ghost)':'var(--brass)';
+    return `<div class="row ${t.done?'item-done':''}" style="${t.done?'opacity:.4;':''}">
+      <input type="checkbox" class="row-cb" ${t.done?'checked':''} onchange="toggleAC('${t.id}')">
+      <span class="ac-pri" style="background:${priColor};"></span>
+      <div class="row-body">
+        <div class="ac-subject">${escH(t.sub)}</div>
+        <div class="ac-name">${escH(t.name)}</div>
+        <div class="ac-meta">
+          <span class="ac-date">${t.date}${t.time?' '+t.time:''}</span>
+          <span class="tag ${tagCls}">${tagTxt}</span>
+          ${t.remind>0?`<span class="ac-bell">⏰ ${formatRemind(t.remind)}</span>`:''}
+        </div>
+      </div>
+      <div class="row-actions">
+        <button class="row-btn" onclick="startAcEdit('${t.id}')">编辑</button>
+        <button class="row-btn" onclick="delAC('${t.id}')">×</button>
+      </div>
+    </div>`;
+  }).join('');
+  attachRipples();
+}
