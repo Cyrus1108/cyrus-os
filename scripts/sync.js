@@ -107,9 +107,9 @@ async function pullTodos(){
   }));
 }
 
-async function pullAll(){
+async function pullAll(force){
   if(!currentUser) return;
-  if(pullAllPromise) return pullAllPromise;
+  if(pullAllPromise && !force) return pullAllPromise;
   pullAllPromise = (async () => {
     try{
       await Promise.all([
@@ -259,7 +259,10 @@ function subscribeRealtime(){
       async () => { await pullTodos(); rTodos(); rMetrics(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'settings', filter: `user_id=eq.${uid}` },
       async () => { await pullSettings(); renderAll(); })
-    .subscribe();
+    .subscribe((status, err) => {
+      console.log('[realtime]', status);
+      if(err) console.error('[realtime] error', err);
+    });
 }
 
 function unsubscribeRealtime(){
@@ -268,3 +271,21 @@ function unsubscribeRealtime(){
     realtimeChannel = null;
   }
 }
+
+/* Android Chrome aggressively suspends WebSockets in background tabs,
+   so Realtime can silently die. On every visibility/focus return, force
+   a fresh pull and re-subscribe if the channel isn't healthy. */
+function rehydrateOnFocus(){
+  if(document.visibilityState !== 'visible') return;
+  if(!currentUser) return;
+  const ch = realtimeChannel;
+  const healthy = ch && (ch.state === 'joined' || ch.state === 'joining');
+  if(!healthy){
+    console.log('[realtime] re-subscribing (state was ' + (ch ? ch.state : 'none') + ')');
+    unsubscribeRealtime();
+    subscribeRealtime();
+  }
+  pullAll(true).then(()=>renderAll());
+}
+document.addEventListener('visibilitychange', rehydrateOnFocus);
+window.addEventListener('focus', rehydrateOnFocus);
