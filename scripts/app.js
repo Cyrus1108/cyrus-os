@@ -101,4 +101,14 @@ async function init(){
   }
 }
 
+/* Service Worker — shell cache for offline + foundation for Stage 4 Web Push.
+   Registers regardless of auth state so the login screen also works offline. */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('[sw] registered:', reg.scope))
+      .catch(err => console.error('[sw] registration failed:', err));
+  });
+}
+
 initAuth();

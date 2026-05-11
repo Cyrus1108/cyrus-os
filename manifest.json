@@ -1,22 +1,42 @@
 {
   "name": "Cyrus · Personal Operating System",
   "short_name": "Cyrus OS",
-  "description": "Personal operating system — v6.1",
+  "description": "Personal operating system — four pillars, nothing else earns your time.",
   "start_url": "./",
   "scope": "./",
+  "id": "/cyrus-os/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#FDFCF9",
   "theme_color": "#FDFCF9",
   "lang": "zh-CN",
   "dir": "ltr",
-  "categories": ["productivity", "personalization"],
+  "categories": ["productivity", "personalization", "lifestyle"],
   "icons": [
     {
       "src": "./icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
