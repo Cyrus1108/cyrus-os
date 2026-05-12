@@ -1,59 +1,127 @@
-# Cyrus OS — v6.1
+# Cyrus OS — v6.2
 
-个人运作系统。单文件 HTML，Cappa 编辑美学。
+Personal operating system. Four pillars. Nothing else earns your time.
 
-## 部署到 GitHub Pages（首次）
+Live: <https://cyrus1108.github.io/cyrus-os/>
 
-1. 在 GitHub 创建一个新仓库，名字 `cyrus-os`（**Public**——免费版 Pages 要求公开）
-2. 在本地这个目录推上去：
-   ```bash
-   git remote add origin https://github.com/<你的用户名>/cyrus-os.git
-   git branch -M main
-   git push -u origin main
-   ```
-3. 进仓库 → **Settings → Pages**
-4. **Source**: Deploy from a branch
-5. **Branch**: `main` / `/ (root)` → Save
-6. 等 30-60 秒，刷新页面顶部出现绿色 ✓ 和 URL：
-   `https://<你的用户名>.github.io/cyrus-os/`
+## What's here
 
-## 添加到手机主屏幕
+Six panels, brass + cream Cappa aesthetic, full cloud sync:
 
-### iPhone (Safari)
-1. Safari 打开上面的 URL
-2. 底部分享按钮 → "添加到主屏幕"
-3. 名称改 "Cyrus OS"，确认
+- **The Creed** — manifesto, two variants, rotates
+- **The 90** — 90-day commitment tracker (5 targets · daily check-ins · heatmap · phase auto-advance)
+- **Morning Ritual** — 8-pill daily routine
+- **Academics** — university tasks with reminders
+- **Japanese N2** — daily streak + practice list + notes
+- **Trading Desk** — daily checklist + session clock + bias notes
+- **General Todos** — categorized, repeating, with reminders
 
-### Android (Chrome)
-1. Chrome 打开 URL
-2. 右上角菜单 → "添加到主屏幕"
+Right-edge drawer: TradingView markets + economic calendar.
 
-## 后续迭代
+## Stack
 
-每次改完代码：
+| Layer | Tech |
+|---|---|
+| Frontend | Vanilla JS, no build, no npm. 4 CSS + 12 JS modules, served as static files |
+| Hosting | GitHub Pages |
+| Auth | Supabase Magic Link (passwordless, single-user) |
+| DB | Supabase Postgres + Realtime (cross-device sync) |
+| Cron + Push | Cloudflare Worker (every minute) + VAPID Web Push |
+| PWA | manifest + Service Worker (offline shell + push handler) |
+
+## Local development
+
 ```bash
-git add -A
-git commit -m "描述改了什么"
-git push
+python -m http.server 8000 --directory /path/to/cyrus-os
 ```
-推上去 30 秒后 Pages 自动更新。手机上 PWA 重新打开会拿到新版本（除非 Service Worker 缓存了——那是 Phase 1 的事）。
 
-## 数据存储
+Then <http://localhost:8000>. Service Worker works on localhost too.
 
-所有数据在浏览器 `localStorage`，前缀 `cyrus_dashboard_v6_`。**不要改前缀**——会丢历史数据。
+## Module layout
 
-手机和电脑是**两份独立的 localStorage**——目前不同步。云同步是 Phase 2。
+```
+index.html              shell only (HTML)
+manifest.json           PWA manifest
+sw.js                   Service Worker (cache + push)
+icon.svg, icons/*.png   PWA icons (incl. maskable)
 
-## 路线图
+styles/
+  tokens.css            CSS variables (brass, cream, easings)
+  base.css              typography, layout, inputs
+  components.css        all panel/drawer/button styles
+  animations.css        @keyframes
 
-- [x] **Phase 0** — 部署 + PWA 添加到主屏幕（你在这里）
-- [ ] **Phase 1** — Service Worker + Web Push 通知
-- [ ] **Phase 2** — Supabase 云同步（手机 ↔ 电脑实时一致）
-- [ ] **Phase 3** — Outlook / Gmail / Google Calendar 接入
-- [ ] **Phase 4** — Claude API agent brain（晨简报、状态建议）
+scripts/
+  supabase.js           creates the sb client
+  state.js              S, TODAY, constants, saveXX(), dirty flags
+  auth.js               Magic Link, session bridge
+  sync.js               pull/push/Realtime, focus rehydration
+  notifications.js      Web Push subscription + permission UI
+  creed.js              expandable manifesto
+  drawer.js             right-edge reference drawer
+  markets.js            TradingView widgets + calendar
+  morning.js            morning ritual pills
+  academics.js          academic tasks panel
+  japanese.js           N2 streak + checklist + note
+  trading.js            trading checklist + bias
+  todos.js              general todos + categories
+  the90.js              90-day tracker (Stage 5)
+  app.js                init, clock, render orchestration, SW reg
 
-## 隐私
+cloudflare/
+  worker.js             cron worker (VAPID + aes128gcm + Supabase reads)
+```
 
-- 仓库公开，但代码里没有个人数据
-- 个人数据全在 localStorage（只在你自己的浏览器里）
-- Phase 2 上线时必须加认证
+Loading order in `index.html`: Supabase CDN → state.js (defines globals) → feature modules (function declarations) → sync.js → auth.js → app.js (calls `initAuth()` at the bottom).
+
+## Data model
+
+All Supabase tables RLS-scoped to `auth.uid() = user_id`. Realtime enabled on all of them.
+
+| Table | Shape |
+|---|---|
+| `settings` | one row · creed_idx, show_done, symbols, banner state |
+| `morning` | (user_id, date) · list jsonb |
+| `academics` | one row per task · sub, name, date, time, pri, remind, done, notified_for |
+| `japanese` | one row · streak, last_date, log jsonb, note, list jsonb |
+| `trading` | (user_id, date) · bias, list jsonb |
+| `categories` | one row per cat · name |
+| `todos` | one row per todo · text, cat_id, date, time, pri, remind, repeat, custom_days, done, done_at, notified_for |
+| `push_subscriptions` | one row per device · endpoint, p256dh, auth |
+| `the90_meta` | one row · start_date, end_date, targets jsonb, current_phase |
+| `the90_daily` | (user_id, date) · scores jsonb {I..V}, note |
+
+## Sync strategy
+
+- **On login** → `pullAll()` fetches every table in parallel, fills `S`, renders.
+- **On every local save** → fire-and-forget `syncPushXxx()`. Failures logged, dirty flag stays set.
+- **On visibility/focus return** → if Realtime channel dropped (Android Chrome suspends WebSockets in background), re-subscribe; if any `dirty.*` flag is set, replay the push; then re-pull and re-render.
+- **Realtime** → per-table channel; remote change → re-pull that table only → re-render its panel.
+- **Conflict policy** → last-write-wins (single user, multi-device — acceptable).
+
+## Reminders (Web Push)
+
+Server-driven, not client-driven (Android Chrome kills `setInterval` in background):
+
+1. Every minute, Cloudflare Worker queries `todos` + `academics` for rows where `done=false AND remind>0 AND date>=yesterday`.
+2. For each row: compute `dueAt = date + (time or 23:59) at +08:00`, `remindAt = dueAt - remind*60s`. If `remindAt <= now < dueAt` and `notified_for != currentDedupeKey`, dispatch a push.
+3. Send VAPID-signed, aes128gcm-encrypted Web Push to every `push_subscriptions` row for that user. Stamp `notified_for` so the same `(date, time, remind)` tuple never fires twice.
+4. Service Worker receives `push` event → `showNotification(...)`.
+
+Dedupe key = `${date}T${time}|${remind}`. Editing the row changes the key → reminder fires again.
+
+## Deploying / disaster recovery
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for the full bootstrap.
+
+## Privacy
+
+Repo is public; code contains no personal data. All user data lives in Supabase under RLS, accessible only with the user's session token. Service role key never ships to the client — it's a Cloudflare Worker secret.
+
+## Roadmap (post-v6.2)
+
+- Offline write queue (replay on reconnect — current behavior loses offline edits if another device wrote while offline)
+- Profile timezone (currently hardcoded `+08:00` in worker)
+- The 90 retroactive editing (only today is editable now)
+- Outlook / Gmail / Google Calendar inbox (drawer pane stub already exists)
+- Daily AI briefing via Claude API
