@@ -161,6 +161,56 @@
     <button class="ghost fx-btn" onclick="dismissNotifBanner()">Later</button>
   </div>
 
+  <!-- THE 90 — 90-day commitment tracker (Stage 5) -->
+  <div id="the90-panel" class="the90-panel">
+    <div class="the90-head">
+      <div id="the90-day" class="the90-head-day">DAY · / 90</div>
+      <div id="the90-phase" class="the90-head-phase">—</div>
+    </div>
+    <div id="the90-identity" class="the90-identity"></div>
+    <div id="the90-tagline" class="the90-tagline"></div>
+
+    <div class="the90-sub-label">今日打卡</div>
+    <div id="the90-cells" class="the90-cells"></div>
+    <div id="the90-labels" class="the90-labels"></div>
+
+    <div class="the90-sub-label">本周</div>
+    <div id="the90-week" class="the90-week"></div>
+
+    <div class="brass-rule-the90"></div>
+    <div class="the90-stats">
+      <div class="the90-stat">
+        <span id="the90-streak" class="the90-stat-num">0</span>
+        <span>Streak</span>
+      </div>
+      <div class="the90-stat">
+        <span id="the90-bestweek" class="the90-stat-num">0/35</span>
+        <span>Best week</span>
+      </div>
+      <div class="the90-stat">
+        <span id="the90-milestone" class="the90-stat-num">—</span>
+        <span>Next milestone</span>
+      </div>
+    </div>
+
+    <div class="the90-sub-label">热力图 · 90 天</div>
+    <div id="the90-heatmap"></div>
+
+    <div class="the90-drawers">
+      <button class="the90-drawer-btn" onclick="toggleThe90Drawer('the90-twomin')">▸ Two-Minute Entries</button>
+      <button class="the90-drawer-btn" onclick="toggleThe90Drawer('the90-badday')">▸ Bad Day Minimums</button>
+    </div>
+    <div id="the90-twomin" class="the90-drawer">
+      <div id="the90-twomin-body"></div>
+    </div>
+    <div id="the90-badday" class="the90-drawer">
+      <div id="the90-badday-body"></div>
+    </div>
+
+    <div class="the90-note-label">今日笔记</div>
+    <textarea id="the90-note" class="bias-input" oninput="onThe90Note()" placeholder="今日反思 · 哪个做到了,哪个没做到,为什么..." style="width:100%;height:60px;resize:none;"></textarea>
+  </div>
+
   <div class="panel mr-panel">
     <div class="panel-head">
       <div class="panel-label-row"><span class="eyebrow">I</span><span class="eyebrow-mute">Morning ritual</span></div>
@@ -391,6 +441,7 @@
 <script src="./scripts/japanese.js"></script>
 <script src="./scripts/trading.js"></script>
 <script src="./scripts/todos.js"></script>
+<script src="./scripts/the90.js"></script>
 <script src="./scripts/sync.js"></script>
 <script src="./scripts/auth.js"></script>
 <script src="./scripts/app.js"></script>

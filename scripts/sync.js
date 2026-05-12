@@ -95,6 +95,35 @@ async function pullCategories(){
   // If empty, leave S.cats as DEFAULT_CATS — they'll get pushed on next write
 }
 
+async function pullThe90Meta(){
+  if(typeof ensureThe90Defaults === 'function') ensureThe90Defaults();
+  const { data } = await sb.from('the90_meta').select('*')
+    .eq('user_id', currentUser.id).maybeSingle();
+  if(data){
+    S.the90.meta = {
+      startDate: data.start_date,
+      endDate: data.end_date,
+      targets: data.targets,
+      currentPhase: data.current_phase || 'standardize',
+    };
+  } else {
+    // No meta yet — push the defaults so other devices see them
+    if(typeof saveThe90Meta === 'function') saveThe90Meta();
+  }
+}
+
+async function pullThe90Daily(){
+  if(typeof ensureThe90Defaults === 'function') ensureThe90Defaults();
+  // Only fetch the last 95 days (covers entire 90-day window + buffer)
+  const since = new Date(Date.now() - 95 * 86400000).toISOString().slice(0,10);
+  const { data } = await sb.from('the90_daily').select('*')
+    .eq('user_id', currentUser.id).gte('date', since);
+  S.the90.daily = {};
+  for(const row of (data || [])){
+    S.the90.daily[row.date] = { scores: row.scores || {}, note: row.note || '' };
+  }
+}
+
 async function pullTodos(){
   const { data } = await sb.from('todos').select('*')
     .eq('user_id', currentUser.id);
@@ -121,6 +150,7 @@ async function pullAll(force){
       await Promise.all([
         pullSettings(), pullMorning(), pullAcademics(),
         pullJapanese(), pullTrading(), pullCategories(), pullTodos(),
+        pullThe90Meta(), pullThe90Daily(),
       ]);
       initialPullDone = true;
       console.log('[sync] initial pull complete');
@@ -237,6 +267,36 @@ async function syncPushCategories(){
   if(ok) dirty.categories = false;
 }
 
+async function syncPushThe90Meta(){
+  if(!currentUser || !S.the90?.meta) return;
+  await waitForPull();
+  const m = S.the90.meta;
+  const res = await sb.from('the90_meta').upsert({
+    user_id: currentUser.id,
+    start_date: m.startDate,
+    end_date: m.endDate,
+    targets: m.targets,
+    current_phase: m.currentPhase || 'standardize',
+  });
+  if(!res.error) dirty.the90Meta = false;
+  logIfError('push the90_meta', res);
+}
+
+async function syncPushThe90Daily(){
+  if(!currentUser || !S.the90?.daily) return;
+  await waitForPull();
+  const day = S.the90.daily[TODAY];
+  if(!day) return;
+  const res = await sb.from('the90_daily').upsert({
+    user_id: currentUser.id,
+    date: TODAY,
+    scores: day.scores || {},
+    note: day.note || '',
+  }, { onConflict: 'user_id,date' });
+  if(!res.error) dirty.the90Daily = false;
+  logIfError('push the90_daily', res);
+}
+
 async function syncPushTodos(){
   if(!currentUser) return;
   await waitForPull();
@@ -275,6 +335,10 @@ function subscribeRealtime(){
       async () => { await pullTodos(); rTodos(); rMetrics(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'settings', filter: `user_id=eq.${uid}` },
       async () => { await pullSettings(); renderAll(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'the90_meta', filter: `user_id=eq.${uid}` },
+      async () => { await pullThe90Meta(); rThe90(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'the90_daily', filter: `user_id=eq.${uid}` },
+      async () => { await pullThe90Daily(); rThe90(); })
     .subscribe((status, err) => {
       console.log('[realtime]', status);
       if(err) console.error('[realtime] error', err);
@@ -318,6 +382,8 @@ async function rehydrateOnFocus(){
     if(dirty.categories) pushes.push(syncPushCategories());
     if(dirty.todos) pushes.push(syncPushTodos());
     if(dirty.settings) pushes.push(syncPushSettings());
+    if(dirty.the90Meta) pushes.push(syncPushThe90Meta());
+    if(dirty.the90Daily) pushes.push(syncPushThe90Daily());
     try{ await Promise.all(pushes); }catch(e){ console.error('[sync] flush', e); }
   }
 

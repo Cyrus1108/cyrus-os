@@ -104,6 +104,7 @@ function saveLS(key,val){
 const dirty = {
   morning: false, academics: false, japanese: false,
   trading: false, categories: false, todos: false, settings: false,
+  the90Meta: false, the90Daily: false,
 };
 
 function saveMR(){saveLSRaw('mr',S.mr); dirty.morning=true; if(typeof syncPushMorning==='function') syncPushMorning();}
@@ -112,3 +113,5 @@ function saveTR(){saveLSRaw('tr',S.tr); dirty.trading=true; if(typeof syncPushTr
 function saveJP(){saveLSRaw('jp',S.jp); dirty.japanese=true; if(typeof syncPushJP==='function') syncPushJP();}
 function saveTodos(){saveLSRaw('todos', S.todos); dirty.todos=true; if(typeof syncPushTodos==='function') syncPushTodos();}
 function saveCats(){saveLSRaw('cats', S.cats); dirty.categories=true; if(typeof syncPushCategories==='function') syncPushCategories();}
+function saveThe90Meta(){saveLSRaw('the90_meta', S.the90?.meta); dirty.the90Meta=true; if(typeof syncPushThe90Meta==='function') syncPushThe90Meta();}
+function saveThe90Daily(){saveLSRaw('the90_daily', S.the90?.daily); dirty.the90Daily=true; if(typeof syncPushThe90Daily==='function') syncPushThe90Daily();}

@@ -53,7 +53,7 @@ function rMetrics(){
   updateShowDoneBtn();
 }
 
-function renderAll(){rDate();rMR();rAC();rJP();rTR();rCats();rTodos();rMetrics();attachRipples();}
+function renderAll(){rDate();rMR();rAC();rJP();rTR();rCats();rTodos();if(typeof rThe90==='function') rThe90();rMetrics();attachRipples();}
 
 function onAuthReady(){
   /* Called by auth.js once a Supabase session is established.
@@ -81,6 +81,15 @@ async function init(){
   const syms=loadLS('symbols',null);if(syms&&Array.isArray(syms)&&syms.length>0)S.symbols=syms;
   const noti=loadLS('notifiedIds',null);if(noti)S.notifiedIds=noti;
   showDone = loadLS('show_done', false);
+
+  // Hydrate The 90 state from localStorage cache (first paint before Supabase pull)
+  if(typeof ensureThe90Defaults === 'function'){
+    ensureThe90Defaults();
+    const metaCache = loadLS('the90_meta', null);
+    if(metaCache) S.the90.meta = metaCache;
+    const dailyCache = loadLS('the90_daily', null);
+    if(dailyCache) S.the90.daily = dailyCache;
+  }
 
   initCreed();
   renderAll();
