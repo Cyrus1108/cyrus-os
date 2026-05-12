@@ -5,7 +5,7 @@
    - TradingView widgets and external CDNs: stale-while-revalidate.
    Bump CACHE_VERSION on every shell change to force clients to drop the old cache. */
 
-const CACHE_VERSION = 'cyrus-os-v6.2.1';
+const CACHE_VERSION = 'cyrus-os-v6.2.2';
 const APP_SHELL = [
   './',
   './index.html',
@@ -90,4 +90,37 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-/* Stage 4 will add a 'push' event listener here for Web Push from Cloudflare Workers. */
+/* ════════════ Web Push (Stage 4) ════════════ */
+
+self.addEventListener('push', (event) => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch (e) {
+    payload = { title: 'Cyrus OS', body: event.data ? event.data.text() : '' };
+  }
+  const title = payload.title || 'Cyrus OS';
+  const options = {
+    body: payload.body || '',
+    icon: './icons/icon-192.png',
+    badge: './icons/icon-192.png',
+    tag: payload.tag || 'cyrus-os',
+    requireInteraction: false,
+    data: { url: payload.url || './' },
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+/* Clicking a notification focuses an existing PWA window or opens a new one */
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = (event.notification.data && event.notification.data.url) || './';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const c of clients) {
+        if ('focus' in c) return c.focus();
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(target);
+    })
+  );
+});

@@ -99,6 +99,10 @@ async function init(){
     renderAll();
     if(typeof subscribeRealtime === 'function') subscribeRealtime();
   }
+
+  /* Stage 4: ensure this device's existing push subscription is bound to the current user
+     in Supabase (in case the user logged in fresh on a different account). */
+  if(typeof reattachPushSubscription === 'function') reattachPushSubscription();
 }
 
 /* Service Worker — shell cache for offline + foundation for Stage 4 Web Push.
