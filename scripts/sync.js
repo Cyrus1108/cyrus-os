@@ -145,6 +145,7 @@ async function syncPushSettings(){
     notif_banner_dismissed: loadLS('notif_banner_dismissed', false),
   });
   logIfError('push settings', res);
+  if(!res.error) dirty.settings = false;
 }
 
 async function syncPushMorning(){
@@ -156,6 +157,7 @@ async function syncPushMorning(){
     list: S.mr.list,
   }, { onConflict: 'user_id,date' });
   logIfError('push morning', res);
+  if(!res.error) dirty.morning = false;
 }
 
 async function syncPushJP(){
@@ -170,6 +172,7 @@ async function syncPushJP(){
     list: S.jp.list,
   });
   logIfError('push jp', res);
+  if(!res.error) dirty.japanese = false;
 }
 
 async function syncPushTrading(){
@@ -182,10 +185,11 @@ async function syncPushTrading(){
     list: S.tr.list,
   }, { onConflict: 'user_id,date' });
   logIfError('push trading', res);
+  if(!res.error) dirty.trading = false;
 }
 
 /* Helper: replace-all sync (delete remote rows not in local, upsert local).
-   Returns immediately if no currentUser. */
+   Returns true if both delete+upsert succeeded (so caller can clear dirty flag). */
 async function replaceTable(table, rows, mapFn){
   const localIds = rows.map(r => r.id);
   let delRes;
@@ -197,35 +201,40 @@ async function replaceTable(table, rows, mapFn){
     delRes = await sb.from(table).delete().eq('user_id', currentUser.id);
   }
   logIfError(`delete ${table}`, delRes);
+  if(delRes.error) return false;
   if(rows.length){
     const upRes = await sb.from(table).upsert(rows.map(mapFn));
     logIfError(`upsert ${table}`, upRes);
+    if(upRes.error) return false;
   }
+  return true;
 }
 
 async function syncPushAcademics(){
   if(!currentUser) return;
   await waitForPull();
-  await replaceTable('academics', S.ac, t => ({
+  const ok = await replaceTable('academics', S.ac, t => ({
     id: t.id, user_id: currentUser.id,
     sub: t.sub, name: t.name,
     date: t.date || null, time: t.time || null,
     pri: t.pri, remind: t.remind || 0, done: t.done,
   }));
+  if(ok) dirty.academics = false;
 }
 
 async function syncPushCategories(){
   if(!currentUser) return;
   await waitForPull();
-  await replaceTable('categories', S.cats, c => ({
+  const ok = await replaceTable('categories', S.cats, c => ({
     id: c.id, user_id: currentUser.id, name: c.name,
   }));
+  if(ok) dirty.categories = false;
 }
 
 async function syncPushTodos(){
   if(!currentUser) return;
   await waitForPull();
-  await replaceTable('todos', S.todos, t => ({
+  const ok = await replaceTable('todos', S.todos, t => ({
     id: t.id, user_id: currentUser.id,
     text: t.text,
     cat_id: t.cat || null,
@@ -236,6 +245,7 @@ async function syncPushTodos(){
     done: t.done,
     done_at: t.doneAt ? new Date(t.doneAt).toISOString() : null,
   }));
+  if(ok) dirty.todos = false;
 }
 
 /* ════════════ REALTIME ════════════ */
@@ -273,11 +283,15 @@ function unsubscribeRealtime(){
 }
 
 /* Android Chrome aggressively suspends WebSockets in background tabs,
-   so Realtime can silently die. On every visibility/focus return, force
-   a fresh pull and re-subscribe if the channel isn't healthy. */
-function rehydrateOnFocus(){
+   so Realtime can silently die. On every visibility/focus return:
+   1. Re-subscribe if the Realtime channel isn't healthy
+   2. Flush any dirty tables (offline writes made while disconnected) — push BEFORE pull,
+      otherwise pullAll would overwrite local offline changes with stale remote data
+   3. Pull to absorb any remote changes made while we were away */
+async function rehydrateOnFocus(){
   if(document.visibilityState !== 'visible') return;
   if(!currentUser) return;
+
   const ch = realtimeChannel;
   const healthy = ch && (ch.state === 'joined' || ch.state === 'joining');
   if(!healthy){
@@ -285,7 +299,25 @@ function rehydrateOnFocus(){
     unsubscribeRealtime();
     subscribeRealtime();
   }
-  pullAll(true).then(()=>renderAll());
+
+  // Flush offline writes first
+  const dirtyTables = Object.entries(dirty).filter(([_, v]) => v).map(([k]) => k);
+  if(dirtyTables.length){
+    console.log('[sync] flushing dirty:', dirtyTables.join(','));
+    const pushes = [];
+    if(dirty.morning) pushes.push(syncPushMorning());
+    if(dirty.academics) pushes.push(syncPushAcademics());
+    if(dirty.japanese) pushes.push(syncPushJP());
+    if(dirty.trading) pushes.push(syncPushTrading());
+    if(dirty.categories) pushes.push(syncPushCategories());
+    if(dirty.todos) pushes.push(syncPushTodos());
+    if(dirty.settings) pushes.push(syncPushSettings());
+    try{ await Promise.all(pushes); }catch(e){ console.error('[sync] flush', e); }
+  }
+
+  // Then pull (clean tables are now up-to-date with remote; dirty tables are now pushed and authoritative)
+  await pullAll(true);
+  renderAll();
 }
 document.addEventListener('visibilitychange', rehydrateOnFocus);
 window.addEventListener('focus', rehydrateOnFocus);

@@ -93,12 +93,22 @@ function saveLSRaw(key,val){try{localStorage.setItem(STORAGE_PREFIX+key,JSON.str
 const SETTINGS_KEYS = ['creed_idx','creed_open','show_done','symbols','notif_banner_dismissed'];
 function saveLS(key,val){
   saveLSRaw(key,val);
-  if(SETTINGS_KEYS.includes(key) && typeof syncPushSettings==='function') syncPushSettings();
+  if(SETTINGS_KEYS.includes(key)){
+    dirty.settings = true;
+    if(typeof syncPushSettings==='function') syncPushSettings();
+  }
 }
 
-function saveMR(){saveLSRaw('mr',S.mr); if(typeof syncPushMorning==='function') syncPushMorning();}
-function saveAC(){saveLSRaw('ac',S.ac); if(typeof syncPushAcademics==='function') syncPushAcademics();}
-function saveTR(){saveLSRaw('tr',S.tr); if(typeof syncPushTrading==='function') syncPushTrading();}
-function saveJP(){saveLSRaw('jp',S.jp); if(typeof syncPushJP==='function') syncPushJP();}
-function saveTodos(){saveLSRaw('todos', S.todos); if(typeof syncPushTodos==='function') syncPushTodos();}
-function saveCats(){saveLSRaw('cats', S.cats); if(typeof syncPushCategories==='function') syncPushCategories();}
+/* Dirty flags — set when a local save happens, cleared when push succeeds.
+   On visibility return, sync.js checks these and replays unsynced writes from offline. */
+const dirty = {
+  morning: false, academics: false, japanese: false,
+  trading: false, categories: false, todos: false, settings: false,
+};
+
+function saveMR(){saveLSRaw('mr',S.mr); dirty.morning=true; if(typeof syncPushMorning==='function') syncPushMorning();}
+function saveAC(){saveLSRaw('ac',S.ac); dirty.academics=true; if(typeof syncPushAcademics==='function') syncPushAcademics();}
+function saveTR(){saveLSRaw('tr',S.tr); dirty.trading=true; if(typeof syncPushTrading==='function') syncPushTrading();}
+function saveJP(){saveLSRaw('jp',S.jp); dirty.japanese=true; if(typeof syncPushJP==='function') syncPushJP();}
+function saveTodos(){saveLSRaw('todos', S.todos); dirty.todos=true; if(typeof syncPushTodos==='function') syncPushTodos();}
+function saveCats(){saveLSRaw('cats', S.cats); dirty.categories=true; if(typeof syncPushCategories==='function') syncPushCategories();}
