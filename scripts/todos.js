@@ -118,7 +118,7 @@ function rTodos(){
           <div class="field-row">
             <span class="field-label">截止</span>
             <input id="etd-date" type="date" value="${t.date||''}" style="flex:1;">
-            <input id="etd-time" type="time" value="${t.time||''}" style="flex:1;">
+            <input id="etd-time" type="time" value="${(t.time||'').slice(0,5)}" style="flex:1;">
           </div>
           <select id="etd-pri" style="width:100%;">
             <option value="high" ${t.pri==='high'?'selected':''}>高优先级</option>
@@ -157,7 +157,9 @@ function rTodos(){
     let dateStr = '';
     let tagCls='tag-ok', tagTxt='';
     if(t.date){
-      const dueTime = t.time ? `${t.date}T${t.time}:00` : `${t.date}T23:59:59`;
+      // Defensive: t.time may be 'HH:MM' (input) or 'HH:MM:SS' (from Postgres) — strip to 'HH:MM'
+      const hhmm = t.time ? t.time.slice(0,5) : null;
+      const dueTime = hhmm ? `${t.date}T${hhmm}:00` : `${t.date}T23:59:59`;
       const diff = new Date(dueTime) - new Date();
       const hours = Math.ceil(diff/3600000);
       const days = Math.ceil(diff/86400000);
@@ -165,7 +167,7 @@ function rTodos(){
       else if(diff<0){tagCls='tag-urgent';tagTxt='Overdue';}
       else if(hours<=24){tagCls='tag-warn';tagTxt=hours+'h';}
       else{tagCls='tag-ok';tagTxt=days+'d';}
-      dateStr = t.date + (t.time ? ' '+t.time : '');
+      dateStr = t.date + (hhmm ? ' '+hhmm : '');
     } else {
       tagTxt = t.done?'Done':'No due';
       tagCls = t.done?'tag-done':'tag-ok';

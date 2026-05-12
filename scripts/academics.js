@@ -38,7 +38,7 @@ function rAC(){
           <div class="field-row">
             <span class="field-label">截止</span>
             <input id="ea-date" type="date" value="${t.date}" style="flex:1;">
-            <input id="ea-time" type="time" value="${t.time||''}" style="flex:1;">
+            <input id="ea-time" type="time" value="${(t.time||'').slice(0,5)}" style="flex:1;">
           </div>
           <select id="ea-pri" style="width:100%;">
             <option value="high" ${t.pri==='high'?'selected':''}>高优先级</option>
@@ -73,7 +73,7 @@ function rAC(){
         <div class="ac-subject">${escH(t.sub)}</div>
         <div class="ac-name">${escH(t.name)}</div>
         <div class="ac-meta">
-          <span class="ac-date">${t.date}${t.time?' '+t.time:''}</span>
+          <span class="ac-date">${t.date}${t.time?' '+t.time.slice(0,5):''}</span>
           <span class="tag ${tagCls}">${tagTxt}</span>
           ${t.remind>0?`<span class="ac-bell">⏰ ${formatRemind(t.remind)}</span>`:''}
         </div>
