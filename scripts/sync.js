@@ -52,7 +52,10 @@ async function pullAcademics(){
     .eq('user_id', currentUser.id);
   S.ac = (data || []).map(r => ({
     id: r.id, sub: r.sub, name: r.name,
-    date: r.date, time: r.time, pri: r.pri,
+    date: r.date,
+    // Postgres time returns 'HH:MM:SS' — normalize to 'HH:MM' so existing UI code that does `${time}:00` works
+    time: r.time ? r.time.slice(0,5) : null,
+    pri: r.pri,
     remind: r.remind || 0, done: r.done,
   }));
 }
@@ -97,7 +100,10 @@ async function pullTodos(){
     .eq('user_id', currentUser.id);
   S.todos = (data || []).map(r => ({
     id: r.id, text: r.text, cat: r.cat_id,
-    date: r.date, time: r.time, pri: r.pri,
+    date: r.date,
+    // Postgres time returns 'HH:MM:SS' — normalize to 'HH:MM' so existing UI code that does `${time}:00` works
+    time: r.time ? r.time.slice(0,5) : null,
+    pri: r.pri,
     remind: r.remind || 0,
     repeat: r.repeat || 'none',
     customDays: r.custom_days || 0,
