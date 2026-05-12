@@ -5,7 +5,7 @@
    - TradingView widgets and external CDNs: stale-while-revalidate.
    Bump CACHE_VERSION on every shell change to force clients to drop the old cache. */
 
-const CACHE_VERSION = 'cyrus-os-v6.2.5';
+const CACHE_VERSION = 'cyrus-os-v6.2.6';
 const APP_SHELL = [
   './',
   './index.html',
@@ -35,8 +35,11 @@ const APP_SHELL = [
 self.addEventListener('install', (event) => {
   // Pre-cache the app shell so the PWA boots offline
   event.waitUntil(
-    caches.open(CACHE_VERSION).then((cache) => cache.addAll(APP_SHELL))
-      .then(() => self.skipWaiting())
+    caches.open(CACHE_VERSION).then((cache) =>
+      // Force-revalidate every shell entry on install so a CSS/JS edit always
+      // wins over the browser HTTP cache once a new SW version takes over.
+      cache.addAll(APP_SHELL.map((u) => new Request(u, { cache: 'no-cache' })))
+    ).then(() => self.skipWaiting())
   );
 });
 

@@ -79,7 +79,8 @@ let S={
   cats:JSON.parse(JSON.stringify(DEFAULT_CATS)),
   activeCat:'all',
   notifiedIds:[],
-  symbols:null
+  symbols:null,
+  subjects:null,  /* Preset academic subjects — populated from settings.subjects */
 };
 
 let editingAC=null, editingJP=null, editingTR=null, editingTD=null;
@@ -90,7 +91,7 @@ function loadLS(key,fallback){try{const raw=localStorage.getItem(STORAGE_PREFIX+
 /* saveLSRaw: pure local write, used by sync layer when mirroring DB → LS (no re-sync). */
 function saveLSRaw(key,val){try{localStorage.setItem(STORAGE_PREFIX+key,JSON.stringify(val));}catch(e){}}
 /* saveLS: local write + auto-sync if the key is a settings field. */
-const SETTINGS_KEYS = ['creed_idx','creed_open','show_done','symbols','notif_banner_dismissed'];
+const SETTINGS_KEYS = ['creed_idx','creed_open','show_done','symbols','subjects','notif_banner_dismissed'];
 function saveLS(key,val){
   saveLSRaw(key,val);
   if(SETTINGS_KEYS.includes(key)){

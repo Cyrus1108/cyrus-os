@@ -37,17 +37,30 @@ input[type=text],
 input[type=date],
 input[type=time],
 input[type=number],
+input:not([type]),
 select{
   box-sizing:border-box;
   font-family:var(--sans);
   border-radius:2px;
   background:var(--color-background-input);
   color:var(--ink) !important;
+  /* Some Chromium forks (Brave/Comet/Vivaldi) and autofill set -webkit-text-fill-color
+     independently of color, which makes input text appear black on dark backgrounds.
+     Force it explicitly to match `color`. */
+  -webkit-text-fill-color:var(--ink) !important;
   border:.5px solid var(--hair-strong);
   padding:8px 11px;
   font-size:13px;
   letter-spacing:.005em;
   transition:border-color .2s, background .2s, box-shadow .3s var(--ease-silk);
+  caret-color:var(--brass);
+}
+/* Autofill states (Chrome/Edge/Brave: persistent yellow background + black text). */
+textarea:-webkit-autofill,
+input:-webkit-autofill,
+select:-webkit-autofill{
+  -webkit-text-fill-color:var(--ink) !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--color-background-input) inset !important;
   caret-color:var(--brass);
 }
 textarea:hover,input[type=text]:hover,input[type=date]:hover,input[type=time]:hover,input[type=number]:hover,select:hover{

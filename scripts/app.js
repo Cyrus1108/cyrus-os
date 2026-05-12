@@ -79,6 +79,7 @@ async function init(){
   const tds=loadLS('todos',null);if(tds)S.todos=tds;
   const cats=loadLS('cats',null);if(cats&&cats.length)S.cats=cats;
   const syms=loadLS('symbols',null);if(syms&&Array.isArray(syms)&&syms.length>0)S.symbols=syms;
+  const subj=loadLS('subjects',null);if(subj&&Array.isArray(subj))S.subjects=subj;
   const noti=loadLS('notifiedIds',null);if(noti)S.notifiedIds=noti;
   showDone = loadLS('show_done', false);
 

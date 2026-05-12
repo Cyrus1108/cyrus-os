@@ -240,12 +240,26 @@
           </div>
         </div>
       </div>
-      <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:8px;gap:6px;">
+        <button class="ghost fx-btn" onclick="toggleSubManage()">⚙ 科目</button>
         <button class="ghost fx-btn" onclick="toggleAcForm()">+ 新增</button>
       </div>
+
+      <!-- Subject preset manager (toggleable) -->
+      <div id="sub-manage" class="cat-manage">
+        <div class="cat-manage-row">
+          <input id="sub-new" type="text" placeholder="新科目名称…" style="flex:1;">
+          <button class="primary fx-btn" onclick="addSubject()">加</button>
+        </div>
+        <div id="sub-list" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;"></div>
+      </div>
+
+      <!-- Datalist consumed by both add and edit subject inputs -->
+      <datalist id="ac-subjects-list"></datalist>
+
       <div id="ac-form" style="display:none;padding-bottom:12px;margin-bottom:8px;border-bottom:.5px solid var(--hair);">
         <div class="edit-box">
-          <input id="f-sub" placeholder="科目" style="width:100%;">
+          <input id="f-sub" placeholder="科目" list="ac-subjects-list" style="width:100%;">
           <input id="f-name" placeholder="内容（作业 / 考试）" style="width:100%;">
           <div class="field-row">
             <span class="field-label">截止</span>

@@ -32,6 +32,10 @@ async function pullSettings(){
     saveLSRaw('symbols', data.symbols);
     S.symbols = data.symbols;
   }
+  if(data.subjects != null){
+    saveLSRaw('subjects', data.subjects);
+    S.subjects = data.subjects;
+  }
   if(data.notif_banner_dismissed != null) saveLSRaw('notif_banner_dismissed', data.notif_banner_dismissed);
 }
 
@@ -178,6 +182,7 @@ async function syncPushSettings(){
     creed_open: loadLS('creed_open', false),
     show_done: loadLS('show_done', false),
     symbols: S.symbols,
+    subjects: S.subjects,
     notif_banner_dismissed: loadLS('notif_banner_dismissed', false),
   });
   logIfError('push settings', res);

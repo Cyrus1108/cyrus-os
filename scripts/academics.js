@@ -1,6 +1,36 @@
 /* Academics — university coursework with reminders */
 let acOpen=false;
 function toggleAcForm(){acOpen=!acOpen;document.getElementById('ac-form').style.display=acOpen?'block':'none';}
+
+/* ════ Subject presets ════ */
+function toggleSubManage(){document.getElementById('sub-manage').classList.toggle('open');}
+function addSubject(){
+  const inp = document.getElementById('sub-new');
+  const name = inp.value.trim();
+  if(!name) return;
+  if(!Array.isArray(S.subjects)) S.subjects = [];
+  if(S.subjects.includes(name)){inp.value=''; return;}
+  S.subjects.push(name);
+  inp.value = '';
+  saveLS('subjects', S.subjects);
+  renderSubjects();
+}
+function delSubject(name){
+  S.subjects = (Array.isArray(S.subjects) ? S.subjects : []).filter(s => s !== name);
+  saveLS('subjects', S.subjects);
+  renderSubjects();
+}
+function renderSubjects(){
+  const subjects = Array.isArray(S.subjects) ? S.subjects : [];
+  // <datalist> options — picks up via list="ac-subjects-list" on the input
+  const dl = document.getElementById('ac-subjects-list');
+  if(dl) dl.innerHTML = subjects.map(s => `<option value="${escH(s)}">`).join('');
+  // Manage panel chips
+  const list = document.getElementById('sub-list');
+  if(list) list.innerHTML = subjects.length
+    ? subjects.map(s => `<div class="cat-item">${escH(s)}<button class="cat-del" onclick="delSubject('${escH(s).replace(/'/g,'&#39;')}')">×</button></div>`).join('')
+    : '<div style="color:var(--ghost);font-style:italic;font-size:11px;">尚无预设 · 加几个科目让下次添加更快</div>';
+}
 function addAcTask(){
   const sub=document.getElementById('f-sub').value.trim(),name=document.getElementById('f-name').value.trim(),date=document.getElementById('f-date').value,time=document.getElementById('f-time').value,pri=document.getElementById('f-pri').value,remind=parseInt(document.getElementById('f-remind').value);
   if(!sub||!name||!date)return;
@@ -33,7 +63,7 @@ function rAC(){
     if(editingAC===t.id){
       return `<div style="padding:6px 0;border-bottom:.5px solid var(--hair);">
         <div class="edit-box">
-          <input id="ea-sub" value="${escH(t.sub)}" placeholder="科目" style="width:100%;">
+          <input id="ea-sub" value="${escH(t.sub)}" placeholder="科目" list="ac-subjects-list" style="width:100%;">
           <input id="ea-name" value="${escH(t.name)}" placeholder="内容" style="width:100%;">
           <div class="field-row">
             <span class="field-label">截止</span>
@@ -84,5 +114,6 @@ function rAC(){
       </div>
     </div>`;
   }).join('');
+  renderSubjects();
   attachRipples();
 }

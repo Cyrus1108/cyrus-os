@@ -1,3 +1,9 @@
+/* Tell the UA we own both light and dark variants. Prevents Chromium forks
+   (Brave/Comet/Vivaldi) and Chromes force-dark-mode from inverting form-control
+   text colors. Declared on html (not in :root with vars) so a parser hiccup
+   in one block cannot drop the other. */
+html{ color-scheme: light dark; }
+
 :root{
   --brass:#A88455;
   --brass-soft:#C9A876;
