@@ -231,7 +231,7 @@ async function checkReminders(env) {
   const due = [];
   for (const t of todos) {
     if (!t.date || !t.remind) continue;
-    const dueAt = new Date(`${t.date}T${t.time || '23:59'}:00`).getTime();
+    const dueAt = new Date(`${t.date}T${t.time || '23:59'}:00+08:00`).getTime();
     const remindAt = dueAt - t.remind * 60000;
     const key = dedupeKey(t);
     if (now >= remindAt && now < dueAt && t.notified_for !== key) {
