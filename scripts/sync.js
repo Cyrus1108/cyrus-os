@@ -53,8 +53,10 @@ async function pullMorning(){
 }
 
 async function pullAcademics(){
+  // Don't .order('position') here — if the column doesn't exist yet the query
+  // errors and returns null, blanking the panel. rAC sorts by position in JS.
   const { data } = await sb.from('academics').select('*')
-    .eq('user_id', currentUser.id).order('position');
+    .eq('user_id', currentUser.id);
   S.ac = (data || []).map(r => ({
     id: r.id, sub: r.sub, name: r.name,
     date: r.date,
@@ -131,8 +133,9 @@ async function pullThe90Daily(){
 }
 
 async function pullTodos(){
+  // Don't .order('position') here — see pullAcademics note. rTodos sorts in JS.
   const { data } = await sb.from('todos').select('*')
-    .eq('user_id', currentUser.id).order('position');
+    .eq('user_id', currentUser.id);
   S.todos = (data || []).map(r => ({
     id: r.id, text: r.text, cat: r.cat_id,
     date: r.date,
