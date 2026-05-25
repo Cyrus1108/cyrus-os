@@ -49,6 +49,7 @@ async function pullMorning(){
     S.mr.list = S.mr.list.map(i=>({...i, d:false}));
     S.mr.date = TODAY;
   }
+  if(cleanMorning()) saveMR();
 }
 
 async function pullAcademics(){

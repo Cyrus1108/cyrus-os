@@ -6,12 +6,20 @@ const MR_DEFAULT=[
   {id:'mr1',t:'Drink water',mins:2,d:false},
   {id:'mr2',t:"Man's work",mins:15,d:false},
   {id:'mr3',t:'Meditation',mins:10,d:false},
-  {id:'mr4',t:'Prep meals',mins:5,d:false},
   {id:'mr5',t:'Walk',mins:10,d:false},
   {id:'mr6',t:'Breakfast',mins:20,d:false},
   {id:'mr7',t:'Calisthenics',mins:60,d:false},
   {id:'mr8',t:'Bath',mins:6,d:false},
 ];
+
+/* Migration: strip the removed "Prep meals" item from any loaded morning list
+   (existing Supabase/LS rows still carry it). Returns true if anything changed. */
+function cleanMorning(){
+  if(!S.mr || !Array.isArray(S.mr.list)) return false;
+  const before = S.mr.list.length;
+  S.mr.list = S.mr.list.filter(i => i.id !== 'mr4' && i.t !== 'Prep meals');
+  return S.mr.list.length !== before;
+}
 const DEF_JP=[
   {id:'j1',t:'Anki 词汇 20张',d:false},
   {id:'j2',t:'语法练习 1课',d:false},

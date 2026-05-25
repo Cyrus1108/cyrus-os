@@ -274,14 +274,23 @@
             <option value="mid" selected>中优先级</option>
             <option value="low">低优先级</option>
           </select>
-          <select id="f-remind" style="width:100%;">
+          <select id="f-remind" onchange="toggleRemindCustom('f-remind','f-rc')" style="width:100%;">
             <option value="0">不提醒</option>
             <option value="15">截止前 15 分钟</option>
             <option value="60" selected>截止前 1 小时</option>
             <option value="240">截止前 4 小时</option>
             <option value="1440">截止前 1 天</option>
             <option value="2880">截止前 2 天</option>
+            <option value="custom">自定义…</option>
           </select>
+          <div id="f-rc" class="field-row" style="display:none;">
+            <input id="f-rc-num" type="number" min="1" placeholder="数值" style="flex:1;">
+            <select id="f-rc-unit" style="flex:1;">
+              <option value="1">分钟</option>
+              <option value="60">小时</option>
+              <option value="1440">天</option>
+            </select>
+          </div>
           <div style="display:flex;gap:6px;">
             <button class="primary fx-btn" onclick="addAcTask()" style="flex:1;">确认</button>
             <button class="ghost fx-btn" onclick="toggleAcForm()" style="flex:1;">取消</button>
@@ -402,13 +411,22 @@
           <option value="mid" selected>中优先级</option>
           <option value="low">低优先级</option>
         </select>
-        <select id="td-remind" style="width:100%;">
+        <select id="td-remind" onchange="toggleRemindCustom('td-remind','td-rc')" style="width:100%;">
           <option value="0">不提醒</option>
           <option value="5">截止前 5 分钟</option>
           <option value="15" selected>截止前 15 分钟</option>
           <option value="60">截止前 1 小时</option>
           <option value="1440">截止前 1 天</option>
+          <option value="custom">自定义…</option>
         </select>
+        <div id="td-rc" class="field-row" style="display:none;">
+          <input id="td-rc-num" type="number" min="1" placeholder="数值" style="flex:1;">
+          <select id="td-rc-unit" style="flex:1;">
+            <option value="1">分钟</option>
+            <option value="60">小时</option>
+            <option value="1440">天</option>
+          </select>
+        </div>
         <select id="td-repeat" onchange="toggleTdCustom()" style="width:100%;">
           <option value="none">不重复</option>
           <option value="daily">每日</option>

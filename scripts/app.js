@@ -1,6 +1,40 @@
 /* App entry — clock, sessions, metrics, init, render orchestration */
 function escH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
+/* ════ Reminder lead-time: dropdown + custom "number × unit" ════
+   Stored value is always minutes (int). Used by todos + academics forms. */
+function toggleRemindCustom(selectId, wrapId){
+  const sel = document.getElementById(selectId);
+  const wrap = document.getElementById(wrapId);
+  if(sel && wrap) wrap.style.display = sel.value === 'custom' ? 'flex' : 'none';
+}
+function readRemind(selectId, numId, unitId){
+  const sel = document.getElementById(selectId).value;
+  if(sel === 'custom'){
+    const num = parseInt(document.getElementById(numId).value) || 0;
+    const unit = parseInt(document.getElementById(unitId).value) || 1;
+    return Math.max(0, num * unit);
+  }
+  return parseInt(sel) || 0;
+}
+/* Break a minutes value into {num, unit} using the largest clean unit. */
+function decomposeRemind(mins){
+  if(mins && mins % 1440 === 0) return { num: mins/1440, unit: 1440 };
+  if(mins && mins % 60 === 0) return { num: mins/60, unit: 60 };
+  return { num: mins || '', unit: 1 };
+}
+/* Render the custom number+unit row markup for an edit/add form. */
+function remindCustomRow(prefix, isCustom, num, unit){
+  return `<div id="${prefix}-rc" class="field-row" style="${isCustom?'':'display:none;'}">
+    <input id="${prefix}-rc-num" type="number" min="1" value="${isCustom?num:''}" placeholder="数值" style="flex:1;">
+    <select id="${prefix}-rc-unit" style="flex:1;">
+      <option value="1" ${unit===1?'selected':''}>分钟</option>
+      <option value="60" ${unit===60?'selected':''}>小时</option>
+      <option value="1440" ${unit===1440?'selected':''}>天</option>
+    </select>
+  </div>`;
+}
+
 /* Ripple effect */
 function addRipple(e){
   const btn = e.currentTarget;
@@ -72,6 +106,7 @@ async function init(){
       saveMR();
     }
   }
+  if(cleanMorning()) saveMR();
   const ac=loadLS('ac',null);if(ac)S.ac=ac;
   const jp=loadLS('jp',null);if(jp)S.jp=jp;
   const tr=loadLS('tr',null);

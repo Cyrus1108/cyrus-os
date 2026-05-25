@@ -32,10 +32,12 @@ function renderSubjects(){
     : '<div style="color:var(--ghost);font-style:italic;font-size:11px;">尚无预设 · 加几个科目让下次添加更快</div>';
 }
 function addAcTask(){
-  const sub=document.getElementById('f-sub').value.trim(),name=document.getElementById('f-name').value.trim(),date=document.getElementById('f-date').value,time=document.getElementById('f-time').value,pri=document.getElementById('f-pri').value,remind=parseInt(document.getElementById('f-remind').value);
+  const sub=document.getElementById('f-sub').value.trim(),name=document.getElementById('f-name').value.trim(),date=document.getElementById('f-date').value,time=document.getElementById('f-time').value,pri=document.getElementById('f-pri').value,remind=readRemind('f-remind','f-rc-num','f-rc-unit');
   if(!sub||!name||!date)return;
   S.ac.push({id:crypto.randomUUID(),sub,name,date,time,pri,remind,done:false});
   ['f-sub','f-name','f-date','f-time'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-remind').value='60';
+  document.getElementById('f-rc').style.display='none';
   toggleAcForm();saveAC();rAC();rMetrics();
 }
 function toggleAC(id){const t=S.ac.find(t=>t.id===id);if(t)t.done=!t.done;saveAC();rAC();rMetrics();}
@@ -49,7 +51,7 @@ function saveAcEdit(id){
   const date=document.getElementById('ea-date').value;
   const time=document.getElementById('ea-time').value;
   const pri=document.getElementById('ea-pri').value;
-  const remind=parseInt(document.getElementById('ea-remind').value);
+  const remind=readRemind('ea-remind','ea-rc-num','ea-rc-unit');
   if(!sub||!name||!date)return;
   t.sub=sub;t.name=name;t.date=date;t.time=time;t.pri=pri;t.remind=remind;
   editingAC=null;saveAC();rAC();rMetrics();
@@ -75,14 +77,16 @@ function rAC(){
             <option value="mid" ${t.pri==='mid'?'selected':''}>中优先级</option>
             <option value="low" ${t.pri==='low'?'selected':''}>低优先级</option>
           </select>
-          <select id="ea-remind" style="width:100%;">
+          <select id="ea-remind" onchange="toggleRemindCustom('ea-remind','ea-rc')" style="width:100%;">
             <option value="0" ${t.remind===0?'selected':''}>不提醒</option>
             <option value="15" ${t.remind===15?'selected':''}>截止前 15 分钟</option>
             <option value="60" ${t.remind===60?'selected':''}>截止前 1 小时</option>
             <option value="240" ${t.remind===240?'selected':''}>截止前 4 小时</option>
             <option value="1440" ${t.remind===1440?'selected':''}>截止前 1 天</option>
             <option value="2880" ${t.remind===2880?'selected':''}>截止前 2 天</option>
+            <option value="custom" ${![0,15,60,240,1440,2880].includes(t.remind)?'selected':''}>自定义…</option>
           </select>
+          ${remindCustomRow('ea', ![0,15,60,240,1440,2880].includes(t.remind), decomposeRemind(t.remind).num, decomposeRemind(t.remind).unit)}
           <div style="display:flex;gap:6px;">
             <button class="primary fx-btn" onclick="saveAcEdit('${t.id}')" style="flex:1;">保存</button>
             <button class="ghost fx-btn" onclick="cancelAcEdit()" style="flex:1;">取消</button>

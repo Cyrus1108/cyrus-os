@@ -56,7 +56,7 @@ function addTodo(){
   const date = document.getElementById('td-date').value;
   const time = document.getElementById('td-time').value;
   const pri = document.getElementById('td-pri').value;
-  const remind = parseInt(document.getElementById('td-remind').value);
+  const remind = readRemind('td-remind', 'td-rc-num', 'td-rc-unit');
   const repeat = document.getElementById('td-repeat').value;
   const customDays = parseInt(document.getElementById('td-repeat-custom').value) || 0;
   if(!text) return;
@@ -70,6 +70,8 @@ function addTodo(){
   document.getElementById('td-time').value='';
   document.getElementById('td-repeat-custom').value='';
   document.getElementById('td-repeat-custom').style.display='none';
+  document.getElementById('td-remind').value='15';
+  document.getElementById('td-rc').style.display='none';
   toggleTdForm();
   saveTodos(); rTodos();
 }
@@ -125,13 +127,15 @@ function rTodos(){
             <option value="mid" ${t.pri==='mid'?'selected':''}>中优先级</option>
             <option value="low" ${t.pri==='low'?'selected':''}>低优先级</option>
           </select>
-          <select id="etd-remind" style="width:100%;">
+          <select id="etd-remind" onchange="toggleRemindCustom('etd-remind','etd-rc')" style="width:100%;">
             <option value="0" ${t.remind===0?'selected':''}>不提醒</option>
             <option value="5" ${t.remind===5?'selected':''}>截止前 5 分钟</option>
             <option value="15" ${t.remind===15?'selected':''}>截止前 15 分钟</option>
             <option value="60" ${t.remind===60?'selected':''}>截止前 1 小时</option>
             <option value="1440" ${t.remind===1440?'selected':''}>截止前 1 天</option>
+            <option value="custom" ${![0,5,15,60,1440].includes(t.remind)?'selected':''}>自定义…</option>
           </select>
+          ${remindCustomRow('etd', ![0,5,15,60,1440].includes(t.remind), decomposeRemind(t.remind).num, decomposeRemind(t.remind).unit)}
           <select id="etd-repeat" onchange="toggleEtdCustom()" style="width:100%;">
             <option value="none" ${t.repeat==='none'?'selected':''}>不重复</option>
             <option value="daily" ${t.repeat==='daily'?'selected':''}>每日</option>
@@ -258,7 +262,7 @@ function saveTdEdit(id){
   t.date = document.getElementById('etd-date').value;
   t.time = document.getElementById('etd-time').value;
   t.pri = document.getElementById('etd-pri').value;
-  t.remind = parseInt(document.getElementById('etd-remind').value);
+  t.remind = readRemind('etd-remind', 'etd-rc-num', 'etd-rc-unit');
   t.repeat = document.getElementById('etd-repeat').value;
   t.customDays = parseInt(document.getElementById('etd-custom').value) || 0;
   editingTD=null;saveTodos();rTodos();rMetrics();
