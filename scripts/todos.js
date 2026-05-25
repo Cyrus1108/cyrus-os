@@ -60,9 +60,11 @@ function addTodo(){
   const repeat = document.getElementById('td-repeat').value;
   const customDays = parseInt(document.getElementById('td-repeat-custom').value) || 0;
   if(!text) return;
+  const maxPos = S.todos.reduce((m,t)=>Math.max(m, t.position||0), 0);
   S.todos.push({
     id:crypto.randomUUID(),
     text,cat,date,time,pri,remind,repeat,customDays,done:false,doneAt:null,
+    position: maxPos+1,
     created:TODAY
   });
   document.getElementById('td-text').value='';
@@ -96,18 +98,12 @@ function rTodos(){
   if(S.activeCat !== 'all') list = list.filter(t=>t.cat===S.activeCat);
   if(!showDone) list = list.filter(t=>!t.done);
   list.sort((a,b)=>{
-    if(a.done !== b.done) return a.done?1:-1;
-    if(a.date && !b.date) return -1;
-    if(!a.date && b.date) return 1;
-    if(a.date && b.date){
-      const ta = (a.date+'T'+(a.time||'23:59'));
-      const tb = (b.date+'T'+(b.time||'23:59'));
-      return ta.localeCompare(tb);
-    }
-    return 0;
+    if(a.done !== b.done) return a.done?1:-1;       // done sink to bottom
+    return (a.position||0) - (b.position||0);        // manual drag order
   });
 
   if(!list.length){el.innerHTML='<div class="empty">— 暂无待办 —</div>';return;}
+  // (drag-to-reorder wired at the end of this function)
 
   el.innerHTML = list.map(t=>{
     if(editingTD === t.id){
@@ -176,8 +172,9 @@ function rTodos(){
       tagTxt = t.done?'Done':'No due';
       tagCls = t.done?'tag-done':'tag-ok';
     }
-    return `<div class="todo-row ${t.done?'todo-done':''}" style="${t.done?'opacity:.4;':''}">
+    return `<div class="todo-row ${t.done?'todo-done':''}" data-id="${t.id}" style="${t.done?'opacity:.4;':''}">
       <div class="todo-main">
+        <span class="drag-handle" onclick="event.stopPropagation()" aria-label="拖动排序">⠿</span>
         <input type="checkbox" class="row-cb" ${t.done?'checked':''} onchange="toggleTd('${t.id}')">
         <span class="ac-pri" style="background:${priColor};"></span>
         <div class="todo-body">
@@ -198,6 +195,13 @@ function rTodos(){
     </div>`;
   }).join('');
   attachRipples();
+  makeSortable(el, { itemSelector:'.todo-row', handleSelector:'.drag-handle', onReorder:onReorderTodos });
+}
+function onReorderTodos(ids){
+  S.todos = reorderById(S.todos, ids);
+  S.todos.forEach((t,i)=> t.position = i);
+  saveTodos();
+  rTodos();
 }
 function formatRemind(m){
   if(m>=1440) return Math.floor(m/1440)+'d';

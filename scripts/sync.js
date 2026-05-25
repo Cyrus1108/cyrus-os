@@ -54,7 +54,7 @@ async function pullMorning(){
 
 async function pullAcademics(){
   const { data } = await sb.from('academics').select('*')
-    .eq('user_id', currentUser.id);
+    .eq('user_id', currentUser.id).order('position');
   S.ac = (data || []).map(r => ({
     id: r.id, sub: r.sub, name: r.name,
     date: r.date,
@@ -62,6 +62,7 @@ async function pullAcademics(){
     time: r.time ? r.time.slice(0,5) : null,
     pri: r.pri,
     remind: r.remind || 0, done: r.done,
+    position: r.position || 0,
   }));
 }
 
@@ -131,7 +132,7 @@ async function pullThe90Daily(){
 
 async function pullTodos(){
   const { data } = await sb.from('todos').select('*')
-    .eq('user_id', currentUser.id);
+    .eq('user_id', currentUser.id).order('position');
   S.todos = (data || []).map(r => ({
     id: r.id, text: r.text, cat: r.cat_id,
     date: r.date,
@@ -144,6 +145,7 @@ async function pullTodos(){
     done: r.done,
     doneAt: r.done_at ? new Date(r.done_at).getTime() : null,
     created: r.created_at ? r.created_at.slice(0,10) : TODAY,
+    position: r.position || 0,
   }));
 }
 
@@ -260,6 +262,7 @@ async function syncPushAcademics(){
     sub: t.sub, name: t.name,
     date: t.date || null, time: t.time || null,
     pri: t.pri, remind: t.remind || 0, done: t.done,
+    position: t.position || 0,
   }));
   if(ok) dirty.academics = false;
 }
@@ -316,6 +319,7 @@ async function syncPushTodos(){
     custom_days: t.customDays || 0,
     done: t.done,
     done_at: t.doneAt ? new Date(t.doneAt).toISOString() : null,
+    position: t.position || 0,
   }));
   if(ok) dirty.todos = false;
 }

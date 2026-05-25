@@ -8,9 +8,15 @@ function rMR(){
   document.getElementById('mr-time').textContent=done===list.length?'All complete':`~ ${remMins} min remaining`;
   document.getElementById('mr-list').innerHTML=list.map(i=>`
     <div class="mr-pill ${i.d?'done':''}" data-id="${i.id}" onclick="toggleMR('${i.id}', event)">
+      <span class="drag-handle" onclick="event.stopPropagation()" aria-label="拖动排序">⠿</span>
       <span class="mr-pill-name">${escH(i.t)}</span>
       <span class="mr-pill-time">${i.mins}m</span>
     </div>`).join('');
+  makeSortable(document.getElementById('mr-list'), { itemSelector:'.mr-pill', handleSelector:'.drag-handle', onReorder:onReorderMR });
+}
+function onReorderMR(ids){
+  S.mr.list = reorderById(S.mr.list, ids);
+  saveMR();rMR();
 }
 function toggleMR(id,event){
   const i=S.mr.list.find(i=>i.id===id);

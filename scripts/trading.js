@@ -18,7 +18,8 @@ function rTR(){
         <button class="ghost fx-btn" onclick="cancelTREdit()">×</button>
       </div></div>`;
     }
-    return `<div class="row ${i.d?'item-done':''}">
+    return `<div class="row ${i.d?'item-done':''}" data-id="${i.id}">
+      <span class="drag-handle" onclick="event.stopPropagation()" aria-label="拖动排序">⠿</span>
       <input type="checkbox" class="row-cb" ${i.d?'checked':''} onchange="toggleTR('${i.id}')">
       <div class="row-body"><span class="item-text">${escH(i.t)}</span></div>
       <div class="row-actions">
@@ -29,4 +30,9 @@ function rTR(){
   }).join('');
   const be=document.getElementById('t-bias');if(be&&document.activeElement!==be)be.value=S.tr.bias||'';
   attachRipples();
+  makeSortable(document.getElementById('tr-list'), { itemSelector:'.row', handleSelector:'.drag-handle', onReorder:onReorderTR });
+}
+function onReorderTR(ids){
+  S.tr.list = reorderById(S.tr.list, ids);
+  saveTR();rTR();
 }

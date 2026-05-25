@@ -38,7 +38,8 @@ function rJP(){
         <button class="ghost fx-btn" onclick="cancelJPEdit()">×</button>
       </div></div>`;
     }
-    return `<div class="row ${i.d?'item-done':''}">
+    return `<div class="row ${i.d?'item-done':''}" data-id="${i.id}">
+      <span class="drag-handle" onclick="event.stopPropagation()" aria-label="拖动排序">⠿</span>
       <input type="checkbox" class="row-cb" ${i.d?'checked':''} onchange="toggleJP('${i.id}')">
       <div class="row-body"><span class="item-text">${escH(i.t)}</span></div>
       <div class="row-actions">
@@ -49,4 +50,9 @@ function rJP(){
   }).join('');
   const ne=document.getElementById('jp-note');if(ne&&document.activeElement!==ne)ne.value=S.jp.note||'';
   attachRipples();
+  makeSortable(document.getElementById('jp-checklist'), { itemSelector:'.row', handleSelector:'.drag-handle', onReorder:onReorderJP });
+}
+function onReorderJP(ids){
+  S.jp.list = reorderById(S.jp.list, ids);
+  saveJP();rJP();
 }

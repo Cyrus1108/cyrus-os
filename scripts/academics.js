@@ -34,7 +34,8 @@ function renderSubjects(){
 function addAcTask(){
   const sub=document.getElementById('f-sub').value.trim(),name=document.getElementById('f-name').value.trim(),date=document.getElementById('f-date').value,time=document.getElementById('f-time').value,pri=document.getElementById('f-pri').value,remind=readRemind('f-remind','f-rc-num','f-rc-unit');
   if(!sub||!name||!date)return;
-  S.ac.push({id:crypto.randomUUID(),sub,name,date,time,pri,remind,done:false});
+  const maxPos = S.ac.reduce((m,t)=>Math.max(m,t.position||0),0);
+  S.ac.push({id:crypto.randomUUID(),sub,name,date,time,pri,remind,done:false,position:maxPos+1});
   ['f-sub','f-name','f-date','f-time'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('f-remind').value='60';
   document.getElementById('f-rc').style.display='none';
@@ -59,7 +60,7 @@ function saveAcEdit(id){
 
 function rAC(){
   const el=document.getElementById('ac-list');
-  const all=[...S.ac].sort((a,b)=>a.done!==b.done?a.done?1:-1:new Date(a.date)-new Date(b.date));
+  const all=[...S.ac].sort((a,b)=> a.done!==b.done ? (a.done?1:-1) : (a.position||0)-(b.position||0));
   if(!all.length){el.innerHTML='<div class="empty">— 暂无待办 —</div>';return;}
   el.innerHTML=all.map(t=>{
     if(editingAC===t.id){
@@ -100,7 +101,8 @@ function rAC(){
     else if(days<=0){tagCls='tag-urgent';tagTxt='Overdue';}
     else if(days<=3){tagCls='tag-warn';tagTxt=days+' days';}
     const priColor=t.pri==='high'?'var(--color-text-danger)':t.pri==='low'?'var(--ghost)':'var(--brass)';
-    return `<div class="row ${t.done?'item-done':''}" style="${t.done?'opacity:.4;':''}">
+    return `<div class="row ${t.done?'item-done':''}" data-id="${t.id}" style="${t.done?'opacity:.4;':''}">
+      <span class="drag-handle" onclick="event.stopPropagation()" aria-label="拖动排序">⠿</span>
       <input type="checkbox" class="row-cb" ${t.done?'checked':''} onchange="toggleAC('${t.id}')">
       <span class="ac-pri" style="background:${priColor};"></span>
       <div class="row-body">
@@ -120,4 +122,10 @@ function rAC(){
   }).join('');
   renderSubjects();
   attachRipples();
+  makeSortable(el, { itemSelector:'.row', handleSelector:'.drag-handle', onReorder:onReorderAC });
+}
+function onReorderAC(ids){
+  S.ac = reorderById(S.ac, ids);
+  S.ac.forEach((t,i)=>t.position=i);
+  saveAC();rAC();
 }
