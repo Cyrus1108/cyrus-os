@@ -514,3 +514,47 @@ button.check-btn.done{border-color:var(--brass);color:var(--brass);}
 .auth-sent-hint{
   font-size:11px;color:var(--mute);margin-top:14px;font-family:var(--serif);font-style:italic;
 }
+
+/* ════════ Hermes notices ════════
+   Distinct from regular panels: brass-tinted, draws the eye, hidden when empty. */
+.hermes-panel{
+  background:var(--color-background-success);
+  border:.5px solid var(--brass-ghost);
+  border-left:2px solid var(--brass);
+  border-radius:var(--border-radius-lg);
+  padding:1.1rem 1.25rem;
+  margin-bottom:1.75rem;
+  animation:paneFade .4s var(--ease-silk);
+}
+.hermes-head{display:flex;align-items:center;gap:9px;margin-bottom:12px;}
+.hermes-head-glyph{color:var(--brass);font-size:12px;line-height:1;}
+.hermes-head-label{font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:var(--brass);font-weight:500;}
+.hermes-head-count{
+  margin-left:auto;min-width:18px;height:18px;padding:0 5px;
+  display:inline-flex;align-items:center;justify-content:center;
+  background:var(--brass);color:var(--color-background-primary);
+  font-size:11px;font-weight:600;border-radius:9px;line-height:1;
+}
+.hermes-list{display:flex;flex-direction:column;gap:8px;}
+.hermes-notice{
+  display:flex;align-items:flex-start;gap:11px;
+  padding:11px 12px;
+  background:var(--color-background-primary);
+  border:.5px solid var(--hair);border-radius:var(--border-radius-md);
+  transition:border-color .2s ease;
+}
+.hermes-notice:hover{border-color:var(--brass-ghost);}
+.hermes-glyph{color:var(--brass);font-size:13px;line-height:1.4;flex-shrink:0;}
+.hermes-notice-body{flex:1;min-width:0;}
+.hermes-notice-text{font-size:13.5px;line-height:1.5;color:var(--ink);white-space:pre-wrap;word-break:break-word;}
+.hermes-notice-meta{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--ghost);margin-top:6px;}
+.hermes-dismiss{
+  flex-shrink:0;align-self:center;
+  font-size:11px;letter-spacing:.05em;
+  color:var(--mute);background:transparent;
+  border:.5px solid var(--hair);border-radius:2px;
+  padding:5px 10px;cursor:pointer;
+  transition:all .2s var(--ease-press);
+}
+.hermes-dismiss:hover{border-color:var(--brass);color:var(--brass);}
+.hermes-dismiss:active{transform:scale(0.95);}

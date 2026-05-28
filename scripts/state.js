@@ -84,6 +84,7 @@ let S={
   jp:{streak:0,last:null,log:{},note:'',list:JSON.parse(JSON.stringify(DEF_JP))},
   tr:{date:TODAY,bias:'',list:JSON.parse(JSON.stringify(DEF_TR))},
   todos:[],
+  hermes:[],   /* Hermes notices — read/dismiss only; written server-side by the assistant */
   cats:JSON.parse(JSON.stringify(DEFAULT_CATS)),
   activeCat:'all',
   notifiedIds:[],

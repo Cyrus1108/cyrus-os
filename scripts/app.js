@@ -87,7 +87,7 @@ function rMetrics(){
   updateShowDoneBtn();
 }
 
-function renderAll(){rDate();rMR();rAC();rJP();rTR();rCats();rTodos();if(typeof rThe90==='function') rThe90();rMetrics();attachRipples();}
+function renderAll(){rDate();rMR();rAC();rJP();rTR();rCats();rTodos();if(typeof rThe90==='function') rThe90();if(typeof rHermes==='function') rHermes();rMetrics();attachRipples();}
 
 function onAuthReady(){
   /* Called by auth.js once a Supabase session is established.

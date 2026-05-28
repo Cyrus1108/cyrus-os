@@ -152,6 +152,22 @@ async function pullTodos(){
   }));
 }
 
+async function pullHermes(){
+  // Only un-dismissed notices; cap to a sane number, newest first.
+  const { data } = await sb.from('hermes_notices').select('*')
+    .eq('user_id', currentUser.id)
+    .is('dismissed_at', null)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  S.hermes = (data || []).map(r => ({
+    id: r.id,
+    text: r.text,
+    kind: r.kind || 'insight',
+    createdAt: r.created_at ? new Date(r.created_at).getTime() : null,
+    dismissedAt: r.dismissed_at ? new Date(r.dismissed_at).getTime() : null,
+  }));
+}
+
 async function pullAll(force){
   if(!currentUser) return;
   if(pullAllPromise && !force) return pullAllPromise;
@@ -160,7 +176,7 @@ async function pullAll(force){
       await Promise.all([
         pullSettings(), pullMorning(), pullAcademics(),
         pullJapanese(), pullTrading(), pullCategories(), pullTodos(),
-        pullThe90Meta(), pullThe90Daily(),
+        pullThe90Meta(), pullThe90Daily(), pullHermes(),
       ]);
       initialPullDone = true;
       console.log('[sync] initial pull complete');
@@ -327,6 +343,17 @@ async function syncPushTodos(){
   if(ok) dirty.todos = false;
 }
 
+/* Hermes notices are read+dismiss only on the client — no full push.
+   Dismiss stamps dismissed_at; the row stays for history but drops off the panel. */
+async function syncDismissHermes(id){
+  if(!currentUser) return;
+  await waitForPull();
+  const res = await sb.from('hermes_notices')
+    .update({ dismissed_at: new Date().toISOString() })
+    .eq('id', id).eq('user_id', currentUser.id);
+  logIfError('dismiss hermes notice', res);
+}
+
 /* ════════════ REALTIME ════════════ */
 
 function subscribeRealtime(){
@@ -346,6 +373,8 @@ function subscribeRealtime(){
       async () => { await pullCategories(); rCats(); rTodos(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'todos', filter: `user_id=eq.${uid}` },
       async () => { await pullTodos(); rTodos(); rMetrics(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'hermes_notices', filter: `user_id=eq.${uid}` },
+      async () => { await pullHermes(); rHermes(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'settings', filter: `user_id=eq.${uid}` },
       async () => { await pullSettings(); renderAll(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'the90_meta', filter: `user_id=eq.${uid}` },

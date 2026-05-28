@@ -161,6 +161,16 @@
     <button class="ghost fx-btn" onclick="dismissNotifBanner()">Later</button>
   </div>
 
+  <!-- Hermes notices — assistant surfaces things worth seeing; hidden when empty -->
+  <div id="hermes-panel" class="hermes-panel" style="display:none;">
+    <div class="hermes-head">
+      <span class="hermes-head-glyph" aria-hidden="true">&#9670;</span>
+      <span class="hermes-head-label">Hermes 想告诉你</span>
+      <span id="hermes-count" class="hermes-head-count">0</span>
+    </div>
+    <div id="hermes-list" class="hermes-list"></div>
+  </div>
+
   <!-- THE 90 — 90-day commitment tracker (Stage 5) -->
   <div id="the90-panel" class="the90-panel">
     <div class="the90-head">
@@ -475,6 +485,7 @@
 <script src="./scripts/trading.js"></script>
 <script src="./scripts/todos.js"></script>
 <script src="./scripts/the90.js"></script>
+<script src="./scripts/hermes.js"></script>
 <script src="./scripts/sync.js"></script>
 <script src="./scripts/auth.js"></script>
 <script src="./scripts/app.js"></script>
