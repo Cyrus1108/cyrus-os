@@ -117,6 +117,7 @@ async function init(){
   const subj=loadLS('subjects',null);if(subj&&Array.isArray(subj))S.subjects=subj;
   const noti=loadLS('notifiedIds',null);if(noti)S.notifiedIds=noti;
   showDone = loadLS('show_done', false);
+  if(typeof initTheme === 'function') initTheme();
 
   // Hydrate The 90 state from localStorage cache (first paint before Supabase pull)
   if(typeof ensureThe90Defaults === 'function'){

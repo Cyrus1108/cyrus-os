@@ -103,6 +103,7 @@ function toggleThe90(targetId){
   }
   saveThe90Daily();
   rThe90();
+  if(typeof window.lifeTreePulse === 'function') window.lifeTreePulse();   // tree energy feedback on check-in
 }
 
 function toggleThe90Drawer(id){
@@ -136,9 +137,7 @@ function rThe90(){
   document.getElementById('the90-day').textContent = day < 1 ? '— PRE' : day > 90 ? 'COMPLETE' : `DAY ${day} / 90`;
   document.getElementById('the90-phase').textContent = the90PhaseLabel(phase);
 
-  // Identity statement (rotates by day)
-  const identityIdx = day < 1 ? 0 : (day - 1) % THE_90_IDENTITIES.length;
-  document.getElementById('the90-identity').textContent = THE_90_IDENTITIES[identityIdx];
+  // Identity statement removed per Cyrus's request — only the tagline (date + countdown) shows.
 
   // Tagline — countdown to August 9
   const daysLeft = the90DaysUntil(THE_90_END);
@@ -190,6 +189,19 @@ function rThe90(){
   document.getElementById('the90-milestone').textContent = nextMs
     ? `DAY ${nextMs} · ${nextMs - day} 天`
     : '已完成 90 天';
+
+  // Life-tree cultivation-chamber telemetry HUD (sterile theme)
+  const ltGrow = document.getElementById('lt-grow');
+  if(ltGrow){
+    ltGrow.textContent = (day < 1 ? 0 : Math.min(100, Math.round(day / 90 * 100))) + '%';
+    document.getElementById('lt-streak').textContent = computeThe90Streak();
+    document.getElementById('lt-phase').textContent = the90PhaseLabel(phase);
+    document.getElementById('lt-left').textContent = (daysLeft > 0 ? daysLeft : 0) + '天';
+    const metToday = meta.targets.filter(t => the90ScoreMet(todayScores[t.id], phase)).length;
+    document.getElementById('lt-today').textContent = metToday + '/' + meta.targets.length;
+    const ch = document.getElementById('lifetree-chamber');
+    if(ch) ch.classList.toggle('milestone', day === 30 || day === 60 || day === 90);
+  }
 
   // Heatmap — 13 weeks x 5 targets
   document.getElementById('the90-heatmap').innerHTML = renderThe90Heatmap();

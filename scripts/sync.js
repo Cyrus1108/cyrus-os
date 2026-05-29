@@ -37,6 +37,7 @@ async function pullSettings(){
     S.subjects = data.subjects;
   }
   if(data.notif_banner_dismissed != null) saveLSRaw('notif_banner_dismissed', data.notif_banner_dismissed);
+  if(data.theme != null){ saveLSRaw('theme', data.theme); if(typeof applyTheme === 'function') applyTheme(data.theme, false); }
 }
 
 async function pullMorning(){
@@ -206,6 +207,7 @@ async function syncPushSettings(){
     symbols: S.symbols,
     subjects: S.subjects,
     notif_banner_dismissed: loadLS('notif_banner_dismissed', false),
+    theme: loadLS('theme', 'cappa'),
   });
   logIfError('push settings', res);
   if(!res.error) dirty.settings = false;
