@@ -9,6 +9,7 @@ import * as THREE from 'three';
 
 const N = 4200;
 let renderer, scene, camera, group, geo, lgeo, pos, col, FX, THR, LEAF, pairs, lpos, seed;
+let material, sporeGeo, sporePos, sporeVel;
 let raf = 0, running = false, visible = true, io = null;
 let p = 0.02, target = 0.2, pulseStart = -1e9;
 const cBranch = new THREE.Color(0x9a6b4f), cLeaf = new THREE.Color(0x18B85f),
@@ -94,6 +95,14 @@ function tick(t){
     lpos[o+3]=pos[j*3];lpos[o+4]=pos[j*3+1];lpos[o+5]=pos[j*3+2];}
   lgeo.attributes.position.needsUpdate=true;
   group.rotation.y = time*0.16;
+  if(sporePos){
+    for(let i=0;i<sporePos.length;i+=3){
+      sporePos[i]+=sporeVel[i]; sporePos[i+1]+=sporeVel[i+1]; sporePos[i+2]+=sporeVel[i+2];
+      if(sporePos[i+1]>2.4) sporePos[i+1]=-2.4;
+    }
+    sporeGeo.attributes.position.needsUpdate=true;
+  }
+  if(material) material.opacity = 0.86 + 0.14*Math.sin(time*0.45);   // canopy breathing
   renderer.render(scene,camera);
 }
 
@@ -122,8 +131,14 @@ window.initLifeTree = function(){
   geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
   geo.setAttribute('color', new THREE.BufferAttribute(col,3));
-  const mat = new THREE.PointsMaterial({size:0.045, map:dotTex(), vertexColors:true, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending});
-  group.add(new THREE.Points(geo,mat));
+  material = new THREE.PointsMaterial({size:0.045, map:dotTex(), vertexColors:true, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending});
+  group.add(new THREE.Points(geo,material));
+  // ambient floating spores — drift independently of the tree (light motes in the culture)
+  const spN=170; sporePos=new Float32Array(spN*3); sporeVel=new Float32Array(spN*3);
+  for(let i=0;i<spN;i++){ sporePos[i*3]=(Math.random()-.5)*5.0; sporePos[i*3+1]=(Math.random()-.5)*4.6; sporePos[i*3+2]=(Math.random()-.5)*4.0;
+    sporeVel[i*3]=(Math.random()-.5)*0.0008; sporeVel[i*3+1]=0.0006+Math.random()*0.0012; sporeVel[i*3+2]=(Math.random()-.5)*0.0008; }
+  sporeGeo=new THREE.BufferGeometry(); sporeGeo.setAttribute('position', new THREE.BufferAttribute(sporePos,3));
+  scene.add(new THREE.Points(sporeGeo, new THREE.PointsMaterial({size:0.03, map:dotTex(), color:0x9fe6c0, transparent:true, opacity:0.5, depthWrite:false, blending:THREE.AdditiveBlending})));
   lpos = new Float32Array((pairs.length/2)*6);
   lgeo = new THREE.BufferGeometry(); lgeo.setAttribute('position', new THREE.BufferAttribute(lpos,3));
   group.add(new THREE.LineSegments(lgeo, new THREE.LineBasicMaterial({color:0x34D399, transparent:true, opacity:0.05, blending:THREE.AdditiveBlending, depthWrite:false})));

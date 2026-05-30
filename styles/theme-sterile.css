@@ -187,3 +187,75 @@ html[data-theme="sterile"] .hermes-head-glyph{ color:#34D399; }
 html[data-theme="sterile"] .hermes-head-count{ background:#34D399; color:#08120d; }
 html[data-theme="sterile"] .hermes-glyph{ color:#34D399; }
 html[data-theme="sterile"] .hermes-notice{ border-left:2px solid rgba(52,211,153,.40); }
+
+/* ═══════════════════ SYSTEM-WIDE AMBIENT LIGHTING ═══════════════════
+   All sterile-only, all subtle, all pausing/idling when not visible.
+   --amb (0..1, default .6) is driven by today's check-in completion. */
+html[data-theme="sterile"]{ --amb:0.6; }
+
+/* page atmosphere — slow drifting colour wash behind the whole dashboard */
+html[data-theme="sterile"] body::after{
+  content:''; position:fixed; inset:-12%; z-index:-1; pointer-events:none;
+  background:
+    radial-gradient(38% 30% at 24% 18%, rgba(16,185,129, calc(0.06 * var(--amb))), transparent 70%),
+    radial-gradient(34% 28% at 82% 72%, rgba(251,251,69, calc(0.05 * var(--amb))), transparent 70%),
+    radial-gradient(46% 38% at 60% 38%, rgba(98,240,245, calc(0.035 * var(--amb))), transparent 72%);
+  animation:amb-drift 30s ease-in-out infinite alternate;
+}
+@keyframes amb-drift{ 0%{transform:translate(0,0) scale(1);} 100%{transform:translate(2.5%,-2.5%) scale(1.1);} }
+
+/* faint scan line sweeping the whole terminal (injected by ambient.js) */
+#amb-scan{ display:none; }
+html[data-theme="sterile"] #amb-scan{
+  display:block; position:fixed; left:0; right:0; top:0; height:160px; z-index:-1; pointer-events:none;
+  background:linear-gradient(180deg, transparent, rgba(98,240,245,.045), transparent);
+  animation:amb-sweep 11s linear infinite;
+}
+@keyframes amb-sweep{ 0%{transform:translateY(-160px)} 100%{transform:translateY(102vh)} }
+
+/* global cursor "lens" — a soft light that follows the pointer (injected by ambient.js) */
+#amb-cursor{ display:none; }
+html[data-theme="sterile"] #amb-cursor{ display:block; position:fixed; top:0; left:0; width:0; height:0; z-index:60; pointer-events:none; }
+html[data-theme="sterile"] #amb-cursor::before{
+  content:''; position:absolute; left:-300px; top:-300px; width:600px; height:600px; border-radius:50%;
+  background:radial-gradient(circle, rgba(251,251,69,.08), rgba(16,185,129,.045) 34%, transparent 64%);
+}
+
+/* one-time "system boot" sweep when entering sterile (injected by ambient.js) */
+.amb-boot{ position:fixed; left:0; right:0; top:0; height:3px; z-index:99999; pointer-events:none;
+  background:linear-gradient(180deg, rgba(251,251,69,0), #FBFB45, rgba(251,251,69,0));
+  box-shadow:0 0 26px 5px rgba(251,251,69,.5); animation:amb-boot 1.2s ease-out forwards; }
+@keyframes amb-boot{ 0%{top:-4px;opacity:1} 90%{opacity:.9} 100%{top:101vh;opacity:0} }
+
+/* ── every panel responds to the "lens": lift + outer glow + flowing border beam on hover ── */
+html[data-theme="sterile"] .panel{ transition:transform .35s var(--ease-silk,ease), box-shadow .35s, border-color .35s; }
+html[data-theme="sterile"] .panel:hover{
+  transform:translateY(-2px); border-color:var(--brass-ghost);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.85),0 1px 2px rgba(15,23,42,.04),0 22px 50px -16px rgba(15,23,42,.16),0 0 26px -8px var(--brass-glow);
+}
+html[data-theme="sterile"] .panel::before{
+  content:''; position:absolute; inset:0; padding:1.5px; pointer-events:none; z-index:4; opacity:0; transition:opacity .35s;
+  background:conic-gradient(from var(--lt-a), transparent 0 68%, rgba(251,251,69,.5) 80%, #FBFB45 87%, #FFFFC8 90%, #FBFB45 93%, transparent 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0); -webkit-mask-composite:xor;
+          mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0); mask-composite:exclude;
+  animation:lt-spin 4.5s linear infinite; animation-play-state:paused;
+}
+html[data-theme="sterile"] .panel:hover::before{ opacity:1; animation-play-state:running; }
+
+/* the90 + hermes panels also lift/glow on hover */
+html[data-theme="sterile"] #the90-panel, html[data-theme="sterile"] .hermes-panel{ transition:transform .35s, box-shadow .35s; }
+html[data-theme="sterile"] #the90-panel:hover, html[data-theme="sterile"] .hermes-panel:hover{ transform:translateY(-2px); box-shadow:0 22px 50px -16px rgba(15,23,42,.16),0 0 26px -8px var(--brass-glow); }
+
+/* active elements = circuit activation glow */
+html[data-theme="sterile"] .primary:hover, html[data-theme="sterile"] .check-btn:hover{ box-shadow:0 0 16px -3px var(--brass-glow); }
+html[data-theme="sterile"] input:focus, html[data-theme="sterile"] select:focus, html[data-theme="sterile"] textarea:focus{
+  border-color:var(--brass-soft) !important; box-shadow:0 0 0 1px var(--brass-soft),0 0 14px -4px var(--brass-glow); outline:none;
+}
+
+/* ── cultivation-chamber grow-lights (vertical light shafts from above) ── */
+.lt-grow{ position:absolute; inset:0; z-index:1; pointer-events:none; mix-blend-mode:screen; opacity:.8;
+  background:
+    linear-gradient(180deg, rgba(180,255,214,.07), transparent 46%),
+    repeating-linear-gradient(96deg, transparent 0 58px, rgba(180,255,214,.028) 58px 62px, transparent 62px 128px);
+  animation:amb-grow 14s ease-in-out infinite alternate; }
+@keyframes amb-grow{ 0%{opacity:.55} 100%{opacity:.95} }

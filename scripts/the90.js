@@ -201,6 +201,8 @@ function rThe90(){
     document.getElementById('lt-today').textContent = metToday + '/' + meta.targets.length;
     const ch = document.getElementById('lifetree-chamber');
     if(ch) ch.classList.toggle('milestone', day === 30 || day === 60 || day === 90);
+    // state-reactive ambient: more complete today → warmer/brighter whole-system glow
+    if(typeof setAmbientLevel === 'function') setAmbientLevel(metToday / meta.targets.length);
   }
 
   // Heatmap — 13 weeks x 5 targets

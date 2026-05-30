@@ -20,6 +20,7 @@ function applyTheme(name, persist){
 
   if(t === 'sterile'){
     ensureLifeTree();
+    if(typeof initAmbient === 'function') initAmbient();
   } else if(typeof window.destroyLifeTree === 'function'){
     window.destroyLifeTree();
   }
