@@ -24,6 +24,7 @@
 <link rel="stylesheet" href="./styles/components.css">
 <link rel="stylesheet" href="./styles/animations.css">
 <link rel="stylesheet" href="./styles/theme-sterile.css">
+<link rel="stylesheet" href="./styles/finance.css">
 
 <!-- Web fonts for the Sterile / Endfield theme -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -141,6 +142,7 @@
         <div class="eyebrow-mute" style="margin-bottom:10px;">Personal operating system</div>
       </div>
       <div style="text-align:right;">
+        <button id="fin-btn" class="theme-btn" onclick="openFinance()" title="财务" style="margin-bottom:8px;margin-right:6px;">◆ 财务</button>
         <button id="theme-btn" class="theme-btn" onclick="toggleTheme()" title="切换主题" style="margin-bottom:8px;">◆ 终末</button>
         <div id="clock" class="clock"></div>
         <div id="clock-sub" class="clock-sub"></div>
@@ -500,6 +502,24 @@
 </div>
 </div>
 
+<!-- ════ Finance module — full-screen view (Phase 1) ════ -->
+<div id="finance-view" class="fin-view" aria-hidden="true">
+  <div class="fin-top">
+    <button class="fin-back" onclick="closeFinance()">← 返回</button>
+    <div class="fin-title">财务 · Finance</div>
+    <button id="fin-eye" class="fin-eye" onclick="finTogglePrivacy()" title="隐藏金额">&#128065;</button>
+  </div>
+  <div class="fin-tabs">
+    <button class="fin-tab active" data-tab="wallet" onclick="finSwitchTab('wallet')">钱包</button>
+    <button class="fin-tab" data-tab="ledger" onclick="finSwitchTab('ledger')">记账本</button>
+    <button class="fin-tab" data-tab="analytics" onclick="finSwitchTab('analytics')">图表</button>
+    <button class="fin-tab" data-tab="more" onclick="finSwitchTab('more')">更多</button>
+  </div>
+  <div id="fin-body" class="fin-body"></div>
+  <button class="fin-fab" onclick="finOpenTxForm()" aria-label="记一笔">+</button>
+  <div id="fin-modal" class="fin-modal"><div class="fin-modal-card" id="fin-modal-card"></div></div>
+</div>
+
 <!-- Module scripts — order matters:
      1. supabase.js     creates the sb client (needs window.supabase from CDN)
      2. state.js        defines globals (S, TODAY, constants)
@@ -520,6 +540,7 @@
 <script src="./scripts/todos.js"></script>
 <script src="./scripts/the90.js"></script>
 <script src="./scripts/hermes.js"></script>
+<script src="./scripts/finance.js"></script>
 <script src="./scripts/theme.js"></script>
 <script src="./scripts/ambient.js"></script>
 <script src="./scripts/sync.js"></script>

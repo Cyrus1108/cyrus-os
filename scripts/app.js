@@ -116,8 +116,12 @@ async function init(){
   const syms=loadLS('symbols',null);if(syms&&Array.isArray(syms)&&syms.length>0)S.symbols=syms;
   const subj=loadLS('subjects',null);if(subj&&Array.isArray(subj))S.subjects=subj;
   const noti=loadLS('notifiedIds',null);if(noti)S.notifiedIds=noti;
+  const finA=loadLS('fin_accounts',null);if(finA&&Array.isArray(finA))S.fin.accounts=finA;
+  const finC=loadLS('fin_categories',null);if(finC&&Array.isArray(finC))S.fin.categories=finC;
+  const finT=loadLS('fin_transactions',null);if(finT&&Array.isArray(finT))S.fin.transactions=finT;
   showDone = loadLS('show_done', false);
   if(typeof initTheme === 'function') initTheme();
+  if(typeof initFinance === 'function') initFinance();
 
   // Hydrate The 90 state from localStorage cache (first paint before Supabase pull)
   if(typeof ensureThe90Defaults === 'function'){

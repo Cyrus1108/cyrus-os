@@ -38,6 +38,8 @@ async function pullSettings(){
   }
   if(data.notif_banner_dismissed != null) saveLSRaw('notif_banner_dismissed', data.notif_banner_dismissed);
   if(data.theme != null){ saveLSRaw('theme', data.theme); if(typeof applyTheme === 'function') applyTheme(data.theme, false); }
+  if(data.fin_base_currency != null) S.fin.baseCurrency = data.fin_base_currency;
+  if(data.fin_fx_rates != null) S.fin.fxRates = { TWD:1, ...data.fin_fx_rates };
 }
 
 async function pullMorning(){
@@ -169,6 +171,51 @@ async function pullHermes(){
   }));
 }
 
+/* ════════════ Finance (Phase 1) ════════════
+   accounts + categories are small (replace-all on edit, like categories/todos).
+   transactions can grow, so they use targeted single-row insert/update/delete
+   (finAddTx/finUpdateTx/finDeleteTx) instead of replace-all — never re-uploads
+   the whole ledger. Balances are derived in JS (initial_balance + sum of tx). */
+async function pullFinAccounts(){
+  const { data } = await sb.from('fin_accounts').select('*').eq('user_id', currentUser.id);
+  S.fin.accounts = (data || []).map(r => ({
+    id:r.id, name:r.name, type:r.type, currency:r.currency,
+    initialBalance:Number(r.initial_balance)||0,
+    isLiability:!!r.is_liability, status:r.status, icon:r.icon, color:r.color,
+    sort:r.sort||0, created:r.created_at,
+  }));
+  saveLSRaw('fin_accounts', S.fin.accounts);
+}
+async function pullFinCategories(){
+  const { data } = await sb.from('fin_categories').select('*').eq('user_id', currentUser.id);
+  S.fin.categories = (data || []).map(r => ({
+    id:r.id, name:r.name, kind:r.kind, icon:r.icon, color:r.color,
+    archived:!!r.archived, sort:r.sort||0, created:r.created_at,
+  }));
+  saveLSRaw('fin_categories', S.fin.categories);
+}
+async function pullFinTransactions(){
+  // Phase 1: pull all (personal volume is small + wallet balances need the full sum).
+  // Phase 3 introduces a balances RPC + snapshots so we can window this by month.
+  const { data } = await sb.from('fin_transactions').select('*')
+    .eq('user_id', currentUser.id).order('date', { ascending:false });
+  S.fin.transactions = (data || []).map(r => ({
+    id:r.id, date:r.date, type:r.type,
+    amount:Number(r.amount)||0, currency:r.currency,
+    accountId:r.account_id, toAccountId:r.to_account_id,
+    toAmount:r.to_amount!=null?Number(r.to_amount):null,
+    categoryId:r.category_id, note:r.note||'', tags:r.tags||[],
+    created:r.created_at,
+  }));
+  saveLSRaw('fin_transactions', S.fin.transactions);
+}
+
+/* Persist base currency + FX rates (lives in the settings row). */
+function saveFinConfig(){
+  dirty.settings = true;
+  if(typeof syncPushSettings === 'function') syncPushSettings();
+}
+
 async function pullAll(force){
   if(!currentUser) return;
   if(pullAllPromise && !force) return pullAllPromise;
@@ -178,6 +225,7 @@ async function pullAll(force){
         pullSettings(), pullMorning(), pullAcademics(),
         pullJapanese(), pullTrading(), pullCategories(), pullTodos(),
         pullThe90Meta(), pullThe90Daily(), pullHermes(),
+        pullFinAccounts(), pullFinCategories(), pullFinTransactions(),
       ]);
       initialPullDone = true;
       console.log('[sync] initial pull complete');
@@ -208,6 +256,8 @@ async function syncPushSettings(){
     subjects: S.subjects,
     notif_banner_dismissed: loadLS('notif_banner_dismissed', false),
     theme: loadLS('theme', 'cappa'),
+    fin_base_currency: S.fin.baseCurrency || 'TWD',
+    fin_fx_rates: S.fin.fxRates || {TWD:1},
   });
   logIfError('push settings', res);
   if(!res.error) dirty.settings = false;
@@ -356,6 +406,60 @@ async function syncDismissHermes(id){
   logIfError('dismiss hermes notice', res);
 }
 
+/* ── Finance writes ──
+   Accounts/categories: replace-all (small sets; archive keeps rows local so they survive).
+   Transactions: targeted single-row ops returning the server row (for its generated id). */
+async function finSaveAccounts(){
+  if(!currentUser) return;
+  await waitForPull();
+  await replaceTable('fin_accounts', S.fin.accounts, a => ({
+    id:a.id, user_id:currentUser.id, name:a.name, type:a.type, currency:a.currency,
+    initial_balance:a.initialBalance||0, is_liability:!!a.isLiability,
+    status:a.status, icon:a.icon||null, color:a.color||null, sort:a.sort||0,
+  }));
+}
+async function finSaveCategories(){
+  if(!currentUser) return;
+  await waitForPull();
+  await replaceTable('fin_categories', S.fin.categories, c => ({
+    id:c.id, user_id:currentUser.id, name:c.name, kind:c.kind,
+    icon:c.icon||null, color:c.color||null, archived:!!c.archived, sort:c.sort||0,
+  }));
+}
+async function finAddTx(tx){
+  if(!currentUser) return null;
+  await waitForPull();
+  const { data, error } = await sb.from('fin_transactions').insert({
+    user_id:currentUser.id, date:tx.date, type:tx.type,
+    amount:tx.amount, currency:tx.currency,
+    account_id:tx.accountId||null, to_account_id:tx.toAccountId||null,
+    to_amount:tx.toAmount!=null?tx.toAmount:null,
+    category_id:tx.categoryId||null, note:tx.note||null,
+    tags:(tx.tags&&tx.tags.length)?tx.tags:null,
+  }).select().single();
+  logIfError('fin add tx', { error });
+  return data;
+}
+async function finUpdateTx(tx){
+  if(!currentUser) return null;
+  await waitForPull();
+  const { data, error } = await sb.from('fin_transactions').update({
+    date:tx.date, type:tx.type, amount:tx.amount, currency:tx.currency,
+    account_id:tx.accountId||null, to_account_id:tx.toAccountId||null,
+    to_amount:tx.toAmount!=null?tx.toAmount:null,
+    category_id:tx.categoryId||null, note:tx.note||null,
+    tags:(tx.tags&&tx.tags.length)?tx.tags:null,
+  }).eq('id', tx.id).eq('user_id', currentUser.id).select().single();
+  logIfError('fin update tx', { error });
+  return data;
+}
+async function finDeleteTx(id){
+  if(!currentUser) return;
+  await waitForPull();
+  const res = await sb.from('fin_transactions').delete().eq('id', id).eq('user_id', currentUser.id);
+  logIfError('fin delete tx', res);
+}
+
 /* ════════════ REALTIME ════════════ */
 
 function subscribeRealtime(){
@@ -383,6 +487,12 @@ function subscribeRealtime(){
       async () => { await pullThe90Meta(); rThe90(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'the90_daily', filter: `user_id=eq.${uid}` },
       async () => { await pullThe90Daily(); rThe90(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'fin_accounts', filter: `user_id=eq.${uid}` },
+      async () => { await pullFinAccounts(); if(typeof rFinance==='function') rFinance(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'fin_categories', filter: `user_id=eq.${uid}` },
+      async () => { await pullFinCategories(); if(typeof rFinance==='function') rFinance(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'fin_transactions', filter: `user_id=eq.${uid}` },
+      async () => { await pullFinTransactions(); if(typeof rFinance==='function') rFinance(); })
     .subscribe((status, err) => {
       console.log('[realtime]', status);
       if(err) console.error('[realtime] error', err);

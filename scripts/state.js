@@ -41,6 +41,31 @@ const DEFAULT_CATS = [
   {id:'c4',name:'联络'},
 ];
 
+/* ════════════ Finance module (Phase 1) ════════════ */
+const FIN_CURRENCIES = ['TWD','USD','MYR'];          // base = TWD; net worth converts to it
+const FIN_ACCT_TYPES = [
+  {id:'cash',    name:'现金',     icon:'💵'},
+  {id:'bank',    name:'银行',     icon:'🏦'},
+  {id:'credit',  name:'信用卡',   icon:'💳'},
+  {id:'ewallet', name:'电子支付', icon:'📱'},
+];
+const FIN_ACCT_STATUS = { INACTIVE:0, ACTIVE:1, EXCLUDED:2 };
+/* Seeded only if the user has no categories yet (pushed on first edit). */
+const DEF_FIN_CATS = [
+  {name:'餐饮',   kind:'expense', icon:'🍜', color:'#E5704B'},
+  {name:'交通',   kind:'expense', icon:'🚌', color:'#4B89E5'},
+  {name:'购物',   kind:'expense', icon:'🛍️', color:'#E54B9A'},
+  {name:'居住',   kind:'expense', icon:'🏠', color:'#8A6E4B'},
+  {name:'娱乐',   kind:'expense', icon:'🎮', color:'#9A4BE5'},
+  {name:'医疗',   kind:'expense', icon:'💊', color:'#3FB7A0'},
+  {name:'学习',   kind:'expense', icon:'📚', color:'#C9A227'},
+  {name:'其他',   kind:'expense', icon:'📦', color:'#888888'},
+  {name:'工资',   kind:'income',  icon:'💰', color:'#3FAE6B'},
+  {name:'外快',   kind:'income',  icon:'✨', color:'#3FAE9A'},
+  {name:'投资',   kind:'income',  icon:'📈', color:'#6BAE3F'},
+  {name:'其他收入',kind:'income',  icon:'🎁', color:'#AE9A3F'},
+];
+
 const CREED_VARIANTS = [
   {id:'anger',body:`如果你今天没有把时间花在这五件事的任何一件上 ——
     <div class="creed-pillars">睡眠 &nbsp;·&nbsp; 篮球 &nbsp;·&nbsp; 赚钱 &nbsp;·&nbsp; 日本語 &nbsp;·&nbsp; 健身</div>
@@ -94,6 +119,9 @@ let S={
   notifiedIds:[],
   symbols:null,
   subjects:null,  /* Preset academic subjects — populated from settings.subjects */
+  /* Finance module — accounts/categories/transactions pulled from fin_* tables.
+     baseCurrency + fxRates come from settings; net worth aggregates into baseCurrency. */
+  fin:{ accounts:[], categories:[], transactions:[], baseCurrency:'TWD', fxRates:{TWD:1,USD:31.5,MYR:7.1} },
 };
 
 let editingAC=null, editingJP=null, editingTR=null, editingTD=null;
