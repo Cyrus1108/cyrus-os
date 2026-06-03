@@ -73,11 +73,57 @@ function finTxUsesCategory(catId){ return S.fin.transactions.some(t=>t.categoryI
 function finTxUsesAccount(acctId){ return S.fin.transactions.some(t=>t.accountId===acctId||t.toAccountId===acctId); }
 
 /* ════════════ view open / close / routing ════════════ */
+const FIN_TABS = ['wallet','ledger','analytics','more'];
+const finCal = { targetId:null, ym:null, selected:null };
+let _finTouchX=null, _finTouchY=null;
+
 function initFinance(){
   finUI.privacy = loadLS('fin_privacy', false);
   finUI.month = TODAY.slice(0,7);
+  S.fin.fxMeta = loadLS('fin_fxmeta', null) || {};
   window.addEventListener('hashchange', finOnHash);
+
+  // Keyboard: ←/→ switch tabs, Esc steps back out
+  document.addEventListener('keydown', (e)=>{
+    if(!finUI.open) return;
+    const modalOpen = finModalOpen();
+    if(e.key==='Escape'){
+      if(modalOpen) finCloseModal();
+      else if(finCalOpen()) finCloseCal();
+      else if(finUI.acctMgr) finCloseAcctManager();
+      else closeFinance();
+      return;
+    }
+    if(e.key==='ArrowRight' || e.key==='ArrowLeft'){
+      const tag = e.target.tagName;
+      if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT') return;
+      if(modalOpen || finCalOpen() || finUI.acctMgr) return;
+      e.preventDefault();
+      finNavTab(e.key==='ArrowRight'?1:-1);
+    }
+  });
+
+  // Touch: horizontal swipe switches tabs (mobile)
+  const v = document.getElementById('finance-view');
+  if(v){
+    v.addEventListener('touchstart', (e)=>{ const t=e.changedTouches[0]; _finTouchX=t.clientX; _finTouchY=t.clientY; }, {passive:true});
+    v.addEventListener('touchend', (e)=>{
+      if(_finTouchX==null) return;
+      const t=e.changedTouches[0], dx=t.clientX-_finTouchX, dy=t.clientY-_finTouchY;
+      _finTouchX=null;
+      if(finModalOpen() || finCalOpen() || finUI.acctMgr) return;
+      if(Math.abs(dx)>60 && Math.abs(dx)>Math.abs(dy)*1.6) finNavTab(dx<0?1:-1);  // swipe left → next tab
+    }, {passive:true});
+  }
+
   finOnHash();
+}
+function finModalOpen(){ const m=document.getElementById('fin-modal'); return !!(m&&m.classList.contains('open')); }
+function finCalOpen(){ const c=document.getElementById('fin-cal'); return !!(c&&c.classList.contains('open')); }
+function finNavTab(dir){
+  let i = FIN_TABS.indexOf(finUI.tab);
+  i = Math.max(0, Math.min(FIN_TABS.length-1, i+dir));
+  if(FIN_TABS[i]!==finUI.tab) finSwitchTab(FIN_TABS[i]);
 }
 function finOnHash(){
   if(location.hash==='#finance'){ if(!finUI.open) openFinance(true); }
@@ -97,6 +143,7 @@ function openFinance(fromHash){
   }
   finUpdateEye();
   rFinance();
+  finFetchRates();   // refresh live FX in the background (cached ~12h)
 }
 function closeFinance(fromHash){
   const v = document.getElementById('finance-view'); if(!v) return;
@@ -365,14 +412,21 @@ function finRenderMore(){
     <div class="fin-cat-sub">收入</div>${inc.map(catRow).join('')||'<div class="fin-empty sm">无</div>'}
   </div>`;
 
-  // Accounts entry + FX config
+  // Accounts entry
   h += `<div class="fin-more-sec">
-    <div class="fin-more-head">账户与币种</div>
+    <div class="fin-more-head">账户</div>
     <button class="ghost fx-btn" onclick="finUI.tab='wallet';finUI.acctMgr=true;rFinance();">⚙ 账户三态管理</button>
-    <div class="fin-fx">
-      <div class="fin-cat-sub">汇率（1 单位 = ? ${S.fin.baseCurrency} · 手动）</div>
-      ${FIN_CURRENCIES.filter(c=>c!==S.fin.baseCurrency).map(c=>
-        `<label class="fin-fx-row"><span>${c}</span><input type="number" step="0.0001" min="0" value="${finRate(c)}" onchange="finSetRate('${c}',this.value)"></label>`
+  </div>`;
+
+  // Live FX rates (auto)
+  const base = S.fin.baseCurrency||'TWD';
+  const meta = S.fin.fxMeta||{};
+  h += `<div class="fin-more-sec">
+    <div class="fin-more-head">汇率 <button class="ghost fx-btn fin-mini" onclick="finFetchRates(true)">🔄 刷新</button></div>
+    <div class="fin-fx-auto">
+      <div class="fin-fx-note">实时汇率 · 基准 ${base}${meta.updated?` · 更新于 ${finAgo(meta.updated)}`:' · 打开时自动获取'}</div>
+      ${FIN_CURRENCIES.filter(c=>c!==base).map(c=>
+        `<div class="fin-fx-row"><span>1 ${c}</span><b>${finRate(c).toFixed(4)} ${base}</b></div>`
       ).join('')}
     </div>
   </div>`;
@@ -470,7 +524,8 @@ function finOpenTxForm(txId){
 
     <div class="fin-field">
       <label>日期</label>
-      <input id="fin-tx-date" type="date" value="${t?t.date:TODAY}">
+      <button type="button" class="fin-datebtn" onclick="finOpenCal('fin-tx-date')">📅 <span id="fin-tx-date-label">${finDateLabel(t?t.date:TODAY)}</span></button>
+      <input type="hidden" id="fin-tx-date" value="${t?t.date:TODAY}">
     </div>
     <div class="fin-field">
       <label>备注</label>
@@ -679,4 +734,102 @@ function finDeleteCat(id){
   if(typeof finSaveCategories==='function') finSaveCategories();
   saveLSRaw('fin_categories', S.fin.categories);
   rFinance();
+}
+
+/* ════════════ live FX rates (auto, cached ~12h) ════════════
+   open.er-api.com is free + no key + CORS-enabled. latest/<base> returns
+   "units of X per 1 base"; we invert to "base per 1 X" to match fxRates. */
+async function finFetchRates(force){
+  const base = S.fin.baseCurrency || 'TWD';
+  const meta = S.fin.fxMeta || {};
+  if(!force && meta.updated && (Date.now()-meta.updated) < 12*3600*1000) return;
+  try{
+    const res = await fetch(`https://open.er-api.com/v6/latest/${base}`);
+    const j = await res.json();
+    if(j && j.result==='success' && j.rates){
+      const fx = { [base]:1 };
+      for(const c of FIN_CURRENCIES){
+        if(c!==base && j.rates[c]) fx[c] = Math.round((1/j.rates[c])*10000)/10000;
+      }
+      S.fin.fxRates = fx;
+      S.fin.fxMeta = { updated:Date.now(), auto:true };
+      saveLSRaw('fin_fxmeta', S.fin.fxMeta);
+      if(typeof saveFinConfig==='function') saveFinConfig();
+      if(finUI.open && finUI.tab==='more') rFinance();
+    }
+  }catch(e){ console.warn('[fin] fx fetch failed', e); }
+}
+function finAgo(ts){
+  if(!ts) return '';
+  const s = Math.floor((Date.now()-ts)/1000);
+  if(s<60) return '刚刚';
+  if(s<3600) return Math.floor(s/60)+' 分钟前';
+  if(s<86400) return Math.floor(s/3600)+' 小时前';
+  return Math.floor(s/86400)+' 天前';
+}
+
+/* ════════════ themed date picker ════════════ */
+function finDateLabel(ds){
+  if(!ds) return '选择日期';
+  const d = new Date(ds+'T00:00:00');
+  const wd = ['日','一','二','三','四','五','六'][d.getDay()];
+  return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 · 周${wd}`;
+}
+function finOpenCal(targetId){
+  const hidden = document.getElementById(targetId);
+  const cur = (hidden && hidden.value) ? hidden.value : TODAY;
+  finCal.targetId = targetId;
+  finCal.selected = cur;
+  finCal.ym = cur.slice(0,7);
+  finCalShow(finCalHtml());
+}
+function finCalShow(html){
+  let o = document.getElementById('fin-cal');
+  if(!o){
+    o = document.createElement('div'); o.id='fin-cal'; o.className='fin-cal';
+    o.addEventListener('click', e=>{ if(e.target===o) finCloseCal(); });
+    document.getElementById('finance-view').appendChild(o);
+  }
+  o.innerHTML = html;
+  o.classList.add('open');
+}
+function finCloseCal(){ const o=document.getElementById('fin-cal'); if(o) o.classList.remove('open'); }
+function finCalShift(delta){
+  const [y,m] = finCal.ym.split('-').map(Number);
+  const d = new Date(y, m-1+delta, 1);
+  finCal.ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  finCalShow(finCalHtml());
+}
+function finCalHtml(){
+  const [y,m] = finCal.ym.split('-').map(Number);
+  const startWd = new Date(y, m-1, 1).getDay();
+  const days = new Date(y, m, 0).getDate();
+  const wd = ['日','一','二','三','四','五','六'];
+  let cells = '';
+  for(let i=0;i<startWd;i++) cells += `<span class="fin-cal-cell empty"></span>`;
+  for(let d=1; d<=days; d++){
+    const ds = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const cls = (ds===finCal.selected?'sel ':'') + (ds===TODAY?'today':'');
+    cells += `<button type="button" class="fin-cal-cell ${cls.trim()}" onclick="finPickDate('${ds}')">${d}</button>`;
+  }
+  return `<div class="fin-cal-card">
+    <div class="fin-cal-head">
+      <button class="fin-mn-btn" onclick="finCalShift(-1)">‹</button>
+      <span class="fin-cal-title">${y} 年 ${m} 月</span>
+      <button class="fin-mn-btn" onclick="finCalShift(1)">›</button>
+    </div>
+    <div class="fin-cal-wd">${wd.map(w=>`<span>${w}</span>`).join('')}</div>
+    <div class="fin-cal-grid">${cells}</div>
+    <div class="fin-cal-foot">
+      <button class="ghost fx-btn" onclick="finPickDate('${TODAY}')">今天</button>
+      <button class="ghost fx-btn" onclick="finCloseCal()">取消</button>
+    </div>
+  </div>`;
+}
+function finPickDate(ds){
+  const hidden = document.getElementById(finCal.targetId);
+  if(hidden) hidden.value = ds;
+  const lbl = document.getElementById(finCal.targetId+'-label');
+  if(lbl) lbl.textContent = finDateLabel(ds);
+  finCloseCal();
 }
