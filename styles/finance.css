@@ -192,6 +192,18 @@ html[data-theme="sterile"] .fin-tx-ico{ border-radius:0; }
 .fin-tx-cat{ font-size:14px; color:var(--ink); }
 .fin-tx-sub{ font-size:11px; color:var(--ghost); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .fin-tx-amt{ font-family:var(--mono); font-size:15px; font-weight:600; color:var(--ink); }
+.fin-tx-tag{ color:var(--brass); font-size:10px; margin-left:4px; }
+
+/* ── tags (Phase 2-E) ── */
+.fin-tag-list{ display:flex; flex-wrap:wrap; gap:8px; }
+.fin-tag-chip{ display:inline-flex; align-items:center; gap:2px; background:var(--color-background-secondary);
+  border:.5px solid var(--hair); border-radius:16px; padding:3px 4px 3px 10px; font-size:12px; }
+html[data-theme="sterile"] .fin-tag-chip{ border-radius:0; }
+.fin-tag-name{ color:var(--ink); cursor:pointer; }
+.fin-tag-name i{ color:var(--ghost); font-style:normal; font-family:var(--mono); font-size:10px; margin-left:2px; }
+.fin-tag-act{ background:none; border:none; color:var(--ghost); cursor:pointer; font-size:11px; padding:2px 4px; border-radius:50%; }
+.fin-tag-act:hover{ color:var(--ink); background:var(--color-background-tertiary); }
+.fin-tag-act.danger:hover{ color:var(--fin-neg); }
 
 /* ── analytics (Phase 2-B) ── */
 .fin-ana-range{ width:100%; max-width:360px; }
@@ -266,6 +278,8 @@ html[data-theme="sterile"] .fin-bud-cats{ border-radius:0; }
 .fin-fx{ margin-top:10px; }
 .fin-fx-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:6px 0; font-size:13px; color:var(--mute); }
 .fin-fx-row input{ width:120px; }
+.fin-export-row{ display:flex; gap:8px; }
+.fin-export-row button{ flex:1; }
 .fin-search-results{ margin-top:8px; }
 .fin-search-row{ display:flex; align-items:center; gap:8px; }
 .fin-search-date{ font-size:10px; color:var(--ghost); font-family:var(--mono); flex:none; }

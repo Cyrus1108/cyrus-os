@@ -71,6 +71,29 @@ function finCat(id){ return S.fin.categories.find(c=>c.id===id); }
 function finSelectableAccounts(){ return S.fin.accounts.filter(a=>a.status!==FIN_ACCT_STATUS.INACTIVE); }
 function finTxUsesCategory(catId){ return S.fin.transactions.some(t=>t.categoryId===catId); }
 function finTxUsesAccount(acctId){ return S.fin.transactions.some(t=>t.accountId===acctId||t.toAccountId===acctId); }
+/* tags (Phase 2-E) */
+function finParseTags(s){ return Array.from(new Set((s||'').split(/[\s,，、]+/).map(x=>x.trim()).filter(Boolean))); }
+function finAllTags(){ const set=new Set(); for(const t of S.fin.transactions) for(const tg of (t.tags||[])) if(tg) set.add(tg); return Array.from(set).sort(); }
+function finTagCount(tag){ return S.fin.transactions.filter(t=>(t.tags||[]).includes(tag)).length; }
+async function finRenameTag(old){
+  const input = prompt('重命名标签：', old); if(input==null) return;
+  const nv = input.trim(); if(!nv || nv===old) return;
+  for(const t of S.fin.transactions){
+    if((t.tags||[]).includes(old)){ t.tags = Array.from(new Set(t.tags.map(x=>x===old?nv:x))); if(typeof finUpdateTx==='function') await finUpdateTx(t); }
+  }
+  saveLSRaw('fin_transactions', S.fin.transactions); rFinance();
+}
+async function finDeleteTag(tag){
+  if(!confirm(`删除标签 #${tag}？会从所有流水移除该标签。`)) return;
+  for(const t of S.fin.transactions){
+    if((t.tags||[]).includes(tag)){ t.tags = t.tags.filter(x=>x!==tag); if(typeof finUpdateTx==='function') await finUpdateTx(t); }
+  }
+  saveLSRaw('fin_transactions', S.fin.transactions); rFinance();
+}
+function finSearchTag(tag){
+  finUI.search = tag; finUI.tab='more'; rFinance();
+  setTimeout(()=>{ const el=document.getElementById('fin-search'); if(el){ el.value=tag; el.scrollIntoView({block:'center'}); } }, 0);
+}
 
 /* ════════════ view open / close / routing ════════════ */
 const FIN_TABS = ['wallet','ledger','analytics','more'];
@@ -404,7 +427,7 @@ function finTxCard(t){
     <span class="fin-tx-ico" style="${c&&c.color?`background:${c.color}22;`:''}">${c?c.icon||'•':'•'}</span>
     <div class="fin-tx-body">
       <span class="fin-tx-cat">${c?escH(c.name):'未分类'}</span>
-      <span class="fin-tx-sub">${a?escH(a.name):'?'}${t.note?' · '+escH(t.note):''}</span>
+      <span class="fin-tx-sub">${a?escH(a.name):'?'}${t.note?' · '+escH(t.note):''}${(t.tags&&t.tags.length)?' '+t.tags.map(tg=>`<span class="fin-tx-tag">#${escH(tg)}</span>`).join(''):''}</span>
     </div>
     <span class="fin-tx-amt ${cls}">${sign}${finMoney(t.amount,t.currency).replace('−','')}</span>
   </div>`;
@@ -616,6 +639,19 @@ function finRenderMore(){
     <div class="fin-cat-sub">收入</div>${inc.map(catRow).join('')||'<div class="fin-empty sm">无</div>'}
   </div>`;
 
+  // Tags
+  const tags = finAllTags();
+  h += `<div class="fin-more-sec">
+    <div class="fin-more-head">标签</div>
+    ${tags.length
+      ? `<div class="fin-tag-list">${tags.map(tg=>`<span class="fin-tag-chip">
+          <span class="fin-tag-name" onclick="finSearchTag('${escH(tg)}')">#${escH(tg)} <i>${finTagCount(tg)}</i></span>
+          <button class="fin-tag-act" onclick="finRenameTag('${escH(tg)}')" title="重命名">✎</button>
+          <button class="fin-tag-act danger" onclick="finDeleteTag('${escH(tg)}')" title="删除">✕</button>
+        </span>`).join('')}</div>`
+      : '<div class="fin-empty sm">还没有标签。记账时在「标签」栏添加，比分类更细。</div>'}
+  </div>`;
+
   // Accounts entry
   h += `<div class="fin-more-sec">
     <div class="fin-more-head">账户</div>
@@ -634,7 +670,42 @@ function finRenderMore(){
       ).join('')}
     </div>
   </div>`;
+
+  // Export
+  h += `<div class="fin-more-sec">
+    <div class="fin-more-head">导出</div>
+    <div class="fin-export-row">
+      <button class="ghost fx-btn" onclick="finExportCSV('month')">本月 CSV</button>
+      <button class="ghost fx-btn" onclick="finExportCSV('year')">本年 CSV</button>
+    </div>
+    <div class="fin-fx-note" style="margin-top:8px;">在浏览器本地生成，可用 Excel 打开做深度复盘。</div>
+  </div>`;
   return h;
+}
+
+/* ── CSV export (Phase 2-D) — user-initiated download of their own data ── */
+function finExportCSV(scope){
+  const base = S.fin.baseCurrency||'TWD';
+  let txs, tag;
+  if(scope==='year'){ tag=TODAY.slice(0,4); txs=S.fin.transactions.filter(t=>String(t.date).slice(0,4)===tag); }
+  else { tag=TODAY.slice(0,7); txs=S.fin.transactions.filter(t=>String(t.date).slice(0,7)===tag); }
+  txs = txs.slice().sort((a,b)=> a.date<b.date?-1:a.date>b.date?1:0);
+  const esc = s => { s=String(s==null?'':s); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; };
+  const header = ['日期','类型','分类','账户','转入账户','金额','币种',`金额(${base})`,'备注','标签'];
+  const lines = txs.map(t=>{
+    const typeL = t.type==='income'?'收入':t.type==='expense'?'支出':'转账';
+    const c=finCat(t.categoryId), a=finAcct(t.accountId), to=finAcct(t.toAccountId);
+    return [t.date, typeL, c?c.name:'', a?a.name:'', to?to.name:'', t.amount, t.currency,
+      finToBase(t.amount,t.currency).toFixed(2), t.note||'', (t.tags||[]).join(';')].map(esc).join(',');
+  });
+  const csv = '﻿' + [header.map(esc).join(','), ...lines].join('\n');   // BOM → Excel reads UTF-8
+  const blob = new Blob([csv], { type:'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `cyrus-finance-${tag}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  finToast(`已导出 ${txs.length} 笔 · ${tag}`);
 }
 function finSetRate(c, v){
   v = parseFloat(v); if(!isFinite(v)||v<=0) return;
@@ -654,7 +725,8 @@ function finSearchResults(){
     const c = finCat(t.categoryId);
     return (t.note&&t.note.toLowerCase().includes(q))
       || (c&&c.name.toLowerCase().includes(q))
-      || String(t.amount).includes(q);
+      || String(t.amount).includes(q)
+      || (t.tags||[]).some(tg=>tg.toLowerCase().includes(q));
   }).slice(0,40);
   if(!hits.length) return '<div class="fin-empty sm">无匹配</div>';
   return hits.map(t=>`<div class="fin-search-row">${finTxCard(t)}<span class="fin-search-date">${t.date}</span></div>`).join('');
@@ -744,6 +816,11 @@ function finOpenTxForm(txId, presetType){
       <label>备注</label>
       <input id="fin-tx-note" type="text" placeholder="可选…" value="${t?escH(t.note||''):''}">
     </div>
+    <div class="fin-field">
+      <label>标签 <span class="fin-hint-inline">比分类更细 · 空格或逗号分隔</span></label>
+      <input id="fin-tx-tags" type="text" placeholder="如 跟朋友聚餐 报销…" value="${t&&t.tags?escH(t.tags.join(' ')):''}" list="fin-tags-list">
+      <datalist id="fin-tags-list">${finAllTags().map(tg=>`<option value="${escH(tg)}"></option>`).join('')}</datalist>
+    </div>
 
     <div class="fin-form-btns">
       ${txId?`<button class="ghost fx-btn danger" onclick="finDeleteTxConfirm('${txId}')">删除</button>`:''}
@@ -803,7 +880,8 @@ async function finSubmitTx(){
 
   // Currency is derived from the account (NOT a separate field) so it can never
   // disagree with the account and break the balance math.
-  const tx = { type, amount, currency:(S.fin.baseCurrency||'TWD'), date, note, tags:[],
+  const tags = finParseTags(document.getElementById('fin-tx-tags') ? document.getElementById('fin-tx-tags').value : '');
+  const tx = { type, amount, currency:(S.fin.baseCurrency||'TWD'), date, note, tags,
     accountId:null, toAccountId:null, toAmount:null, categoryId:null };
 
   if(type==='transfer'){
