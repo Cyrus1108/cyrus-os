@@ -83,10 +83,17 @@ function initFinance(){
   S.fin.fxMeta = loadLS('fin_fxmeta', null) || {};
   window.addEventListener('hashchange', finOnHash);
 
-  // Keyboard: ←/→ switch tabs, Esc steps back out
+  // Keyboard shortcuts (finance view only):
+  //   ← / →            switch tabs
+  //   ↑ / ↓            quick-record income / expense
+  //   Shift + →        quick-record transfer
+  //   Esc              step back out (modal → calendar → acct manager → close)
   document.addEventListener('keydown', (e)=>{
     if(!finUI.open) return;
+    const tag = e.target.tagName;
+    const typing = tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT';
     const modalOpen = finModalOpen();
+
     if(e.key==='Escape'){
       if(modalOpen) finCloseModal();
       else if(finCalOpen()) finCloseCal();
@@ -94,13 +101,17 @@ function initFinance(){
       else closeFinance();
       return;
     }
-    if(e.key==='ArrowRight' || e.key==='ArrowLeft'){
-      const tag = e.target.tagName;
-      if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT') return;
-      if(modalOpen || finCalOpen() || finUI.acctMgr) return;
-      e.preventDefault();
-      finNavTab(e.key==='ArrowRight'?1:-1);
-    }
+    if(typing || modalOpen || finCalOpen()) return;
+
+    // Quick-entry shortcuts — open the record form pre-set to a type
+    if(e.key==='ArrowUp'){ e.preventDefault(); finOpenTxForm(null,'income'); return; }
+    if(e.key==='ArrowDown'){ e.preventDefault(); finOpenTxForm(null,'expense'); return; }
+    if(e.key==='ArrowRight' && e.shiftKey){ e.preventDefault(); finOpenTxForm(null,'transfer'); return; }
+
+    // Plain ←/→ switch tabs (not while in the account manager)
+    if(finUI.acctMgr) return;
+    if(e.key==='ArrowRight'){ e.preventDefault(); finNavTab(1); }
+    else if(e.key==='ArrowLeft'){ e.preventDefault(); finNavTab(-1); }
   });
 
   // Touch: horizontal swipe switches tabs (mobile)
@@ -471,7 +482,7 @@ function finModal(html){
 function finCloseModal(){ const m=document.getElementById('fin-modal'); if(m) m.classList.remove('open'); }
 
 /* ── transaction form ── */
-function finOpenTxForm(txId){
+function finOpenTxForm(txId, presetType){
   const accts = finSelectableAccounts();
   if(!accts.length && !txId){
     finModal(`<div class="fin-form-title">还没有账户</div>
@@ -480,7 +491,7 @@ function finOpenTxForm(txId){
     return;
   }
   const t = txId ? S.fin.transactions.find(x=>x.id===txId) : null;
-  const type = t? t.type : 'expense';
+  const type = t? t.type : (presetType||'expense');
   const acctOpts = (selId)=> accts.map(a=>`<option value="${a.id}" ${a.id===selId?'selected':''}>${escH(a.name)} · ${a.currency}</option>`).join('');
   const curOpts = (sel)=> FIN_CURRENCIES.map(c=>`<option value="${c}" ${c===sel?'selected':''}>${c}</option>`).join('');
   const defCur = t? t.currency : (accts[0]?accts[0].currency:'TWD');
