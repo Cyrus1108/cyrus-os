@@ -133,6 +133,25 @@ function initFinance(){
     }, {passive:true});
   }
 
+  // FAB gestures (mobile mirror of the keyboard shortcuts):
+  //   swipe ↑ on + = income · ↓ = expense · → = transfer · plain tap = full form
+  const fab = document.querySelector('#finance-view .fin-fab');
+  if(fab){
+    let fbx=null, fby=null;
+    fab.addEventListener('touchstart', (e)=>{ const t=e.changedTouches[0]; fbx=t.clientX; fby=t.clientY; e.stopPropagation(); }, {passive:true});
+    fab.addEventListener('touchend', (e)=>{
+      if(fbx==null) return;
+      const t=e.changedTouches[0], dx=t.clientX-fbx, dy=t.clientY-fby;
+      fbx=null;
+      e.stopPropagation();                 // don't let the view-level swipe also fire
+      const TH=26;
+      if(Math.abs(dx)<TH && Math.abs(dy)<TH) return;  // a tap → let the click open the full form
+      e.preventDefault();                  // a swipe → cancel the synthesized click
+      if(Math.abs(dy) > Math.abs(dx)) finWizStart(dy<0 ? 'income' : 'expense');
+      else if(dx>0) finOpenTxForm(null,'transfer');
+    }, {passive:false});
+  }
+
   finOnHash();
 }
 function finModalOpen(){ const m=document.getElementById('fin-modal'); return !!(m&&m.classList.contains('open')); }
