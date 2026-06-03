@@ -119,6 +119,7 @@ async function init(){
   const finA=loadLS('fin_accounts',null);if(finA&&Array.isArray(finA))S.fin.accounts=finA;
   const finC=loadLS('fin_categories',null);if(finC&&Array.isArray(finC))S.fin.categories=finC;
   const finT=loadLS('fin_transactions',null);if(finT&&Array.isArray(finT))S.fin.transactions=finT;
+  const finB=loadLS('fin_budgets',null);if(finB&&Array.isArray(finB))S.fin.budgets=finB;
   showDone = loadLS('show_done', false);
   if(typeof initTheme === 'function') initTheme();
   if(typeof initFinance === 'function') initFinance();

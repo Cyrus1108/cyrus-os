@@ -210,6 +210,23 @@ async function pullFinTransactions(){
   saveLSRaw('fin_transactions', S.fin.transactions);
 }
 
+async function pullFinBudgets(){
+  const { data } = await sb.from('fin_budgets').select('*').eq('user_id', currentUser.id).order('sort');
+  S.fin.budgets = (data || []).map(r => ({
+    id:r.id, name:r.name, limit:Number(r.amount_limit)||0, type:r.type,
+    targets:r.target_categories||[], period:r.period||'monthly', sort:r.sort||0,
+  }));
+  saveLSRaw('fin_budgets', S.fin.budgets);
+}
+async function finSaveBudgets(){
+  if(!currentUser) return;
+  await waitForPull();
+  await replaceTable('fin_budgets', S.fin.budgets, b => ({
+    id:b.id, user_id:currentUser.id, name:b.name, amount_limit:b.limit||0,
+    type:b.type, target_categories:b.targets||[], period:b.period||'monthly', sort:b.sort||0,
+  }));
+}
+
 /* Persist base currency + FX rates (lives in the settings row). */
 function saveFinConfig(){
   dirty.settings = true;
@@ -225,7 +242,7 @@ async function pullAll(force){
         pullSettings(), pullMorning(), pullAcademics(),
         pullJapanese(), pullTrading(), pullCategories(), pullTodos(),
         pullThe90Meta(), pullThe90Daily(), pullHermes(),
-        pullFinAccounts(), pullFinCategories(), pullFinTransactions(),
+        pullFinAccounts(), pullFinCategories(), pullFinTransactions(), pullFinBudgets(),
       ]);
       initialPullDone = true;
       console.log('[sync] initial pull complete');
@@ -493,6 +510,8 @@ function subscribeRealtime(){
       async () => { await pullFinCategories(); if(typeof rFinance==='function') rFinance(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'fin_transactions', filter: `user_id=eq.${uid}` },
       async () => { await pullFinTransactions(); if(typeof rFinance==='function') rFinance(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'fin_budgets', filter: `user_id=eq.${uid}` },
+      async () => { await pullFinBudgets(); if(typeof rFinance==='function') rFinance(); })
     .subscribe((status, err) => {
       console.log('[realtime]', status);
       if(err) console.error('[realtime] error', err);

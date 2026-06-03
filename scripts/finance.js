@@ -489,6 +489,104 @@ function finRenderLedgerCalendar(txs){
 /* ════════════ ANALYTICS ════════════
    finRenderAnalytics() lives in finance-charts.js (Chart.js, lazy-loaded). */
 
+/* ════════════ BUDGET ENGINE (Phase 2-C) ════════════
+   Monthly budgets, 3 modes: global (all expenses), inclusive (only the listed
+   categories), exclusive (all expenses except the listed categories). */
+function finBudgetSpent(b){
+  const month = TODAY.slice(0,7);
+  let spent = 0;
+  for(const t of S.fin.transactions){
+    if(t.type!=='expense' || String(t.date).slice(0,7)!==month) continue;
+    const cat = t.categoryId;
+    if(b.type==='inclusive' && !(b.targets||[]).includes(cat)) continue;
+    if(b.type==='exclusive' && (b.targets||[]).includes(cat)) continue;
+    spent += finToBase(t.amount, t.currency);
+  }
+  return spent;
+}
+function finBudgetTypeHint(t){
+  return t==='global' ? '统计本月全部支出'
+    : t==='inclusive' ? '只统计选中分类的支出'
+    : '统计除选中分类外的支出（衡量真正可控的日常开销）';
+}
+function finBudgetsBlockHtml(){
+  let rows = '';
+  for(const b of S.fin.budgets){
+    const spent = finBudgetSpent(b), pct = b.limit>0 ? spent/b.limit : 0;
+    const cls = pct>=1 ? 'over' : pct>=0.8 ? 'warn' : '';
+    const typeLabel = b.type==='global'?'全局':b.type==='inclusive'?'专用':'排他';
+    rows += `<div class="fin-bud" onclick="finOpenBudgetForm('${b.id}')">
+      <div class="fin-bud-top">
+        <span class="fin-bud-name">${escH(b.name)} <span class="fin-bud-type">${typeLabel}</span></span>
+        <span class="fin-bud-nums ${cls}">${finBaseMoney(spent)} / ${finBaseMoney(b.limit)}</span>
+      </div>
+      <div class="fin-bud-bar"><div class="fin-bud-fill ${cls}" style="width:${Math.min(100,pct*100).toFixed(0)}%"></div></div>
+      <div class="fin-bud-meta ${cls}">${(pct*100).toFixed(0)}%${pct>=1?' · 已超支':''}</div>
+    </div>`;
+  }
+  return `<div class="fin-ana-block span2 fin-bud-block">
+    <div class="fin-ana-head"><span>本月预算</span><button class="primary fx-btn fin-mini" onclick="event.stopPropagation();finOpenBudgetForm()">+ 新预算</button></div>
+    ${rows || '<div class="fin-empty sm">还没有预算。设一个来盯住开销。</div>'}
+  </div>`;
+}
+function finOpenBudgetForm(id){
+  const b = id ? S.fin.budgets.find(x=>x.id===id) : null;
+  const type = b ? b.type : 'global';
+  const targets = b ? (b.targets||[]) : [];
+  const expCats = S.fin.categories.filter(c=>c.kind==='expense' && !c.archived);
+  finModal(`
+    <div class="fin-form-title">${id?'编辑预算':'新预算'}</div>
+    <input type="hidden" id="fin-bud-id" value="${id||''}">
+    <div class="fin-field"><label>名称</label><input id="fin-bud-name" type="text" placeholder="如 本月可控开销" value="${b?escH(b.name):''}"></div>
+    <div class="fin-field"><label>每月限额 · ${S.fin.baseCurrency||'TWD'}</label><input id="fin-bud-limit" type="number" step="0.01" inputmode="decimal" placeholder="0.00" value="${b?b.limit:''}"></div>
+    <div class="fin-field"><label>类型</label>
+      <div class="fin-seg" id="fin-bud-typeseg">
+        ${[['global','全局'],['inclusive','专用'],['exclusive','排他']].map(([k,l])=>`<button type="button" class="fin-seg-btn ${k===type?'active':''}" data-t="${k}" onclick="finBudgetSetType('${k}')">${l}</button>`).join('')}
+      </div>
+      <input type="hidden" id="fin-bud-type" value="${type}">
+      <div class="fin-hint" id="fin-bud-typehint">${finBudgetTypeHint(type)}</div>
+    </div>
+    <div class="fin-field" id="fin-bud-cats-wrap" style="${type==='global'?'display:none;':''}">
+      <label id="fin-bud-cats-label">${type==='exclusive'?'排除这些分类':'只统计这些分类'}</label>
+      <div class="fin-bud-cats">${expCats.map(c=>`<label class="fin-bud-cat"><input type="checkbox" value="${c.id}" ${targets.includes(c.id)?'checked':''}> <span class="fin-wiz-catico" style="${c.color?`background:${c.color}22;`:''}">${c.icon||'•'}</span> ${escH(c.name)}</label>`).join('')}</div>
+    </div>
+    <div class="fin-form-btns">
+      ${id?`<button class="ghost fx-btn danger" onclick="finDeleteBudget('${id}')">删除</button>`:''}
+      <button class="ghost fx-btn" onclick="finCloseModal()">取消</button>
+      <button class="primary fx-btn" onclick="finSubmitBudget()">保存</button>
+    </div>
+  `);
+}
+function finBudgetSetType(t){
+  document.getElementById('fin-bud-type').value = t;
+  document.querySelectorAll('#fin-bud-typeseg .fin-seg-btn').forEach(b=>b.classList.toggle('active', b.dataset.t===t));
+  document.getElementById('fin-bud-cats-wrap').style.display = t==='global' ? 'none' : '';
+  document.getElementById('fin-bud-cats-label').textContent = t==='exclusive' ? '排除这些分类' : '只统计这些分类';
+  document.getElementById('fin-bud-typehint').textContent = finBudgetTypeHint(t);
+}
+function finSubmitBudget(){
+  const id = document.getElementById('fin-bud-id').value;
+  const name = document.getElementById('fin-bud-name').value.trim();
+  if(!name){ alert('请输入预算名称'); return; }
+  const limit = Math.round((parseFloat(document.getElementById('fin-bud-limit').value)||0)*100)/100;
+  if(limit<=0){ alert('请输入限额'); return; }
+  const type = document.getElementById('fin-bud-type').value;
+  const targets = type==='global' ? [] : Array.from(document.querySelectorAll('#fin-bud-cats-wrap input:checked')).map(i=>i.value);
+  if(type!=='global' && !targets.length){ alert('请至少选择一个分类'); return; }
+  if(id){ Object.assign(S.fin.budgets.find(b=>b.id===id), { name, limit, type, targets }); }
+  else { S.fin.budgets.push({ id:crypto.randomUUID(), name, limit, type, targets, period:'monthly', sort:S.fin.budgets.length }); }
+  if(typeof finSaveBudgets==='function') finSaveBudgets();
+  saveLSRaw('fin_budgets', S.fin.budgets);
+  finCloseModal(); rFinance();
+}
+function finDeleteBudget(id){
+  if(!confirm('删除这个预算？')) return;
+  S.fin.budgets = S.fin.budgets.filter(b=>b.id!==id);
+  if(typeof finSaveBudgets==='function') finSaveBudgets();
+  saveLSRaw('fin_budgets', S.fin.budgets);
+  finCloseModal(); rFinance();
+}
+
 /* ════════════ MORE ════════════ */
 function finRenderMore(){
   // Search

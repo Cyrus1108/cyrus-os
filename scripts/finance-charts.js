@@ -91,6 +91,7 @@ function finRenderAnalytics(){
     <div class="fin-led-viewtoggle fin-ana-range">${R('week','本周')}${R('month','本月')}${R('year','本年')}${R('custom','自定义')}</div>
     ${custom}
     <div class="fin-ana-grid">
+      ${typeof finBudgetsBlockHtml==='function' ? finBudgetsBlockHtml() : ''}
       <div class="fin-ana-block">
         <div class="fin-ana-head"><span>${finAna.kind==='expense'?'支出':'收入'}构成</span>
           <span class="fin-anatoggles">${seg(finAna.kind,[{k:'expense',label:'支出'},{k:'income',label:'收入'}],'finAnaSetKind')}

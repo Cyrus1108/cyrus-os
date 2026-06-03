@@ -223,6 +223,28 @@ html[data-theme="sterile"] .fin-ana-dot{ border-radius:0; }
 .fin-ana-toppct{ color:var(--ghost); font-family:var(--mono); font-size:11px; width:36px; text-align:right; }
 .fin-ana-topval{ color:var(--mute); font-family:var(--mono); font-size:12px; min-width:64px; text-align:right; }
 
+/* ── budgets (Phase 2-C) ── */
+.fin-bud{ padding:10px 0; border-bottom:.5px solid var(--hair); cursor:pointer; }
+.fin-bud:last-child{ border-bottom:none; }
+.fin-bud-top{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:6px; }
+.fin-bud-name{ font-size:14px; color:var(--ink); }
+.fin-bud-type{ font-size:10px; color:var(--brass); border:.5px solid var(--brass-ghost); border-radius:3px; padding:1px 5px; margin-left:4px; }
+html[data-theme="sterile"] .fin-bud-type{ border-radius:0; }
+.fin-bud-nums{ font-family:var(--mono); font-size:12px; color:var(--mute); }
+.fin-bud-nums.warn{ color:var(--color-text-warning); } .fin-bud-nums.over{ color:var(--fin-neg); }
+.fin-bud-bar{ height:7px; background:var(--color-background-tertiary); border-radius:4px; overflow:hidden; }
+html[data-theme="sterile"] .fin-bud-bar{ border-radius:0; }
+.fin-bud-fill{ height:100%; background:var(--brass); border-radius:4px; transition:width .4s var(--ease-silk); }
+html[data-theme="sterile"] .fin-bud-fill{ border-radius:0; }
+.fin-bud-fill.warn{ background:var(--color-text-warning); } .fin-bud-fill.over{ background:var(--fin-neg); }
+.fin-bud-meta{ font-size:11px; color:var(--ghost); font-family:var(--mono); margin-top:4px; }
+.fin-bud-meta.warn{ color:var(--color-text-warning); } .fin-bud-meta.over{ color:var(--fin-neg); }
+.fin-bud-cats{ display:flex; flex-direction:column; gap:4px; max-height:200px; overflow-y:auto;
+  border:.5px solid var(--hair); border-radius:var(--border-radius-md); padding:8px; }
+html[data-theme="sterile"] .fin-bud-cats{ border-radius:0; }
+.fin-bud-cat{ display:flex; align-items:center; gap:6px; font-size:13px; color:var(--ink); cursor:pointer; }
+.fin-bud-cat input{ width:auto !important; }
+
 /* ── empty / soon ── */
 .fin-empty{ text-align:center; color:var(--ghost); font-size:13px; padding:40px 20px; line-height:1.8; }
 .fin-empty.sm{ padding:14px; font-size:12px; }
