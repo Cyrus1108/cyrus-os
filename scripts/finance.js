@@ -74,7 +74,8 @@ function finTxUsesAccount(acctId){ return S.fin.transactions.some(t=>t.accountId
 
 /* ════════════ view open / close / routing ════════════ */
 const FIN_TABS = ['wallet','ledger','analytics','more'];
-const finCal = { targetId:null, ym:null, selected:null };
+const finCal = { targetId:null, ym:null, selected:null, onPick:null };
+const finWiz = { active:false, type:'expense', step:'account', accountIdx:0, accountId:null, amount:null, date:null, note:'' };
 let _finTouchX=null, _finTouchY=null;
 
 function initFinance(){
@@ -91,22 +92,26 @@ function initFinance(){
   //   Esc              step back out (modal → calendar → acct manager → close)
   document.addEventListener('keydown', (e)=>{
     if(!finUI.open) return;
+    // Calendar popup owns the keyboard while open (←→ ±day, ↑↓ ±week, Enter pick, Esc close)
+    if(finCalOpen()){ finCalKey(e); return; }
+    // Quick-entry wizard owns the keyboard while active
+    if(finWiz.active){ finWizKey(e); return; }
+
     const tag = e.target.tagName;
     const typing = tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT';
     const modalOpen = finModalOpen();
 
     if(e.key==='Escape'){
       if(modalOpen) finCloseModal();
-      else if(finCalOpen()) finCloseCal();
       else if(finUI.acctMgr) finCloseAcctManager();
       else closeFinance();
       return;
     }
-    if(typing || modalOpen || finCalOpen()) return;
+    if(typing || modalOpen) return;
 
-    // Quick-entry shortcuts — open the record form pre-set to a type
-    if(e.key==='ArrowUp'){ e.preventDefault(); finOpenTxForm(null,'income'); return; }
-    if(e.key==='ArrowDown'){ e.preventDefault(); finOpenTxForm(null,'expense'); return; }
+    // Quick-entry: ↑ income / ↓ expense launch the keyboard wizard; Shift+→ transfer (full form)
+    if(e.key==='ArrowUp'){ e.preventDefault(); finWizStart('income'); return; }
+    if(e.key==='ArrowDown'){ e.preventDefault(); finWizStart('expense'); return; }
     if(e.key==='ArrowRight' && e.shiftKey){ e.preventDefault(); finOpenTxForm(null,'transfer'); return; }
 
     // Plain ←/→ switch tabs (not while in the account manager)
@@ -549,7 +554,7 @@ function finModal(html){
   document.getElementById('fin-modal-card').innerHTML = html;
   m.classList.add('open');
 }
-function finCloseModal(){ const m=document.getElementById('fin-modal'); if(m) m.classList.remove('open'); }
+function finCloseModal(){ const m=document.getElementById('fin-modal'); if(m) m.classList.remove('open'); finWiz.active=false; }
 
 /* ── transaction form ── */
 function finOpenTxForm(txId, presetType){
@@ -864,10 +869,11 @@ function finDateLabel(ds){
   const wd = ['日','一','二','三','四','五','六'][d.getDay()];
   return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 · 周${wd}`;
 }
-function finOpenCal(targetId){
+function finOpenCal(targetId, onPick){
   const hidden = document.getElementById(targetId);
   const cur = (hidden && hidden.value) ? hidden.value : TODAY;
   finCal.targetId = targetId;
+  finCal.onPick = onPick || null;
   finCal.selected = cur;
   finCal.ym = cur.slice(0,7);
   finCalShow(finCalHtml());
@@ -876,13 +882,33 @@ function finCalShow(html){
   let o = document.getElementById('fin-cal');
   if(!o){
     o = document.createElement('div'); o.id='fin-cal'; o.className='fin-cal';
-    o.addEventListener('click', e=>{ if(e.target===o) finCloseCal(); });
+    o.addEventListener('click', e=>{ if(e.target===o) finCalCancel(); });
     document.getElementById('finance-view').appendChild(o);
   }
   o.innerHTML = html;
   o.classList.add('open');
 }
 function finCloseCal(){ const o=document.getElementById('fin-cal'); if(o) o.classList.remove('open'); }
+/* Cancel = dismiss without picking; aborts the wizard if it was mid date-step. */
+function finCalCancel(){ finCloseCal(); if(finWiz.active && finWiz.step==='date') finWizCancel(); }
+/* Keyboard nav inside the calendar popup. */
+function finCalKey(e){
+  if(e.key==='Escape'){ e.preventDefault(); finCalCancel(); return; }
+  if(e.key==='Enter'){ e.preventDefault(); finPickDate(finCal.selected); return; }
+  let d=0;
+  if(e.key==='ArrowLeft') d=-1;
+  else if(e.key==='ArrowRight') d=1;
+  else if(e.key==='ArrowUp') d=-7;
+  else if(e.key==='ArrowDown') d=7;
+  if(d){ e.preventDefault(); finCalMove(d); }
+}
+function finCalMove(d){
+  const dt = new Date(finCal.selected+'T00:00:00');
+  dt.setDate(dt.getDate()+d);
+  finCal.selected = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+  finCal.ym = finCal.selected.slice(0,7);
+  finCalShow(finCalHtml());
+}
 function finCalShift(delta){
   const [y,m] = finCal.ym.split('-').map(Number);
   const d = new Date(y, m-1+delta, 1);
@@ -911,7 +937,7 @@ function finCalHtml(){
     <div class="fin-cal-grid">${cells}</div>
     <div class="fin-cal-foot">
       <button class="ghost fx-btn" onclick="finPickDate('${TODAY}')">今天</button>
-      <button class="ghost fx-btn" onclick="finCloseCal()">取消</button>
+      <button class="ghost fx-btn" onclick="finCalCancel()">取消</button>
     </div>
   </div>`;
 }
@@ -920,5 +946,124 @@ function finPickDate(ds){
   if(hidden) hidden.value = ds;
   const lbl = document.getElementById(finCal.targetId+'-label');
   if(lbl) lbl.textContent = finDateLabel(ds);
+  const cb = finCal.onPick; finCal.onPick = null;
   finCloseCal();
+  if(cb) cb(ds);
+}
+
+/* ════════════ keyboard quick-entry wizard (↑ income / ↓ expense) ════════════
+   account (↑↓ + Enter) → amount (type + Enter) → calendar (Enter / arrows)
+   → note (type, Enter = save). Category is left blank for speed. */
+function finWizAccts(){ return finSelectableAccounts(); }
+function finWizTitle(){ return finWiz.type==='income' ? '记一笔收入' : '记一笔支出'; }
+function finWizStart(type){
+  const accts = finWizAccts();
+  if(!accts.length){ finOpenTxForm(null, type); return; }  // no accounts → full form prompts to create one
+  finWiz.active=true; finWiz.type=type; finWiz.step='account';
+  finWiz.accountIdx=0; finWiz.accountId=null;
+  finWiz.amount=null; finWiz.date=TODAY; finWiz.note='';
+  finWizRender();
+}
+function finWizCancel(){ finWiz.active=false; finCloseCal(); finCloseModal(); }
+function finWizRender(){
+  const accts = finWizAccts();
+  const a = finAcct(finWiz.accountId);
+  if(finWiz.step==='account'){
+    finModal(`<div class="fin-wiz">
+      <div class="fin-wiz-head">${finWizTitle()} · 选择账户</div>
+      <div class="fin-wiz-accts">
+        ${accts.map((x,i)=>`<button type="button" class="fin-wiz-acct ${i===finWiz.accountIdx?'active':''}" onclick="finWizPick(${i})">
+          <span class="fin-wiz-acct-name">${escH(x.name)}</span>
+          <span class="fin-wiz-cur">${x.currency}</span></button>`).join('')}
+      </div>
+      <div class="fin-wiz-hint">↑↓ 选择 · Enter 确认 · Esc 取消</div>
+    </div>`);
+  } else if(finWiz.step==='amount'){
+    finModal(`<div class="fin-wiz">
+      <div class="fin-wiz-head">${finWizTitle()} · 金额 · <span class="fin-cur-suffix">${a?a.currency:''}</span></div>
+      <input id="fin-wiz-amount" class="fin-wiz-amount" type="number" step="0.01" inputmode="decimal" placeholder="0.00" value="${finWiz.amount!=null?finWiz.amount:''}">
+      <div class="fin-wiz-line">账户：${a?escH(a.name):''}</div>
+      <div class="fin-wiz-hint">输入金额 · Enter 下一步（日期）</div>
+    </div>`);
+    setTimeout(()=>{ const el=document.getElementById('fin-wiz-amount'); if(el){ el.focus(); el.select&&el.select(); } }, 60);
+  } else if(finWiz.step==='date'){
+    finModal(`<div class="fin-wiz">
+      <div class="fin-wiz-head">${finWizTitle()} · 日期</div>
+      <div class="fin-wiz-summary">${a?escH(a.name):''} · ${a?a.currency:''} ${finWiz.amount}</div>
+      <input type="hidden" id="fin-wiz-date" value="${finWiz.date}">
+      <div class="fin-wiz-hint">日历中 ←→ 改日 · ↑↓ 改周 · Enter 确认</div>
+    </div>`);
+    finOpenCal('fin-wiz-date', finWizDatePicked);
+  } else if(finWiz.step==='note'){
+    finModal(`<div class="fin-wiz">
+      <div class="fin-wiz-head">${finWizTitle()} · 备注（可选）</div>
+      <input id="fin-wiz-note" class="fin-wiz-note" type="text" placeholder="可留空…" value="${escH(finWiz.note||'')}">
+      <div class="fin-wiz-summary">${a?escH(a.name):''} · ${a?a.currency:''} ${finWiz.amount} · ${finDateLabel(finWiz.date)}</div>
+      <div class="fin-wiz-hint">Enter 完成记账</div>
+    </div>`);
+    setTimeout(()=>{ const el=document.getElementById('fin-wiz-note'); if(el) el.focus(); }, 60);
+  }
+}
+function finWizMove(d){
+  const n = finWizAccts().length; if(!n) return;
+  finWiz.accountIdx = (finWiz.accountIdx + d + n) % n;
+  finWizRender();
+}
+function finWizPick(i){ finWiz.accountIdx=i; finWizChooseAccount(); }
+function finWizChooseAccount(){
+  const a = finWizAccts()[finWiz.accountIdx]; if(!a) return;
+  finWiz.accountId = a.id; finWiz.step='amount'; finWizRender();
+}
+function finWizAmountNext(){
+  const el = document.getElementById('fin-wiz-amount');
+  const v = parseFloat(el ? el.value : '');
+  if(!isFinite(v) || v<=0){ if(el){ el.classList.add('shake'); setTimeout(()=>el.classList.remove('shake'),400); el.focus(); } return; }
+  finWiz.amount = Math.round(v*100)/100;
+  finWiz.step='date';
+  finWizRender();   // opens the calendar via finOpenCal('fin-wiz-date', ...)
+}
+function finWizDatePicked(ds){
+  finWiz.date = ds || TODAY;
+  finWiz.step='note';
+  finWizRender();
+}
+function finWizKey(e){
+  if(e.key==='Escape'){ e.preventDefault(); finWizCancel(); return; }
+  if(finWiz.step==='account'){
+    if(e.key==='ArrowDown'){ e.preventDefault(); finWizMove(1); }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); finWizMove(-1); }
+    else if(e.key==='Enter'){ e.preventDefault(); finWizChooseAccount(); }
+    return;
+  }
+  if(e.key==='Enter'){
+    e.preventDefault();
+    if(finWiz.step==='amount') finWizAmountNext();
+    else if(finWiz.step==='note') finWizSave();
+  }
+}
+async function finWizSave(){
+  const a = finAcct(finWiz.accountId);
+  const noteEl = document.getElementById('fin-wiz-note');
+  const tx = {
+    type: finWiz.type, amount: finWiz.amount,
+    currency: a ? a.currency : (S.fin.baseCurrency||'TWD'),
+    date: finWiz.date || TODAY, note: noteEl ? noteEl.value.trim() : '', tags:[],
+    accountId: finWiz.accountId, toAccountId:null, toAmount:null, categoryId:null,
+  };
+  finWiz.active=false;
+  finCloseModal();
+  const saved = await finAddTx(tx);
+  const newId = saved ? saved.id : crypto.randomUUID();
+  S.fin.transactions.unshift({ id:newId, created:new Date().toISOString(), ...tx });
+  saveLSRaw('fin_transactions', S.fin.transactions);
+  rFinance();
+  finToast(`已记一笔 · ${tx.type==='income'?'收入':'支出'} ${a?a.currency:''} ${finNum(tx.amount)}`);
+}
+function finToast(msg){
+  let t = document.getElementById('fin-toast');
+  if(!t){ t=document.createElement('div'); t.id='fin-toast'; t.className='fin-toast'; document.getElementById('finance-view').appendChild(t); }
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>t.classList.remove('show'), 1800);
 }
