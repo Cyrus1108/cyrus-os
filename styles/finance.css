@@ -137,7 +137,13 @@ html[data-theme="sterile"] .fin-acct-card{ border-radius:0; }
 .fin-led-totals{ display:flex; gap:10px; background:var(--color-background-secondary);
   border:.5px solid var(--hair); border-radius:var(--border-radius-lg); padding:14px; }
 html[data-theme="sterile"] .fin-led-totals{ border-radius:0; }
-.fin-led-cell{ flex:1; display:flex; flex-direction:column; gap:3px; align-items:center; }
+.fin-led-cell{ flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; align-items:center; }
+/* keep the three totals from overflowing on narrow phones — scale the number to fit */
+.fin-led-cell span:last-child{
+  font-size:clamp(11px, 3.3vw, 16px) !important; max-width:100%;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:-.02em;
+}
+@media(max-width:420px){ .fin-led-totals{ gap:6px; padding:14px 10px; } }
 
 /* list / calendar view toggle */
 .fin-led-viewtoggle{ display:flex; width:170px; margin:12px auto 0;

@@ -44,10 +44,11 @@ const DEFAULT_CATS = [
 /* ════════════ Finance module (Phase 1) ════════════ */
 const FIN_CURRENCIES = ['TWD','USD','MYR'];          // base = TWD; net worth converts to it
 const FIN_ACCT_TYPES = [
-  {id:'cash',    name:'现金',     icon:'💵'},
-  {id:'bank',    name:'银行',     icon:'🏦'},
-  {id:'credit',  name:'信用卡',   icon:'💳'},
-  {id:'ewallet', name:'电子支付', icon:'📱'},
+  {id:'cash',     name:'现金',     icon:'💵'},
+  {id:'bank',     name:'银行',     icon:'🏦'},
+  {id:'credit',   name:'信用卡',   icon:'💳'},
+  {id:'ewallet',  name:'电子支付', icon:'📱'},
+  {id:'exchange', name:'交易所',   icon:'📊'},
 ];
 const FIN_ACCT_STATUS = { INACTIVE:0, ACTIVE:1, EXCLUDED:2 };
 /* Seeded only if the user has no categories yet (pushed on first edit). */
