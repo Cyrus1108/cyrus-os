@@ -574,7 +574,19 @@ function finModal(html){
     m.addEventListener('click', e=>{ if(e.target===m) finCloseModal(); });
     document.getElementById('finance-view').appendChild(m);
   }
-  document.getElementById('fin-modal-card').innerHTML = html;
+  const card = document.getElementById('fin-modal-card');
+  // Mobile: swipe down on the sheet to dismiss (bound once; #fin-modal ships in index.html)
+  if(card && !card.dataset.swipeBound){
+    card.dataset.swipeBound = '1';
+    let sy=null, sx=null, st=0;
+    card.addEventListener('touchstart', e=>{ const t=e.changedTouches[0]; sy=t.clientY; sx=t.clientX; st=card.scrollTop; }, {passive:true});
+    card.addEventListener('touchend', e=>{
+      if(sy==null) return;
+      const t=e.changedTouches[0], dy=t.clientY-sy, dx=t.clientX-sx; sy=null;
+      if(dy>80 && Math.abs(dy)>Math.abs(dx)*1.5 && st<=0){ finWiz.active ? finWizCancel() : finCloseModal(); }
+    }, {passive:true});
+  }
+  card.innerHTML = html;
   m.classList.add('open');
 }
 function finCloseModal(){ const m=document.getElementById('fin-modal'); if(m) m.classList.remove('open'); finWiz.active=false; }
@@ -906,6 +918,13 @@ function finCalShow(html){
   if(!o){
     o = document.createElement('div'); o.id='fin-cal'; o.className='fin-cal';
     o.addEventListener('click', e=>{ if(e.target===o) finCalCancel(); });
+    let cy=null, cx=null;
+    o.addEventListener('touchstart', e=>{ const t=e.changedTouches[0]; cy=t.clientY; cx=t.clientX; }, {passive:true});
+    o.addEventListener('touchend', e=>{
+      if(cy==null) return;
+      const t=e.changedTouches[0], dy=t.clientY-cy, dx=t.clientX-cx; cy=null;
+      if(dy>70 && Math.abs(dy)>Math.abs(dx)*1.5) finCalCancel();   // swipe down to dismiss
+    }, {passive:true});
     document.getElementById('finance-view').appendChild(o);
   }
   o.innerHTML = html;

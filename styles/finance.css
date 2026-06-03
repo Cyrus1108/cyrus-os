@@ -244,6 +244,13 @@ html[data-theme="sterile"] .fin-view select{ border-radius:0; }
   padding:22px 18px calc(22px + env(safe-area-inset-bottom));
   box-shadow:0 -8px 40px rgba(0,0,0,0.3);
 }
+/* grabber handle — affordance for swipe-down-to-dismiss on the mobile bottom sheet */
+@media(max-width:559px){
+  .fin-modal-card{ position:relative; padding-top:30px; }
+  .fin-modal-card::before{ content:""; position:absolute; top:9px; left:50%; transform:translateX(-50%);
+    width:40px; height:4px; border-radius:2px; background:var(--hair-strong); }
+  html[data-theme="sterile"] .fin-modal-card::before{ border-radius:0; }
+}
 html[data-theme="sterile"] .fin-modal-card{ border-radius:0; border:.5px solid var(--brass-ghost); }
 @media(min-width:560px){
   .fin-modal{ align-items:center; }
