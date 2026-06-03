@@ -182,6 +182,7 @@ async function pullFinAccounts(){
     id:r.id, name:r.name, type:r.type, currency:r.currency,
     initialBalance:Number(r.initial_balance)||0,
     isLiability:!!r.is_liability, status:r.status, icon:r.icon, color:r.color,
+    interestRate:Number(r.interest_rate)||0,
     sort:r.sort||0, created:r.created_at,
   }));
   saveLSRaw('fin_accounts', S.fin.accounts);
@@ -480,7 +481,8 @@ async function finSaveAccounts(){
   await replaceTable('fin_accounts', S.fin.accounts, a => ({
     id:a.id, user_id:currentUser.id, name:a.name, type:a.type, currency:a.currency,
     initial_balance:a.initialBalance||0, is_liability:!!a.isLiability,
-    status:a.status, icon:a.icon||null, color:a.color||null, sort:a.sort||0,
+    status:a.status, icon:a.icon||null, color:a.color||null,
+    interest_rate:a.interestRate||0, sort:a.sort||0,
   }));
 }
 async function finSaveCategories(){

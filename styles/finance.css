@@ -105,6 +105,7 @@ html[data-theme="sterile"] .fin-acct-card{ border-radius:0; }
 .fin-acct-meta{ display:flex; flex-direction:column; gap:2px; }
 .fin-acct-name{ font-size:14px; color:var(--ink); }
 .fin-acct-cur{ font-size:11px; color:var(--ghost); }
+.fin-acct-rate{ color:var(--fin-pos); font-family:var(--mono); }
 .fin-acct-bal{ font-family:var(--mono); font-size:15px; font-weight:600; color:var(--ink); }
 .fin-acct-tag{ font-size:10px; color:var(--brass); border:.5px solid var(--brass-ghost); border-radius:3px; padding:1px 4px; margin-left:4px; }
 .fin-acct-tag.liab{ color:var(--fin-neg); border-color:var(--fin-neg); }

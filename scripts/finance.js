@@ -283,7 +283,7 @@ function finRenderWallet(){
         h += `<div class="fin-acct-card">
           <div class="fin-acct-meta">
             <span class="fin-acct-name">${escH(a.name)}${excl?' <span class="fin-acct-tag">不计净资产</span>':''}${a.isLiability?' <span class="fin-acct-tag liab">负债</span>':''}</span>
-            <span class="fin-acct-cur">${a.currency}</span>
+            <span class="fin-acct-cur">${a.currency}${a.interestRate>0?` · <span class="fin-acct-rate">${(+a.interestRate)}%/年</span>`:''}</span>
           </div>
           <span class="fin-acct-bal ${bal<0?'fin-neg':''}">${finMoney(bal, a.currency)}</span>
         </div>`;
@@ -1176,6 +1176,7 @@ function finOpenAcctForm(id){
     <div class="fin-field"><label>类型</label><select id="fin-acct-type">${typeOpts}</select></div>
     <div class="fin-field"><label>币种</label><select id="fin-acct-currency">${curOpts}</select></div>
     <div class="fin-field"><label>${id?'初始余额（建账时的余额，不可追溯改流水）':'当前余额'}</label><input id="fin-acct-init" type="number" step="0.01" inputmode="decimal" placeholder="0.00" value="${a?a.initialBalance:''}"></div>
+    <div class="fin-field"><label>年利率 % <span class="fin-hint-inline">储蓄账户填写 · 每月 1 号自动计入利息</span></label><input id="fin-acct-rate" type="number" step="0.001" min="0" inputmode="decimal" placeholder="0（不计息）" value="${a&&a.interestRate?a.interestRate:''}"></div>
     <label class="fin-check"><input type="checkbox" id="fin-acct-liab" ${a&&a.isLiability?'checked':''}> 这是负债账户（信用卡 / 借款）</label>
     <div class="fin-form-btns">
       ${id&&!finTxUsesAccount(id)?`<button class="ghost fx-btn danger" onclick="finDeleteAcct('${id}')">删除</button>`:''}
@@ -1192,12 +1193,13 @@ function finSubmitAcct(){
   const type = document.getElementById('fin-acct-type').value;
   const currency = document.getElementById('fin-acct-currency').value;
   const initialBalance = Math.round((parseFloat(document.getElementById('fin-acct-init').value)||0)*100)/100;
+  const interestRate = Math.max(0, parseFloat(document.getElementById('fin-acct-rate').value)||0);
   const isLiability = document.getElementById('fin-acct-liab').checked;
   if(id){
     const a = finAcct(id);
-    Object.assign(a, { name, type, currency, initialBalance, isLiability });
+    Object.assign(a, { name, type, currency, initialBalance, interestRate, isLiability });
   } else {
-    S.fin.accounts.push({ id:crypto.randomUUID(), name, type, currency, initialBalance,
+    S.fin.accounts.push({ id:crypto.randomUUID(), name, type, currency, initialBalance, interestRate,
       isLiability, status:FIN_ACCT_STATUS.ACTIVE, icon:null, color:null, sort:S.fin.accounts.length });
   }
   if(typeof finSaveAccounts==='function') finSaveAccounts();

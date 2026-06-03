@@ -161,9 +161,23 @@ async function init(){
 /* Service Worker — shell cache for offline + foundation for Stage 4 Web Push.
    Registers regardless of auth state so the login screen also works offline. */
 if('serviceWorker' in navigator){
+  /* Auto-update: always network-check sw.js (updateViaCache:'none'), re-check when the
+     tab regains focus, and reload ONCE when a new SW takes control — so a version bump
+     reaches users without a manual hard-refresh (the old cache-first SW could otherwise
+     keep serving a stale build indefinitely). */
+  let _swRefreshing = false;
+  const _hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if(_swRefreshing || !_hadController) return;   // skip the very first claim on a clean install
+    _swRefreshing = true;
+    window.location.reload();
+  });
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
-      .then(reg => console.log('[sw] registered:', reg.scope))
+    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+      .then(reg => {
+        reg.update();
+        document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') reg.update(); });
+      })
       .catch(err => console.error('[sw] registration failed:', err));
   });
 }
