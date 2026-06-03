@@ -76,6 +76,7 @@ function lockMount(){
     <div class="applock-pad">${pad}</div>
     <div class="applock-pinhint" id="applock-pinhint"></div>
     <div class="applock-err" id="applock-err"></div>
+    <button class="applock-forgot" onclick="lockForgotPin()">忘记 PIN？</button>
   </div>`;
   document.body.appendChild(o);
 }
@@ -240,6 +241,46 @@ async function lockDisable(){
   appUnlockDone();
   _lockReRenderMore();
   alert('应用锁已停用。');
+}
+
+/* ── Forgot PIN → email magic-link verification reset ── */
+async function lockForgotPin(){
+  if(!confirm('忘记 PIN 了？\n\n我们会给你注册的邮箱发一封魔法链接验证邮件。\n验证成功后就可以设置新 PIN。')) return;
+  // We use the Supabase session's email if available; otherwise ask.
+  let email = '';
+  try{
+    if(window.sb){ const { data } = await sb.auth.getSession(); email = data?.session?.user?.email || ''; }
+  }catch(e){}
+  if(!email){ email = prompt('输入你的登录邮箱：') || ''; email = email.trim(); }
+  if(!email){ return; }
+  const err=document.getElementById('applock-err');
+  try{
+    let res;
+    if(window.sb){ res = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.href + '?pinreset=1' } }); }
+    else throw new Error('no supabase');
+    if(res.error) throw res.error;
+    if(err) err.textContent='';
+    const hint=document.getElementById('applock-pinhint');
+    if(hint){ hint.style.color='var(--fin-pos)'; hint.textContent='验证邮件已发送，请点击邮件里的链接，然后回到这里设置新 PIN。'; }
+    // after they click the link and return, the page reloads with pinreset=1
+    window._lockAwaitReset = true;
+  }catch(e){
+    if(err) err.textContent = '发送失败：' + (e.message||e);
+  }
+}
+/* If page loaded after a pinreset magic-link click, offer to set a new PIN. */
+if(new URLSearchParams(location.search).get('pinreset')==='1'){
+  window.addEventListener('load', async ()=>{
+    await new Promise(r=>setTimeout(r,600));
+    // user is now authenticated; let them set a new PIN without the old one
+    const pin = await lockPromptNewPin(); if(!pin) return;
+    const { hash, salt, iter } = await lockHashPin(pin);
+    const c = lockCfg(); c.enabled=true; c.pinHash=hash; c.pinSalt=salt; c.pinIter=iter; c.updated=Date.now();
+    lockSave(c); lockRT.unlocked=true; appUnlockDone();
+    // clean the URL param
+    const u = new URL(location.href); u.searchParams.delete('pinreset'); history.replaceState(null,'',u.href);
+    alert('新 PIN 已设置 ✓');
+  });
 }
 
 /* Engage as early as possible (body-bottom script → DOM is ready), independent of auth. */

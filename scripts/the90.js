@@ -12,19 +12,19 @@ const THE_90_START = '2026-05-11';
 const THE_90_END = '2026-08-09';
 
 const THE_90_TARGETS_DEFAULT = [
-  { id: 'I',   label: '21:30 上床',     twoMin: '把手机放到客厅充电器',   badDay: '21:30 灯关 + 闭眼躺平' },
-  { id: 'II',  label: '10 分钟冥想',    twoMin: '坐到瑜伽垫 + 打开计时器', badDay: '1 分钟深呼吸 × 3 次' },
-  { id: 'III', label: '课业全 A',       twoMin: '打开课本翻到当前页',     badDay: '看课程笔记 5 分钟' },
-  { id: 'IV',  label: '每周健身 5 天',  twoMin: '换上健身服',             badDay: '10 俯卧撑 + 10 深蹲' },
-  { id: 'V',   label: '性能量管理',     twoMin: '冲动时去阳台站 30 秒',   badDay: '冲动时做 10 俯卧撑代替' },
+  { id: 'I',   label: '睡眠',   twoMin: '21:30 前手机放到客厅充电',    badDay: '灯关 + 闭眼躺平，手机不过夜' },
+  { id: 'II',  label: '篮球',   twoMin: '拿起球拍一拍',                 badDay: '10 分钟传球练习' },
+  { id: 'III', label: '赚钱',   twoMin: '打开交易/学习页面 5 分钟',     badDay: '看一条市场资讯 + 记录' },
+  { id: 'IV',  label: '日语',   twoMin: '打开 Anki 翻 5 张卡',          badDay: '听一段日语音频' },
+  { id: 'V',   label: '健身',   twoMin: '换上健身服站到垫子上',         badDay: '10 俯卧撑 + 10 深蹲' },
 ];
 
 const THE_90_IDENTITIES = [
   '我是一个掌控自己睡眠的人',
-  '我是一个每天与自己对话的人',
-  '我是一个把课业当作奖学金路径的人',
+  '我是一个每天拍球的人',
+  '我是一个让钱为我工作的人',
+  '我是一个走向日语流利的人',
   '我是一个把训练当饭吃的人',
-  '我是一个掌控自己性能量的人',
 ];
 
 /* ════════ Pure helpers ════════ */

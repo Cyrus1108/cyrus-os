@@ -308,8 +308,23 @@ html[data-theme="sterile"] .applock-biomain{ border-radius:0; }
 .applock-key{ aspect-ratio:1; border-radius:50%; border:.5px solid var(--hair-strong); background:var(--color-background-secondary);
   font-size:22px; color:var(--ink); font-family:var(--mono); cursor:pointer; transition:background .12s; }
 .applock-key:active{ background:var(--brass); color:var(--color-background-primary); }
+.applock-key.blank{ background:none; border-color:transparent; cursor:default; pointer-events:none; }
 .applock-keyfn{ font-size:18px; color:var(--brass); }
-.applock-err{ color:var(--fin-neg); font-size:13px; margin-top:18px; min-height:18px; }
+/* bio primary button — shown only when biometric is registered */
+.applock-biomain{
+  display:block; width:100%; max-width:280px; margin:0 auto 18px;
+  padding:14px 20px; background:var(--brass); color:var(--color-background-primary);
+  border:none; border-radius:32px; font-size:15px; font-weight:600; cursor:pointer;
+  letter-spacing:.03em; transition:opacity .15s;
+}
+html[data-theme="sterile"] .applock-biomain{ border-radius:0; }
+.applock-biomain:active{ opacity:.75; }
+.applock-sub{ font-size:13px; color:var(--mute); margin:0 0 18px; }
+.applock-pinhint{ font-size:11px; color:var(--ghost); margin-bottom:10px; }
+.applock-err{ color:var(--fin-neg); font-size:13px; margin-top:14px; min-height:18px; }
+.applock-forgot{ background:none; border:none; color:var(--ghost); font-size:12px; margin-top:18px;
+  cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
+.applock-forgot:hover{ color:var(--mute); }
 html[data-theme="sterile"] .applock-dot,
 html[data-theme="sterile"] .applock-key{ border-radius:0; }
 .fin-lock-status{ font-size:11px; color:var(--ghost); border:.5px solid var(--hair); border-radius:10px; padding:1px 8px; }
