@@ -250,6 +250,8 @@ html[data-theme="sterile"] .fin-modal-card{ border-radius:0; border:.5px solid v
 .fin-form-title{ font-size:17px; color:var(--ink); font-family:var(--serif); margin-bottom:16px; }
 .fin-field{ margin-bottom:14px; }
 .fin-field label{ display:block; font-size:12px; color:var(--mute); margin-bottom:6px; }
+.fin-cur-suffix{ color:var(--brass); font-family:var(--mono); font-weight:600; }
+.fin-hint-inline{ color:var(--ghost); font-size:11px; }
 .fin-amt-row{ display:flex; gap:8px; }
 .fin-amt-row input{ flex:1; }
 .fin-amt-row select{ width:90px; flex:none; }

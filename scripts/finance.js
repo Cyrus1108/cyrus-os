@@ -563,7 +563,7 @@ function finOpenTxForm(txId, presetType){
   const t = txId ? S.fin.transactions.find(x=>x.id===txId) : null;
   const type = t? t.type : (presetType||'expense');
   const acctOpts = (selId)=> accts.map(a=>`<option value="${a.id}" ${a.id===selId?'selected':''}>${escH(a.name)} · ${a.currency}</option>`).join('');
-  const curOpts = (sel)=> FIN_CURRENCIES.map(c=>`<option value="${c}" ${c===sel?'selected':''}>${c}</option>`).join('');
+  // Currency is NOT chosen separately — it always equals the selected account's currency.
   const defCur = t? t.currency : (accts[0]?accts[0].currency:'TWD');
 
   finModal(`
@@ -575,11 +575,8 @@ function finOpenTxForm(txId, presetType){
     <input type="hidden" id="fin-tx-id" value="${txId||''}">
 
     <div class="fin-field">
-      <label>金额</label>
-      <div class="fin-amt-row">
-        <input id="fin-tx-amount" type="number" step="0.01" inputmode="decimal" placeholder="0.00" value="${t?t.amount:''}">
-        <select id="fin-tx-currency">${curOpts(defCur)}</select>
-      </div>
+      <label>金额 · <span class="fin-cur-suffix" id="fin-tx-curlabel">${defCur}</span></label>
+      <input id="fin-tx-amount" type="number" step="0.01" inputmode="decimal" placeholder="0.00" value="${t?t.amount:''}" onkeydown="if(event.key==='Enter'){event.preventDefault();finSubmitTx();}">
     </div>
 
     <div class="fin-field" id="fin-tx-acct-wrap">
@@ -593,8 +590,8 @@ function finOpenTxForm(txId, presetType){
     </div>
 
     <div class="fin-field" id="fin-tx-toamt-wrap" style="display:none;">
-      <label>转入金额（对方币种）</label>
-      <input id="fin-tx-toamount" type="number" step="0.01" inputmode="decimal" placeholder="跨币种时填写" value="${t&&t.toAmount!=null?t.toAmount:''}">
+      <label>转入金额 · <span id="fin-tx-tocurlabel"></span> <span class="fin-hint-inline">（跨币种到账金额）</span></label>
+      <input id="fin-tx-toamount" type="number" step="0.01" inputmode="decimal" placeholder="对方账户实际到账" value="${t&&t.toAmount!=null?t.toAmount:''}">
     </div>
 
     <div class="fin-field" id="fin-tx-cat-wrap">
@@ -621,6 +618,8 @@ function finOpenTxForm(txId, presetType){
   `);
   finTxSetType(type, true);
   if(t&&t.categoryId) finRenderCatGrid(t.categoryId);
+  // Auto-focus the amount field so you can type immediately (esp. via ↑/↓/Shift+→ shortcuts)
+  setTimeout(()=>{ const el=document.getElementById('fin-tx-amount'); if(el){ el.focus(); el.select&&el.select(); } }, 60);
 }
 function finTxSetType(type, keepCat){
   document.getElementById('fin-tx-type').value = type;
@@ -633,13 +632,18 @@ function finTxSetType(type, keepCat){
   finTxAcctChanged();
 }
 function finTxAcctChanged(){
-  // Show "to amount" only for cross-currency transfers
+  // Currency follows the selected account — keep the amount-field label in sync.
   const type = document.getElementById('fin-tx-type').value;
-  const wrap = document.getElementById('fin-tx-toamt-wrap');
-  if(type!=='transfer'){ wrap.style.display='none'; return; }
   const from = finAcct(document.getElementById('fin-tx-account').value);
+  const curLbl = document.getElementById('fin-tx-curlabel');
+  if(curLbl && from) curLbl.textContent = from.currency;
+  const wrap = document.getElementById('fin-tx-toamt-wrap');
+  if(type!=='transfer'){ if(wrap) wrap.style.display='none'; return; }
+  // Transfer: "to amount" only shown for cross-currency moves
   const to = finAcct(document.getElementById('fin-tx-toaccount').value);
-  wrap.style.display = (from&&to&&from.currency!==to.currency)?'':'none';
+  const toLbl = document.getElementById('fin-tx-tocurlabel');
+  if(toLbl && to) toLbl.textContent = to.currency;
+  if(wrap) wrap.style.display = (from&&to&&from.currency!==to.currency)?'':'none';
 }
 function finRenderCatGrid(selId){
   const grid = document.getElementById('fin-tx-catgrid'); if(!grid) return;
@@ -658,12 +662,13 @@ async function finSubmitTx(){
   const type = document.getElementById('fin-tx-type').value;
   const amount = Math.round((parseFloat(document.getElementById('fin-tx-amount').value)||0)*100)/100;
   if(amount<=0){ alert('请输入金额'); return; }
-  const currency = document.getElementById('fin-tx-currency').value;
   const date = document.getElementById('fin-tx-date').value || TODAY;
   const note = document.getElementById('fin-tx-note').value.trim();
   const id = document.getElementById('fin-tx-id').value;
 
-  const tx = { type, amount, currency, date, note, tags:[],
+  // Currency is derived from the account (NOT a separate field) so it can never
+  // disagree with the account and break the balance math.
+  const tx = { type, amount, currency:(S.fin.baseCurrency||'TWD'), date, note, tags:[],
     accountId:null, toAccountId:null, toAmount:null, categoryId:null };
 
   if(type==='transfer'){
@@ -671,12 +676,15 @@ async function finSubmitTx(){
     tx.toAccountId = document.getElementById('fin-tx-toaccount').value;
     if(tx.accountId===tx.toAccountId){ alert('转出和转入账户不能相同'); return; }
     const from=finAcct(tx.accountId), to=finAcct(tx.toAccountId);
+    tx.currency = from ? from.currency : tx.currency;     // transfer amount is in the from-account currency
     if(from&&to&&from.currency!==to.currency){
       const ta=parseFloat(document.getElementById('fin-tx-toamount').value);
       tx.toAmount = isFinite(ta)&&ta>0 ? Math.round(ta*100)/100 : amount;
     }
   } else {
     tx.accountId = document.getElementById('fin-tx-account').value;
+    const acct = finAcct(tx.accountId);
+    tx.currency = acct ? acct.currency : tx.currency;     // income/expense currency = account currency
     tx.categoryId = document.getElementById('fin-tx-category').value || null;
   }
 
