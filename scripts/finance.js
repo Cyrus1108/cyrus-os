@@ -196,10 +196,13 @@ function finRenderWallet(){
   if(finUI.acctMgr) return finRenderAcctManager();
 
   // Asset dashboard
+  const altCur = FIN_CURRENCIES.filter(c=>c!==base)
+    .map(c=>`≈ ${finMoney(finRate(c)?nw.net/finRate(c):0, c)}`).join(' ');
   let h = `<div class="fin-dash">
     <div class="fin-dash-net">
       <div class="fin-dash-label">净资产 · NET WORTH <span class="fin-dash-cur">${base}</span></div>
       <div class="fin-dash-net-val ${nw.net<0?'fin-neg':''}">${finBaseMoney(nw.net)}</div>
+      ${altCur?`<div class="fin-dash-alt">${altCur}</div>`:''}
     </div>
     <div class="fin-dash-row">
       <div class="fin-dash-cell"><span class="fin-dash-sub">总资产</span><span class="fin-pos">${finBaseMoney(nw.assets)}</span></div>
