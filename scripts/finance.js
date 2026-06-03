@@ -12,7 +12,7 @@ const FIN_SYM = { TWD:'NT$', USD:'US$', MYR:'RM ' };
 
 const finUI = {
   open:false, tab:'wallet', month:null, privacy:false,
-  acctMgr:false, search:'',
+  acctMgr:false, search:'', ledgerView:'list', calDay:null,
 };
 
 /* ── money + currency helpers ── */
@@ -80,6 +80,7 @@ let _finTouchX=null, _finTouchY=null;
 function initFinance(){
   finUI.privacy = loadLS('fin_privacy', false);
   finUI.month = TODAY.slice(0,7);
+  finUI.ledgerView = loadLS('fin_ledgerview', 'list');
   S.fin.fxMeta = loadLS('fin_fxmeta', null) || {};
   window.addEventListener('hashchange', finOnHash);
 
@@ -288,6 +289,13 @@ function finShiftMonth(delta){
   const [y,m] = finUI.month.split('-').map(Number);
   const d = new Date(y, m-1+delta, 1);
   finUI.month = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  finUI.calDay = null;   // selected day belongs to a month; clear on month change
+  rFinance();
+}
+function finSetLedgerView(v){
+  finUI.ledgerView = v;
+  saveLSRaw('fin_ledgerview', v);
+  if(v==='calendar' && !finUI.calDay && finUI.month===TODAY.slice(0,7)) finUI.calDay = TODAY;
   rFinance();
 }
 function finRenderLedger(){
@@ -296,7 +304,7 @@ function finRenderLedger(){
   const tot = finTotals(txs);
   const [yy,mm] = month.split('-');
 
-  // Header dashboard
+  // Shared header: month nav + totals + sparkline + list/calendar toggle
   let h = `<div class="fin-led-head">
     <div class="fin-month-nav">
       <button class="fin-mn-btn" onclick="finShiftMonth(-1)">‹</button>
@@ -309,7 +317,13 @@ function finRenderLedger(){
       <div class="fin-led-cell"><span class="fin-dash-sub">结余</span><span class="${tot.net<0?'fin-neg':'fin-pos'}">${finBaseMoney(tot.net)}</span></div>
     </div>
     ${finSparkline(txs)}
+    <div class="fin-led-viewtoggle">
+      <button class="fin-vt ${finUI.ledgerView==='list'?'active':''}" onclick="finSetLedgerView('list')">列表</button>
+      <button class="fin-vt ${finUI.ledgerView==='calendar'?'active':''}" onclick="finSetLedgerView('calendar')">日历</button>
+    </div>
   </div>`;
+
+  if(finUI.ledgerView==='calendar') return h + finRenderLedgerCalendar(txs);
 
   if(!txs.length){
     h += `<div class="fin-empty">本月还没有流水。<br>点右下「+」记一笔。</div>`;
@@ -383,6 +397,62 @@ function finSparkline(txs){
     <line x1="0" y1="${H/2}" x2="${W}" y2="${H/2}" class="fin-spark-zero"/>
     <polyline points="${pts}" class="fin-spark-line"/>
   </svg>`;
+}
+
+/* ── ledger calendar view (Module 1 View B) ── */
+function finShort(n){
+  if(finUI.privacy) return '••';
+  n = Math.round(Math.abs(n));
+  if(n>=10000) return Math.round(n/1000)+'k';
+  if(n>=1000) return (n/1000).toFixed(1)+'k';
+  return ''+n;
+}
+function finCalDayPick(ds){ finUI.calDay = (finUI.calDay===ds ? null : ds); rFinance(); }
+function finRenderLedgerCalendar(txs){
+  const [y,m] = finUI.month.split('-').map(Number);
+  const startWd = new Date(y, m-1, 1).getDay();
+  const days = new Date(y, m, 0).getDate();
+  const wd = ['日','一','二','三','四','五','六'];
+
+  // per-day income/expense (base currency)
+  const agg = {};
+  for(const t of txs){
+    const d = Number(String(t.date).slice(8,10));
+    const a = agg[d] || (agg[d]={inc:0, exp:0});
+    if(t.type==='income') a.inc += finToBase(t.amount, t.currency);
+    else if(t.type==='expense') a.exp += finToBase(t.amount, t.currency);
+  }
+
+  let cells = '';
+  for(let i=0;i<startWd;i++) cells += `<div class="fin-lcal-cell empty"></div>`;
+  for(let d=1; d<=days; d++){
+    const ds = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const a = agg[d];
+    const cls = (ds===finUI.calDay?'sel ':'') + (ds===TODAY?'today':'');
+    cells += `<button type="button" class="fin-lcal-cell ${cls.trim()}" onclick="finCalDayPick('${ds}')">
+      <span class="fin-lcal-d">${d}</span>
+      ${a ? `<span class="fin-lcal-sums">${a.inc?`<i class="fin-pos">+${finShort(a.inc)}</i>`:''}${a.exp?`<i class="fin-neg">−${finShort(a.exp)}</i>`:''}</span>` : ''}
+    </button>`;
+  }
+
+  // selected-day panel
+  let dayPanel;
+  if(finUI.calDay){
+    const dayTxs = txs.filter(t=>t.date===finUI.calDay)
+      .sort((a,b)=> (a.created<b.created?1:-1));
+    dayPanel = `<div class="fin-lcal-day-head">${finDateLabel(finUI.calDay)}</div>` +
+      (dayTxs.length ? dayTxs.map(finTxCard).join('') : '<div class="fin-empty sm">这天没有流水</div>');
+  } else {
+    dayPanel = `<div class="fin-lcal-hint">点选某天查看当日流水</div>`;
+  }
+
+  return `<div class="fin-lcal-wrap">
+    <div class="fin-lcal">
+      <div class="fin-cal-wd">${wd.map(w=>`<span>${w}</span>`).join('')}</div>
+      <div class="fin-lcal-grid">${cells}</div>
+    </div>
+    <div class="fin-lcal-day">${dayPanel}</div>
+  </div>`;
 }
 
 /* ════════════ ANALYTICS (Phase 2 placeholder) ════════════ */
