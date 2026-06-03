@@ -121,7 +121,7 @@ let S={
   subjects:null,  /* Preset academic subjects — populated from settings.subjects */
   /* Finance module — accounts/categories/transactions pulled from fin_* tables.
      baseCurrency + fxRates come from settings; net worth aggregates into baseCurrency. */
-  fin:{ accounts:[], categories:[], transactions:[], budgets:[], goals:[], recurring:[], baseCurrency:'TWD', fxRates:{TWD:1,USD:31.5,MYR:7.1} },
+  fin:{ accounts:[], categories:[], transactions:[], budgets:[], goals:[], recurring:[], snapshots:{}, baseCurrency:'TWD', fxRates:{TWD:1,USD:31.5,MYR:7.1} },
 };
 
 let editingAC=null, editingJP=null, editingTR=null, editingTD=null;

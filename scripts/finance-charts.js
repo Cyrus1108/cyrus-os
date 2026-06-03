@@ -68,6 +68,10 @@ function finBalanceAsOf(acctId, date){
   return bal;
 }
 function finNetWorthAsOf(date){
+  // Prefer the nightly server snapshot when present (fast, and reflects the fx
+  // rates as of that day); fall back to client-side computation for days with none.
+  const snap = S.fin.snapshots && S.fin.snapshots[date];
+  if(snap!=null) return snap;
   let nw = 0;
   for(const a of S.fin.accounts){
     if(a.status!==FIN_ACCT_STATUS.ACTIVE) continue;

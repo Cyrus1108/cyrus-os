@@ -264,6 +264,16 @@ async function finSaveRecurring(){
   }));
 }
 
+async function pullFinSnapshots(){
+  // last ~400 days of nightly net-worth snapshots (written server-side by pg_cron)
+  const since = new Date(Date.now() - 400*86400000).toISOString().slice(0,10);
+  const { data } = await sb.from('fin_asset_snapshots').select('date,net_worth')
+    .eq('user_id', currentUser.id).gte('date', since);
+  const map = {};
+  for(const r of (data || [])) map[r.date] = Number(r.net_worth)||0;
+  S.fin.snapshots = map;
+}
+
 /* Persist base currency + FX rates (lives in the settings row). */
 function saveFinConfig(){
   dirty.settings = true;
@@ -280,7 +290,7 @@ async function pullAll(force){
         pullJapanese(), pullTrading(), pullCategories(), pullTodos(),
         pullThe90Meta(), pullThe90Daily(), pullHermes(),
         pullFinAccounts(), pullFinCategories(), pullFinTransactions(), pullFinBudgets(),
-        pullFinGoals(), pullFinRecurring(),
+        pullFinGoals(), pullFinRecurring(), pullFinSnapshots(),
       ]);
       initialPullDone = true;
       console.log('[sync] initial pull complete');
