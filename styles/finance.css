@@ -287,6 +287,28 @@ html[data-theme="sterile"] .fin-bud-cats{ border-radius:0; }
 .fin-bud-cat{ display:flex; align-items:center; gap:6px; font-size:13px; color:var(--ink); cursor:pointer; }
 .fin-bud-cat input{ width:auto !important; }
 
+/* ── app lock ── */
+.applock{ position:fixed; inset:0; z-index:99999; display:none; align-items:center; justify-content:center;
+  background:var(--color-background-primary); }
+.applock.show{ display:flex; }
+.applock-card{ width:100%; max-width:320px; text-align:center; padding:24px; }
+.applock-glyph{ font-size:30px; color:var(--brass); margin-bottom:10px; }
+.applock-title{ font-family:var(--serif); font-size:24px; color:var(--ink); letter-spacing:.04em; }
+.applock-sub{ font-size:13px; color:var(--mute); margin:6px 0 24px; }
+.applock-dots{ display:flex; gap:13px; justify-content:center; margin-bottom:28px; }
+.applock-dot{ width:13px; height:13px; border-radius:50%; border:1.5px solid var(--brass); transition:background .15s; }
+.applock-dot.on{ background:var(--brass); }
+.applock-pad{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; max-width:264px; margin:0 auto; }
+.applock-key{ aspect-ratio:1; border-radius:50%; border:.5px solid var(--hair-strong); background:var(--color-background-secondary);
+  font-size:22px; color:var(--ink); font-family:var(--mono); cursor:pointer; transition:background .12s; }
+.applock-key:active{ background:var(--brass); color:var(--color-background-primary); }
+.applock-keyfn{ font-size:18px; color:var(--brass); }
+.applock-err{ color:var(--fin-neg); font-size:13px; margin-top:18px; min-height:18px; }
+html[data-theme="sterile"] .applock-dot,
+html[data-theme="sterile"] .applock-key{ border-radius:0; }
+.fin-lock-status{ font-size:11px; color:var(--ghost); border:.5px solid var(--hair); border-radius:10px; padding:1px 8px; }
+.fin-lock-status.on{ color:var(--fin-pos); border-color:var(--fin-pos); }
+
 /* ── empty / soon ── */
 .fin-empty{ text-align:center; color:var(--ghost); font-size:13px; padding:40px 20px; line-height:1.8; }
 .fin-empty.sm{ padding:14px; font-size:12px; }

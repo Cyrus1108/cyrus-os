@@ -846,8 +846,11 @@ function finDeleteRecurring(id){
 
 /* ════════════ MORE ════════════ */
 function finRenderMore(){
+  // App lock (security) — global, but managed here
+  let h = (typeof appLockSettingsHtml==='function') ? appLockSettingsHtml() : '';
+
   // Search
-  let h = `<div class="fin-more-sec">
+  h += `<div class="fin-more-sec">
     <div class="fin-more-head">账单搜索</div>
     <input id="fin-search" class="fin-input" placeholder="搜索备注 / 金额 / 分类…" value="${escH(finUI.search)}" oninput="finDoSearch(this.value)">
     <div id="fin-search-results" class="fin-search-results">${finSearchResults()}</div>
