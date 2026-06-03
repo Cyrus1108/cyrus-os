@@ -193,6 +193,36 @@ html[data-theme="sterile"] .fin-tx-ico{ border-radius:0; }
 .fin-tx-sub{ font-size:11px; color:var(--ghost); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .fin-tx-amt{ font-family:var(--mono); font-size:15px; font-weight:600; color:var(--ink); }
 
+/* ── analytics (Phase 2-B) ── */
+.fin-ana-range{ width:100%; max-width:360px; }
+.fin-ana-custom{ display:flex; align-items:center; justify-content:center; gap:8px; margin:12px 0 4px; }
+.fin-ana-custom .fin-datebtn{ width:auto; flex:1; max-width:170px; font-size:12px; padding:8px 10px; }
+.fin-ana-dash{ color:var(--ghost); }
+.fin-ana-grid{ display:grid; grid-template-columns:1fr; gap:14px; margin-top:14px; }
+@media(min-width:760px){ .fin-ana-grid{ grid-template-columns:1fr 1fr; }
+  .fin-ana-block.span2{ grid-column:1 / -1; } }
+.fin-ana-block{ background:var(--color-background-secondary); border:.5px solid var(--hair);
+  border-radius:var(--border-radius-lg); padding:14px; }
+html[data-theme="sterile"] .fin-ana-block{ border-radius:0; }
+.fin-ana-head{ display:flex; align-items:center; justify-content:space-between; gap:8px;
+  font-size:13px; color:var(--ink); margin-bottom:12px; flex-wrap:wrap; }
+.fin-ana-sub{ font-size:11px; color:var(--brass); font-family:var(--mono); }
+.fin-anatoggles{ display:flex; align-items:center; gap:4px; }
+.fin-anatoggle{ background:none; border:.5px solid var(--hair); color:var(--ghost); font-size:11px;
+  padding:3px 9px; border-radius:20px; cursor:pointer; }
+html[data-theme="sterile"] .fin-anatoggle{ border-radius:0; }
+.fin-anatoggle.active{ background:var(--brass); color:var(--color-background-primary); border-color:var(--brass); }
+.fin-ana-sep{ width:.5px; height:14px; background:var(--hair-strong); margin:0 2px; }
+.fin-ana-donutwrap{ height:200px; position:relative; }
+.fin-ana-canvaswrap{ height:190px; position:relative; }
+.fin-ana-toplist{ margin-top:12px; }
+.fin-ana-toprow{ display:flex; align-items:center; gap:8px; padding:5px 0; font-size:13px; }
+.fin-ana-dot{ width:9px; height:9px; border-radius:50%; flex:none; }
+html[data-theme="sterile"] .fin-ana-dot{ border-radius:0; }
+.fin-ana-toplabel{ flex:1; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.fin-ana-toppct{ color:var(--ghost); font-family:var(--mono); font-size:11px; width:36px; text-align:right; }
+.fin-ana-topval{ color:var(--mute); font-family:var(--mono); font-size:12px; min-width:64px; text-align:right; }
+
 /* ── empty / soon ── */
 .fin-empty{ text-align:center; color:var(--ghost); font-size:13px; padding:40px 20px; line-height:1.8; }
 .fin-empty.sm{ padding:14px; font-size:12px; }

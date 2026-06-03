@@ -191,7 +191,10 @@ function closeFinance(fromHash){
   finCloseModal();
   if(!fromHash && location.hash==='#finance'){ history.replaceState(null,'',location.pathname+location.search); }
 }
-function finSwitchTab(tab){ finUI.tab=tab; finUI.acctMgr=false; rFinance(); }
+function finSwitchTab(tab){
+  if(finUI.tab==='analytics' && tab!=='analytics' && typeof finAnaDestroy==='function') finAnaDestroy();
+  finUI.tab=tab; finUI.acctMgr=false; rFinance();
+}
 function finTogglePrivacy(){ finUI.privacy=!finUI.privacy; saveLSRaw('fin_privacy', finUI.privacy); finUpdateEye(); rFinance(); }
 function finUpdateEye(){ const e=document.getElementById('fin-eye'); if(e) e.textContent = finUI.privacy?'🙈':'👁'; }
 
@@ -483,14 +486,8 @@ function finRenderLedgerCalendar(txs){
   </div>`;
 }
 
-/* ════════════ ANALYTICS (Phase 2 placeholder) ════════════ */
-function finRenderAnalytics(){
-  return `<div class="fin-soon">
-    <div class="fin-soon-glyph">◆</div>
-    <div class="fin-soon-title">图表分析 · 预算引擎</div>
-    <div class="fin-soon-sub">饼图 / 趋势 / 三种预算模式<br>将在 Phase 2 迭代加入</div>
-  </div>`;
-}
+/* ════════════ ANALYTICS ════════════
+   finRenderAnalytics() lives in finance-charts.js (Chart.js, lazy-loaded). */
 
 /* ════════════ MORE ════════════ */
 function finRenderMore(){
