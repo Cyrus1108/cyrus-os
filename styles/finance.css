@@ -207,6 +207,16 @@ html[data-theme="sterile"] .fin-tx-ico{ border-radius:0; }
 html[data-theme="sterile"] .fin-goal-acts button{ border-radius:0; }
 .fin-goal-acts button:hover{ color:var(--ink); border-color:var(--brass); }
 
+/* ── recurring (Phase 3-C) ── */
+.fin-rec{ padding:10px 0; border-bottom:.5px solid var(--hair); cursor:pointer; }
+.fin-rec:last-child{ border-bottom:none; }
+.fin-rec.off{ opacity:.5; }
+.fin-rec-top{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+.fin-rec-name{ font-size:14px; color:var(--ink); }
+.fin-rec-amt{ font-family:var(--mono); font-size:13px; color:var(--ink); }
+.fin-rec-meta{ font-size:11px; color:var(--ghost); font-family:var(--mono); margin-top:3px; }
+.fin-rec-headbtns{ display:flex; gap:6px; }
+
 /* ── tags (Phase 2-E) ── */
 .fin-tag-list{ display:flex; flex-wrap:wrap; gap:8px; }
 .fin-tag-chip{ display:inline-flex; align-items:center; gap:2px; background:var(--color-background-secondary);

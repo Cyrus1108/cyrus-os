@@ -715,6 +715,135 @@ function finDeleteGoal(id){
   finCloseModal(); rFinance();
 }
 
+/* ════════════ RECURRING (Phase 3-C) ════════════
+   Templates materialized into fin_transactions nightly by pg_cron
+   (fin_run_recurring); "▶ 运行" triggers fin_run_recurring_self for instant catch-up. */
+const FIN_FREQ_UNIT = { daily:'天', weekly:'周', monthly:'月', yearly:'年' };
+function finFreqText(f,n){ const u=FIN_FREQ_UNIT[f]||'月'; return (n>1)?`每 ${n} ${u}`:`每${u}`; }
+function finRecurringBlockHtml(){
+  let rows = '';
+  for(const r of S.fin.recurring){
+    const typeL = r.type==='income'?'收入':r.type==='expense'?'支出':'转账';
+    const cls = r.type==='income'?'fin-pos':r.type==='expense'?'fin-neg':'';
+    rows += `<div class="fin-rec ${r.active?'':'off'}" onclick="finOpenRecurringForm('${r.id}')">
+      <div class="fin-rec-top"><span class="fin-rec-name">${escH(r.name)}</span><span class="fin-rec-amt ${cls}">${finMoney(r.amount,r.currency)}</span></div>
+      <div class="fin-rec-meta">${typeL} · ${finFreqText(r.frequency,r.intervalN)} · 下次 ${r.nextDate}${r.active?'':' · 已暂停'}</div>
+    </div>`;
+  }
+  return `<div class="fin-more-sec">
+    <div class="fin-more-head">周期记账 <span class="fin-rec-headbtns"><button class="ghost fx-btn fin-mini" onclick="event.stopPropagation();finRunRecurringNow()">▶ 运行</button><button class="primary fx-btn fin-mini" onclick="event.stopPropagation();finOpenRecurringForm()">+ 新周期</button></span></div>
+    ${rows || '<div class="fin-empty sm">还没有周期记账。如每月 Netflix、房租，到期自动入账。</div>'}
+  </div>`;
+}
+async function finRunRecurringNow(){
+  if(typeof sb==='undefined' || !currentUser){ finToast('请先登录'); return; }
+  const { data, error } = await sb.rpc('fin_run_recurring_self');
+  if(error){ console.error('[fin] run recurring', error); finToast('运行失败'); return; }
+  if(typeof pullFinTransactions==='function') await pullFinTransactions();
+  if(typeof pullFinRecurring==='function') await pullFinRecurring();
+  rFinance();
+  finToast(`已生成 ${data||0} 笔`);
+}
+function finRecCatOptions(kind, sel){
+  return S.fin.categories.filter(c=>c.kind===kind && !c.archived)
+    .map(c=>`<option value="${c.id}" ${c.id===sel?'selected':''}>${c.icon||''} ${escH(c.name)}</option>`).join('');
+}
+function finOpenRecurringForm(id){
+  const r = id ? S.fin.recurring.find(x=>x.id===id) : null;
+  const type = r ? r.type : 'expense';
+  const accts = finSelectableAccounts();
+  if(!accts.length){ finModal(`<div class="fin-form-title">还没有账户</div><div class="fin-empty sm">请先创建账户再设周期记账。</div><div class="fin-form-btns"><button class="ghost fx-btn" onclick="finCloseModal()">知道了</button></div>`); return; }
+  const acctOpts = (sel)=> accts.map(a=>`<option value="${a.id}" ${a.id===sel?'selected':''}>${escH(a.name)} · ${a.currency}</option>`).join('');
+  const freq = r ? r.frequency : 'monthly';
+  finModal(`
+    <div class="fin-form-title">${id?'编辑周期':'新周期记账'}</div>
+    <input type="hidden" id="fin-rec-id" value="${id||''}">
+    <div class="fin-seg" id="fin-rec-typeseg">${['expense','income','transfer'].map(k=>`<button type="button" class="fin-seg-btn ${k===type?'active':''}" data-type="${k}" onclick="finRecSetType('${k}')">${k==='expense'?'支出':k==='income'?'收入':'转账'}</button>`).join('')}</div>
+    <input type="hidden" id="fin-rec-type" value="${type}">
+    <div class="fin-field"><label>名称</label><input id="fin-rec-name" type="text" placeholder="如 Netflix / 房租" value="${r?escH(r.name):''}"></div>
+    <div class="fin-field"><label>金额 · <span class="fin-cur-suffix" id="fin-rec-curlabel"></span></label><input id="fin-rec-amount" type="number" step="0.01" inputmode="decimal" placeholder="0.00" value="${r?r.amount:''}"></div>
+    <div class="fin-field" id="fin-rec-acct-wrap"><label id="fin-rec-acct-label">账户</label><select id="fin-rec-account" onchange="finRecAcctChanged()">${acctOpts(r?r.accountId:(accts[0]&&accts[0].id))}</select></div>
+    <div class="fin-field" id="fin-rec-toacct-wrap" style="display:none;"><label>转入账户</label><select id="fin-rec-toaccount" onchange="finRecAcctChanged()">${acctOpts(r?r.toAccountId:(accts[1]?accts[1].id:accts[0].id))}</select></div>
+    <div class="fin-field" id="fin-rec-cat-wrap"><label>分类</label><select id="fin-rec-category">${finRecCatOptions(type==='income'?'income':'expense', r&&r.categoryId)}</select></div>
+    <div class="fin-field"><label>频率</label>
+      <div class="fin-seg" id="fin-rec-freqseg">${[['daily','每日'],['weekly','每周'],['monthly','每月'],['yearly','每年']].map(([k,l])=>`<button type="button" class="fin-seg-btn ${k===freq?'active':''}" data-f="${k}" onclick="finRecSetFreq('${k}')">${l}</button>`).join('')}</div>
+      <input type="hidden" id="fin-rec-freq" value="${freq}">
+      <div class="field-row" style="margin-top:8px;align-items:center;gap:8px;"><span class="field-label">每隔</span><input id="fin-rec-interval" type="number" min="1" value="${r?r.intervalN:1}" style="flex:1;"><span class="field-label" id="fin-rec-intervalunit">${FIN_FREQ_UNIT[freq]}</span></div>
+    </div>
+    <div class="fin-field"><label>开始 / 下次日期</label><button type="button" class="fin-datebtn" onclick="finOpenCal('fin-rec-next')">📅 <span id="fin-rec-next-label">${finDateLabel(r?r.nextDate:TODAY)}</span></button><input type="hidden" id="fin-rec-next" value="${r?r.nextDate:TODAY}"></div>
+    <div class="fin-field"><label>备注</label><input id="fin-rec-note" type="text" placeholder="可选…" value="${r?escH(r.note||''):''}"></div>
+    <label class="fin-check"><input type="checkbox" id="fin-rec-active" ${(!r||r.active)?'checked':''}> 启用（暂停后不再自动入账）</label>
+    <div class="fin-form-btns">
+      ${id?`<button class="ghost fx-btn danger" onclick="finDeleteRecurring('${id}')">删除</button>`:''}
+      <button class="ghost fx-btn" onclick="finCloseModal()">取消</button>
+      <button class="primary fx-btn" onclick="finSubmitRecurring()">保存</button>
+    </div>
+  `);
+  finRecSetType(type, true);
+}
+function finRecSetType(type, keepCat){
+  document.getElementById('fin-rec-type').value = type;
+  document.querySelectorAll('#fin-rec-typeseg .fin-seg-btn').forEach(b=>b.classList.toggle('active', b.dataset.type===type));
+  const isT = type==='transfer';
+  document.getElementById('fin-rec-cat-wrap').style.display = isT?'none':'';
+  document.getElementById('fin-rec-toacct-wrap').style.display = isT?'':'none';
+  document.getElementById('fin-rec-acct-label').textContent = isT?'转出账户':'账户';
+  if(!isT){
+    const sel = keepCat ? (document.getElementById('fin-rec-category').value) : null;
+    document.getElementById('fin-rec-category').innerHTML = finRecCatOptions(type==='income'?'income':'expense', sel);
+  }
+  finRecAcctChanged();
+}
+function finRecSetFreq(f){
+  document.getElementById('fin-rec-freq').value = f;
+  document.querySelectorAll('#fin-rec-freqseg .fin-seg-btn').forEach(b=>b.classList.toggle('active', b.dataset.f===f));
+  document.getElementById('fin-rec-intervalunit').textContent = FIN_FREQ_UNIT[f];
+}
+function finRecAcctChanged(){
+  const from = finAcct(document.getElementById('fin-rec-account').value);
+  const lbl = document.getElementById('fin-rec-curlabel');
+  if(lbl && from) lbl.textContent = from.currency;
+}
+function finSubmitRecurring(){
+  const id = document.getElementById('fin-rec-id').value;
+  const name = document.getElementById('fin-rec-name').value.trim();
+  if(!name){ alert('请输入名称'); return; }
+  const amount = Math.round((parseFloat(document.getElementById('fin-rec-amount').value)||0)*100)/100;
+  if(amount<=0){ alert('请输入金额'); return; }
+  const type = document.getElementById('fin-rec-type').value;
+  const accountId = document.getElementById('fin-rec-account').value;
+  const acct = finAcct(accountId);
+  const rec = {
+    name, type, amount, currency: acct?acct.currency:(S.fin.baseCurrency||'TWD'),
+    accountId, toAccountId:null, toAmount:null, categoryId:null,
+    note: document.getElementById('fin-rec-note').value.trim(), tags:[],
+    frequency: document.getElementById('fin-rec-freq').value,
+    intervalN: Math.max(1, parseInt(document.getElementById('fin-rec-interval').value)||1),
+    nextDate: document.getElementById('fin-rec-next').value || TODAY,
+    active: document.getElementById('fin-rec-active').checked,
+  };
+  if(type==='transfer'){
+    rec.toAccountId = document.getElementById('fin-rec-toaccount').value;
+    if(rec.accountId===rec.toAccountId){ alert('转出和转入账户不能相同'); return; }
+    const from=acct, to=finAcct(rec.toAccountId);
+    if(from&&to&&from.currency!==to.currency) rec.toAmount = amount;   // simple 1:1 default; edit the generated tx for exact fx
+  } else {
+    rec.categoryId = document.getElementById('fin-rec-category').value || null;
+  }
+  if(id){ rec.id=id; Object.assign(S.fin.recurring.find(x=>x.id===id), rec); }
+  else { S.fin.recurring.push({ id:crypto.randomUUID(), sort:S.fin.recurring.length, ...rec }); }
+  if(typeof finSaveRecurring==='function') finSaveRecurring();
+  saveLSRaw('fin_recurring', S.fin.recurring);
+  finCloseModal(); rFinance();
+}
+function finDeleteRecurring(id){
+  if(!confirm('删除这个周期记账？已生成的流水不受影响。')) return;
+  S.fin.recurring = S.fin.recurring.filter(r=>r.id!==id);
+  if(typeof finSaveRecurring==='function') finSaveRecurring();
+  saveLSRaw('fin_recurring', S.fin.recurring);
+  finCloseModal(); rFinance();
+}
+
 /* ════════════ MORE ════════════ */
 function finRenderMore(){
   // Search
@@ -746,6 +875,9 @@ function finRenderMore(){
 
   // Savings goals
   h += finGoalsBlockHtml();
+
+  // Recurring
+  h += finRecurringBlockHtml();
 
   // Tags
   const tags = finAllTags();
