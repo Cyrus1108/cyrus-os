@@ -62,22 +62,22 @@ function lockMount(){
   if(lockOverlay()) return;
   const o = document.createElement('div');
   o.id='applock'; o.className='applock';
-  const pad = [1,2,3,4,5,6,7,8,9,'bio',0,'del'].map(k=>{
-    if(k==='bio') return `<button class="applock-key applock-keyfn" id="applock-biokey" title="生物识别">☉</button>`;
+  const pad = [1,2,3,4,5,6,7,8,9,'blank',0,'del'].map(k=>{
+    if(k==='blank') return `<span class="applock-key blank"></span>`;
     if(k==='del') return `<button class="applock-key applock-keyfn" onclick="lockKey('del')">⌫</button>`;
     return `<button class="applock-key" onclick="lockKey('${k}')">${k}</button>`;
   }).join('');
   o.innerHTML = `<div class="applock-card">
     <div class="applock-glyph">◆</div>
     <div class="applock-title">Cyrus OS</div>
+    <button class="applock-biomain" id="applock-biomain" style="display:none;" onclick="lockBioTap()">面容 / 指纹解锁</button>
     <div class="applock-sub" id="applock-sub">输入 PIN 解锁</div>
     <div class="applock-dots" id="applock-dots">${'<span class="applock-dot"></span>'.repeat(6)}</div>
     <div class="applock-pad">${pad}</div>
+    <div class="applock-pinhint" id="applock-pinhint"></div>
     <div class="applock-err" id="applock-err"></div>
   </div>`;
   document.body.appendChild(o);
-  const bk = document.getElementById('applock-biokey');
-  if(bk) bk.addEventListener('click', lockBioTap);
 }
 function lockRenderDots(){
   const dots = document.querySelectorAll('#applock-dots .applock-dot');
@@ -91,9 +91,17 @@ function appShowLock(){
   const o = lockOverlay(); o.classList.add('show');
   lockRenderDots();
   const err=document.getElementById('applock-err'); if(err) err.textContent='';
-  const bk=document.getElementById('applock-biokey'); if(bk) bk.style.display = lockCfg().credId ? '' : 'none';
-  const sub=document.getElementById('applock-sub'); if(sub) sub.textContent = lockCfg().credId ? '指纹 / 面容，或输入 PIN' : '输入 PIN 解锁';
+  const hasBio = !!lockCfg().credId;
+  const bm=document.getElementById('applock-biomain'); if(bm) bm.style.display = hasBio ? '' : 'none';
+  const sub=document.getElementById('applock-sub'); if(sub) sub.textContent = hasBio ? '面容 / 指纹解锁' : '输入 PIN 解锁';
+  const hint=document.getElementById('applock-pinhint'); if(hint) hint.textContent = hasBio ? '或在下方输入 PIN' : '';
   lockCheckLockout();
+  // Default to biometric: auto-prompt it the moment the lock appears (the OS chooses
+  // face → fingerprint). If it's blocked (no user gesture) or cancelled, the PIN pad
+  // below is the fallback — no scary error on the silent auto attempt.
+  if(hasBio && Date.now() >= lockRT.lockoutUntil){
+    setTimeout(()=>{ if(!lockRT.unlocked && lockOverlay() && lockOverlay().classList.contains('show')) lockBioTap(true); }, 300);
+  }
 }
 function appUnlockDone(){
   lockRT.unlocked = true; lockRT.entry=''; lockRT.fails=0; lockRT.lockoutUntil=0;
@@ -135,11 +143,14 @@ function lockCheckLockout(){
   };
   if(Date.now() < lockRT.lockoutUntil) tick();
 }
-async function lockBioTap(){
-  const err=document.getElementById('applock-err'); if(err) err.textContent='验证中…';
+async function lockBioTap(auto){
+  const err=document.getElementById('applock-err');
+  if(err) err.textContent = auto ? '' : '验证中…';
   const ok = await lockBioUnlock();
-  if(ok) appUnlockDone();
-  else if(err) err.textContent='生物识别未通过，请用 PIN';
+  if(ok){ appUnlockDone(); return; }
+  // failed / cancelled — stay on PIN. Stay silent on the auto attempt (often just a
+  // missing user-gesture); only nudge if the user tapped the button themselves.
+  if(err) err.textContent = auto ? '' : '未通过 · 重试或用 PIN';
 }
 
 /* ── auto-lock ── */
