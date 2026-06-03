@@ -610,6 +610,111 @@ function finDeleteBudget(id){
   finCloseModal(); rFinance();
 }
 
+/* ════════════ SAVINGS GOALS (Phase 3-A) ════════════ */
+function finGoalSaved(g){
+  if(g.mode==='account' && g.accountId){
+    const a = finAcct(g.accountId); if(!a) return 0;
+    return finToBase(finBalance(g.accountId), a.currency) / (finRate(g.currency)||1);  // account balance in the goal's currency
+  }
+  return g.savedAmount||0;
+}
+function finGoalsBlockHtml(){
+  let rows = '';
+  for(const g of S.fin.goals){
+    const saved = finGoalSaved(g), pct = g.target>0 ? saved/g.target : 0, done = pct>=1;
+    rows += `<div class="fin-goal">
+      <div class="fin-goal-top">
+        <span class="fin-goal-name">${escH(g.name)}${g.deadline?` <span class="fin-goal-dl">${g.deadline}</span>`:''}</span>
+        <span class="fin-goal-nums">${finMoney(saved,g.currency)} / ${finMoney(g.target,g.currency)}</span>
+      </div>
+      <div class="fin-bud-bar"><div class="fin-bud-fill" style="width:${Math.min(100,pct*100).toFixed(0)}%;${done?'background:var(--fin-pos);':''}"></div></div>
+      <div class="fin-goal-meta"><span>${(pct*100).toFixed(0)}%${done?' · 达成 🎉':''}</span>
+        <span class="fin-goal-acts">${g.mode==='manual'?`<button onclick="finGoalDeposit('${g.id}')">存入</button>`:''}<button onclick="finOpenGoalForm('${g.id}')">编辑</button></span>
+      </div>
+    </div>`;
+  }
+  return `<div class="fin-more-sec">
+    <div class="fin-more-head">存钱目标 <button class="primary fx-btn fin-mini" onclick="finOpenGoalForm()">+ 新目标</button></div>
+    ${rows || '<div class="fin-empty sm">还没有目标。设一个，攒钱有方向。</div>'}
+  </div>`;
+}
+function finOpenGoalForm(id){
+  const g = id ? S.fin.goals.find(x=>x.id===id) : null;
+  const mode = g ? g.mode : 'manual';
+  const accts = finSelectableAccounts();
+  const baseCur = g ? g.currency : (S.fin.baseCurrency||'TWD');
+  const curOpts = FIN_CURRENCIES.map(c=>`<option value="${c}" ${baseCur===c?'selected':''}>${c}</option>`).join('');
+  const acctOpts = accts.map(a=>`<option value="${a.id}" ${g&&g.accountId===a.id?'selected':''}>${escH(a.name)} · ${a.currency}</option>`).join('') || '<option value="">（无账户）</option>';
+  finModal(`
+    <div class="fin-form-title">${id?'编辑目标':'新目标'}</div>
+    <input type="hidden" id="fin-goal-id" value="${id||''}">
+    <div class="fin-field"><label>名称</label><input id="fin-goal-name" type="text" placeholder="如 旅游基金 / 紧急预备金" value="${g?escH(g.name):''}"></div>
+    <div class="fin-field"><label>目标金额</label><div class="fin-amt-row"><input id="fin-goal-target" type="number" step="0.01" inputmode="decimal" placeholder="0.00" value="${g?g.target:''}"><select id="fin-goal-currency">${curOpts}</select></div></div>
+    <div class="fin-field"><label>方式</label>
+      <div class="fin-seg" id="fin-goal-modeseg">
+        <button type="button" class="fin-seg-btn ${mode==='manual'?'active':''}" data-m="manual" onclick="finGoalSetMode('manual')">手动存入</button>
+        <button type="button" class="fin-seg-btn ${mode==='account'?'active':''}" data-m="account" onclick="finGoalSetMode('account')">关联账户</button>
+      </div>
+      <input type="hidden" id="fin-goal-mode" value="${mode}">
+      <div class="fin-hint" id="fin-goal-modehint">${mode==='account'?'进度 = 该账户当前余额（自动）':'进度 = 你手动累计存入的金额'}</div>
+    </div>
+    <div class="fin-field" id="fin-goal-acct-wrap" style="${mode==='account'?'':'display:none;'}"><label>关联账户</label><select id="fin-goal-account">${acctOpts}</select></div>
+    <div class="fin-field" id="fin-goal-saved-wrap" style="${mode==='manual'?'':'display:none;'}"><label>已存入</label><input id="fin-goal-saved" type="number" step="0.01" inputmode="decimal" placeholder="0.00" value="${g?g.savedAmount:''}"></div>
+    <div class="fin-field"><label>目标日期（可选）</label>
+      <button type="button" class="fin-datebtn" onclick="finOpenCal('fin-goal-deadline')">📅 <span id="fin-goal-deadline-label">${g&&g.deadline?finDateLabel(g.deadline):'不设'}</span></button>
+      <input type="hidden" id="fin-goal-deadline" value="${g&&g.deadline?g.deadline:''}">
+    </div>
+    <div class="fin-form-btns">
+      ${id?`<button class="ghost fx-btn danger" onclick="finDeleteGoal('${id}')">删除</button>`:''}
+      <button class="ghost fx-btn" onclick="finCloseModal()">取消</button>
+      <button class="primary fx-btn" onclick="finSubmitGoal()">保存</button>
+    </div>
+  `);
+}
+function finGoalSetMode(m){
+  document.getElementById('fin-goal-mode').value = m;
+  document.querySelectorAll('#fin-goal-modeseg .fin-seg-btn').forEach(b=>b.classList.toggle('active', b.dataset.m===m));
+  document.getElementById('fin-goal-acct-wrap').style.display = m==='account' ? '' : 'none';
+  document.getElementById('fin-goal-saved-wrap').style.display = m==='manual' ? '' : 'none';
+  document.getElementById('fin-goal-modehint').textContent = m==='account' ? '进度 = 该账户当前余额（自动）' : '进度 = 你手动累计存入的金额';
+}
+function finSubmitGoal(){
+  const id = document.getElementById('fin-goal-id').value;
+  const name = document.getElementById('fin-goal-name').value.trim();
+  if(!name){ alert('请输入目标名称'); return; }
+  const target = Math.round((parseFloat(document.getElementById('fin-goal-target').value)||0)*100)/100;
+  if(target<=0){ alert('请输入目标金额'); return; }
+  const currency = document.getElementById('fin-goal-currency').value;
+  const mode = document.getElementById('fin-goal-mode').value;
+  const accountId = mode==='account' ? (document.getElementById('fin-goal-account').value||null) : null;
+  const savedAmount = mode==='manual' ? Math.round((parseFloat(document.getElementById('fin-goal-saved').value)||0)*100)/100 : 0;
+  const deadline = document.getElementById('fin-goal-deadline').value || null;
+  if(id){ Object.assign(S.fin.goals.find(g=>g.id===id), { name, target, currency, mode, accountId, savedAmount, deadline }); }
+  else { S.fin.goals.push({ id:crypto.randomUUID(), name, target, currency, mode, accountId, savedAmount, deadline, sort:S.fin.goals.length }); }
+  if(typeof finSaveGoals==='function') finSaveGoals();
+  saveLSRaw('fin_goals', S.fin.goals);
+  finCloseModal(); rFinance();
+}
+function finGoalDeposit(id){
+  const g = S.fin.goals.find(x=>x.id===id); if(!g) return;
+  const input = prompt(`存入「${g.name}」(${g.currency})：`, '');
+  if(input==null) return;
+  const v = parseFloat(input); if(!isFinite(v)||v===0) return;
+  g.savedAmount = Math.round(((g.savedAmount||0)+v)*100)/100;
+  if(g.savedAmount<0) g.savedAmount=0;
+  if(typeof finSaveGoals==='function') finSaveGoals();
+  saveLSRaw('fin_goals', S.fin.goals);
+  rFinance();
+  finToast(`已存入 ${finMoney(v,g.currency,{noMask:true})}`);
+}
+function finDeleteGoal(id){
+  if(!confirm('删除这个目标？')) return;
+  S.fin.goals = S.fin.goals.filter(g=>g.id!==id);
+  if(typeof finSaveGoals==='function') finSaveGoals();
+  saveLSRaw('fin_goals', S.fin.goals);
+  finCloseModal(); rFinance();
+}
+
 /* ════════════ MORE ════════════ */
 function finRenderMore(){
   // Search
@@ -638,6 +743,9 @@ function finRenderMore(){
     <div class="fin-cat-sub">支出</div>${exp.map(catRow).join('')||'<div class="fin-empty sm">无</div>'}
     <div class="fin-cat-sub">收入</div>${inc.map(catRow).join('')||'<div class="fin-empty sm">无</div>'}
   </div>`;
+
+  // Savings goals
+  h += finGoalsBlockHtml();
 
   // Tags
   const tags = finAllTags();

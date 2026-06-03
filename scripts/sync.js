@@ -226,6 +226,43 @@ async function finSaveBudgets(){
     type:b.type, target_categories:b.targets||[], period:b.period||'monthly', sort:b.sort||0,
   }));
 }
+async function pullFinGoals(){
+  const { data } = await sb.from('fin_goals').select('*').eq('user_id', currentUser.id).order('sort');
+  S.fin.goals = (data || []).map(r => ({
+    id:r.id, name:r.name, target:Number(r.target_amount)||0, currency:r.currency,
+    mode:r.mode, accountId:r.account_id, savedAmount:Number(r.saved_amount)||0,
+    deadline:r.deadline, sort:r.sort||0,
+  }));
+  saveLSRaw('fin_goals', S.fin.goals);
+}
+async function finSaveGoals(){
+  if(!currentUser) return;
+  await waitForPull();
+  await replaceTable('fin_goals', S.fin.goals, g => ({
+    id:g.id, user_id:currentUser.id, name:g.name, target_amount:g.target||0, currency:g.currency,
+    mode:g.mode, account_id:g.accountId||null, saved_amount:g.savedAmount||0, deadline:g.deadline||null, sort:g.sort||0,
+  }));
+}
+async function pullFinRecurring(){
+  const { data } = await sb.from('fin_recurring').select('*').eq('user_id', currentUser.id).order('sort');
+  S.fin.recurring = (data || []).map(r => ({
+    id:r.id, name:r.name, type:r.type, amount:Number(r.amount)||0, currency:r.currency,
+    accountId:r.account_id, toAccountId:r.to_account_id, toAmount:r.to_amount!=null?Number(r.to_amount):null,
+    categoryId:r.category_id, note:r.note||'', tags:r.tags||[],
+    frequency:r.frequency, intervalN:r.interval_n||1, nextDate:r.next_date, lastRun:r.last_run, active:!!r.active, sort:r.sort||0,
+  }));
+  saveLSRaw('fin_recurring', S.fin.recurring);
+}
+async function finSaveRecurring(){
+  if(!currentUser) return;
+  await waitForPull();
+  await replaceTable('fin_recurring', S.fin.recurring, r => ({
+    id:r.id, user_id:currentUser.id, name:r.name, type:r.type, amount:r.amount||0, currency:r.currency,
+    account_id:r.accountId||null, to_account_id:r.toAccountId||null, to_amount:r.toAmount!=null?r.toAmount:null,
+    category_id:r.categoryId||null, note:r.note||null, tags:(r.tags&&r.tags.length)?r.tags:null,
+    frequency:r.frequency, interval_n:r.intervalN||1, next_date:r.nextDate, active:r.active!==false, sort:r.sort||0,
+  }));
+}
 
 /* Persist base currency + FX rates (lives in the settings row). */
 function saveFinConfig(){
@@ -243,6 +280,7 @@ async function pullAll(force){
         pullJapanese(), pullTrading(), pullCategories(), pullTodos(),
         pullThe90Meta(), pullThe90Daily(), pullHermes(),
         pullFinAccounts(), pullFinCategories(), pullFinTransactions(), pullFinBudgets(),
+        pullFinGoals(), pullFinRecurring(),
       ]);
       initialPullDone = true;
       console.log('[sync] initial pull complete');
@@ -512,6 +550,10 @@ function subscribeRealtime(){
       async () => { await pullFinTransactions(); if(typeof rFinance==='function') rFinance(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'fin_budgets', filter: `user_id=eq.${uid}` },
       async () => { await pullFinBudgets(); if(typeof rFinance==='function') rFinance(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'fin_goals', filter: `user_id=eq.${uid}` },
+      async () => { await pullFinGoals(); if(typeof rFinance==='function') rFinance(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'fin_recurring', filter: `user_id=eq.${uid}` },
+      async () => { await pullFinRecurring(); if(typeof rFinance==='function') rFinance(); })
     .subscribe((status, err) => {
       console.log('[realtime]', status);
       if(err) console.error('[realtime] error', err);

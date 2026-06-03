@@ -120,6 +120,8 @@ async function init(){
   const finC=loadLS('fin_categories',null);if(finC&&Array.isArray(finC))S.fin.categories=finC;
   const finT=loadLS('fin_transactions',null);if(finT&&Array.isArray(finT))S.fin.transactions=finT;
   const finB=loadLS('fin_budgets',null);if(finB&&Array.isArray(finB))S.fin.budgets=finB;
+  const finG=loadLS('fin_goals',null);if(finG&&Array.isArray(finG))S.fin.goals=finG;
+  const finR=loadLS('fin_recurring',null);if(finR&&Array.isArray(finR))S.fin.recurring=finR;
   showDone = loadLS('show_done', false);
   if(typeof initTheme === 'function') initTheme();
   if(typeof initFinance === 'function') initFinance();
