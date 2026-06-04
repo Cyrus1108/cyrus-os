@@ -8,8 +8,7 @@
    ════════════════════════════════════════════════════════════════ */
 
 const LOCK_KEY = 'cyrus_lock';
-const LOCK_IDLE_MS = 3 * 60 * 1000;     // lock after 3 min idle
-const LOCK_BG_MS   = 15 * 1000;         // lock if backgrounded > 15s
+const LOCK_BG_MS   = 15 * 1000;         // lock if backgrounded > 15s (e.g. switched apps on mobile)
 const lockRT = { unlocked:false, hiddenAt:0, idleTimer:null, entry:'', fails:0, lockoutUntil:0 };
 
 /* ── storage ── */
@@ -155,15 +154,12 @@ async function lockBioTap(auto){
 }
 
 /* ── auto-lock ── */
-function lockResetIdle(){
-  if(lockRT.idleTimer) clearTimeout(lockRT.idleTimer);
-  if(!lockEnabled()) return;
-  lockRT.idleTimer = setTimeout(()=>{ if(lockEnabled() && lockRT.unlocked) appShowLock(); }, LOCK_IDLE_MS);
-}
+function lockResetIdle(){ /* idle timer removed — only locks on load and background return */ }
 function initAppLock(){
   if(!lockEnabled()){ document.documentElement.classList.remove('app-locked-boot'); return; }
   appShowLock();
-  ['pointerdown','keydown','touchstart'].forEach(ev=>document.addEventListener(ev, ()=>{ if(lockRT.unlocked) lockResetIdle(); }, {passive:true}));
+  // Only lock when the app returns from the background (e.g. switched to another app
+  // on mobile). Idle-while-open timer has been removed at user request.
   document.addEventListener('visibilitychange', ()=>{
     if(!lockEnabled()) return;
     if(document.visibilityState==='hidden'){ lockRT.hiddenAt = Date.now(); }
