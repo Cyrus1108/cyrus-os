@@ -114,6 +114,8 @@ function initFinance(){
   //   ↑ / ↓            quick-record income / expense
   //   Shift + →        quick-record transfer
   //   Esc              step back out (modal → calendar → acct manager → close)
+  //   [ / ]  (ledger)  toggle list ↔ calendar view
+  //   [ / ]  (charts)  cycle time period  week → month → year → custom
   document.addEventListener('keydown', (e)=>{
     if(!finUI.open) return;
     // Calendar popup owns the keyboard while open (←→ ±day, ↑↓ ±week, Enter pick, Esc close)
@@ -137,6 +139,23 @@ function initFinance(){
     if(e.key==='ArrowUp'){ e.preventDefault(); finWizStart('income'); return; }
     if(e.key==='ArrowDown'){ e.preventDefault(); finWizStart('expense'); return; }
     if(e.key==='ArrowRight' && e.shiftKey){ e.preventDefault(); finWizStart('transfer'); return; }
+
+    // [ / ] — context-aware view/period cycling
+    if(e.key===']' || e.key==='['){
+      e.preventDefault();
+      const fwd = e.key===']';
+      if(finUI.tab==='ledger'){
+        // Toggle list ↔ calendar
+        finSetLedgerView(finUI.ledgerView==='list' ? 'calendar' : 'list');
+      } else if(finUI.tab==='analytics' && typeof finAnaSetRange==='function'){
+        // Cycle week → month → year → custom (] forward, [ backward)
+        const periods = ['week','month','year','custom'];
+        const idx = periods.indexOf(finAna.range);
+        const next = periods[(idx + (fwd ? 1 : periods.length - 1)) % periods.length];
+        finAnaSetRange(next);
+      }
+      return;
+    }
 
     // Plain ←/→ switch tabs (not while in the account manager)
     if(finUI.acctMgr) return;
