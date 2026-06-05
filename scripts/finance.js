@@ -141,8 +141,9 @@ function initFinance(){
     if(e.key==='ArrowDown'){ e.preventDefault(); finWizStart('expense'); return; }
     if(e.key==='ArrowRight' && e.shiftKey){ e.preventDefault(); finWizStart('transfer'); return; }
 
-    // 、— toggle privacy (hide/show amounts)
-    if(e.key==='、'){ e.preventDefault(); finTogglePrivacy(); return; }
+    // 、— toggle privacy (hide/show amounts). The 、(顿号) key sits on the
+    // physical Backslash key; match by e.code so it works regardless of IME state.
+    if(e.key==='、' || e.key==='\\' || e.code==='Backslash'){ e.preventDefault(); finTogglePrivacy(); return; }
 
     // [ / ] — context-aware view/period cycling
     if(e.key===']' || e.key==='['){

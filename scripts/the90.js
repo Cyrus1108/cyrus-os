@@ -130,8 +130,9 @@ function initThe90Keys(){
     if(tag==='INPUT' || tag==='TEXTAREA' || tag==='SELECT') return;
     if(e.metaKey || e.ctrlKey || e.altKey) return;
 
-    // 、 on the main page → jump into finance
-    if(e.key==='、'){
+    // 、 on the main page → jump into finance. The 、(顿号) key is the physical
+    // Backslash key; match by e.code so it fires whatever the IME/input mode.
+    if(e.key==='、' || e.key==='\\' || e.code==='Backslash'){
       if(typeof openFinance==='function'){ e.preventDefault(); openFinance(); }
       return;
     }
