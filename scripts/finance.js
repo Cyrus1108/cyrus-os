@@ -116,6 +116,7 @@ function initFinance(){
   //   Esc              step back out (modal → calendar → acct manager → close)
   //   [ / ]  (ledger)  toggle list ↔ calendar view
   //   [ / ]  (charts)  cycle time period  week → month → year → custom
+  //   、               toggle amount privacy (hide / show)
   document.addEventListener('keydown', (e)=>{
     if(!finUI.open) return;
     // Calendar popup owns the keyboard while open (←→ ±day, ↑↓ ±week, Enter pick, Esc close)
@@ -139,6 +140,9 @@ function initFinance(){
     if(e.key==='ArrowUp'){ e.preventDefault(); finWizStart('income'); return; }
     if(e.key==='ArrowDown'){ e.preventDefault(); finWizStart('expense'); return; }
     if(e.key==='ArrowRight' && e.shiftKey){ e.preventDefault(); finWizStart('transfer'); return; }
+
+    // 、— toggle privacy (hide/show amounts)
+    if(e.key==='、'){ e.preventDefault(); finTogglePrivacy(); return; }
 
     // [ / ] — context-aware view/period cycling
     if(e.key===']' || e.key==='['){
