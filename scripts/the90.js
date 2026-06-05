@@ -12,11 +12,11 @@ const THE_90_START = '2026-05-11';
 const THE_90_END = '2026-08-09';
 
 const THE_90_TARGETS_DEFAULT = [
-  { id: 'I',   label: '睡眠',   twoMin: '21:30 前手机放到客厅充电',    badDay: '灯关 + 闭眼躺平，手机不过夜' },
-  { id: 'II',  label: '篮球',   twoMin: '拿起球拍一拍',                 badDay: '10 分钟传球练习' },
-  { id: 'III', label: '赚钱',   twoMin: '打开交易/学习页面 5 分钟',     badDay: '看一条市场资讯 + 记录' },
-  { id: 'IV',  label: '日语',   twoMin: '打开 Anki 翻 5 张卡',          badDay: '听一段日语音频' },
-  { id: 'V',   label: '健身',   twoMin: '换上健身服站到垫子上',         badDay: '10 俯卧撑 + 10 深蹲' },
+  { id: 'I',   label: '睡眠',   twoMin: '21:30 前手机放到客厅充电',    badDay: '灯关 + 闭眼躺平，手机不过夜',  standard: '23:00 前入睡，睡满 7 小时' },
+  { id: 'II',  label: '篮球',   twoMin: '拿起球拍一拍',                 badDay: '10 分钟传球练习',              standard: '完成一次 ≥30 分钟的练球/打球' },
+  { id: 'III', label: '赚钱',   twoMin: '打开交易/学习页面 5 分钟',     badDay: '看一条市场资讯 + 记录',        standard: '完成当日交易/学习计划并复盘' },
+  { id: 'IV',  label: '日语',   twoMin: '打开 Anki 翻 5 张卡',          badDay: '听一段日语音频',               standard: '完成当日 Anki + 一项学习任务' },
+  { id: 'V',   label: '健身',   twoMin: '换上健身服站到垫子上',         badDay: '10 俯卧撑 + 10 深蹲',          standard: '完成当日训练 ≥30 分钟' },
 ];
 
 const THE_90_IDENTITIES = [
@@ -111,6 +111,40 @@ function toggleThe90Drawer(id){
   if(el) el.classList.toggle('open');
 }
 
+/* ── Hard-standard boxes — ephemeral expand state (not persisted) ── */
+const the90StdOpen = {};
+function toggleThe90Std(id){
+  the90StdOpen[id] = !the90StdOpen[id];
+  rThe90();
+}
+
+/* Global keys on the main page (only when the finance overlay is closed):
+     、         → open the finance view (mirror of the in-finance privacy key)
+     1 … 5      → toggle the matching target's hard-standard box (left→right)
+   Guarded so it never fires while typing or while finance owns the keyboard. */
+function initThe90Keys(){
+  document.addEventListener('keydown', (e)=>{
+    // Finance overlay owns the keyboard while open — let finance.js handle 、 there
+    if(typeof finUI !== 'undefined' && finUI.open) return;
+    const tag = e.target.tagName;
+    if(tag==='INPUT' || tag==='TEXTAREA' || tag==='SELECT') return;
+    if(e.metaKey || e.ctrlKey || e.altKey) return;
+
+    // 、 on the main page → jump into finance
+    if(e.key==='、'){
+      if(typeof openFinance==='function'){ e.preventDefault(); openFinance(); }
+      return;
+    }
+    // 1–5 → toggle that target's hard-standard box
+    if(e.key>='1' && e.key<='5'){
+      if(!document.getElementById('the90-standards')) return;
+      ensureThe90Defaults();
+      const t = S.the90.meta.targets[Number(e.key)-1];
+      if(t){ e.preventDefault(); toggleThe90Std(t.id); }
+    }
+  });
+}
+
 let the90NoteT;
 function onThe90Note(){
   ensureThe90Defaults();
@@ -167,6 +201,21 @@ function rThe90(){
   document.getElementById('the90-labels').innerHTML = meta.targets.map(t =>
     `<span class="the90-label" title="${escH(t.label)}">${escH(t.label)}</span>`
   ).join('');
+
+  // Hard-standard boxes (one per target) — collapsed shows ⌄, expanded reveals the standard.
+  // Toggle by click or number keys 1–5 (left→right). Default standard falls back when missing.
+  const stdEl = document.getElementById('the90-standards');
+  if(stdEl){
+    stdEl.innerHTML = meta.targets.map((t,i)=>{
+      const std = t.standard || (THE_90_TARGETS_DEFAULT[i] && THE_90_TARGETS_DEFAULT[i].standard) || '';
+      const open = !!the90StdOpen[t.id];
+      return `<button class="the90-std ${open?'open':''}" onclick="toggleThe90Std('${t.id}')"
+        title="硬标准 · ${escH(t.label)}（按 ${i+1}）" aria-expanded="${open}">
+        <span class="the90-std-arrow">${open?'⌃':'⌄'}</span>
+        <span class="the90-std-text">${escH(std)}</span>
+      </button>`;
+    }).join('');
+  }
 
   // This week (rolling Mon→Sun) — count met per target
   const now = new Date(TODAY + 'T00:00:00+08:00');

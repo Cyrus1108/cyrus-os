@@ -125,6 +125,7 @@ async function init(){
   showDone = loadLS('show_done', false);
   if(typeof initTheme === 'function') initTheme();
   if(typeof initFinance === 'function') initFinance();
+  if(typeof initThe90Keys === 'function') initThe90Keys();
 
   // Hydrate The 90 state from localStorage cache (first paint before Supabase pull)
   if(typeof ensureThe90Defaults === 'function'){
