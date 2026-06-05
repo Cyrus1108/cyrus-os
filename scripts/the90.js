@@ -212,8 +212,12 @@ function rThe90(){
       const open = !!the90StdOpen[t.id];
       return `<button class="the90-std ${open?'open':''}" onclick="toggleThe90Std('${t.id}')"
         title="硬标准 · ${escH(t.label)}（按 ${i+1}）" aria-expanded="${open}">
-        <span class="the90-std-arrow">${open?'⌃':'⌄'}</span>
-        <span class="the90-std-text">${escH(std)}</span>
+        <span class="the90-std-arrow">⌄</span>
+        <div class="the90-std-body">
+          <div class="the90-std-inner">
+            <span class="the90-std-text">${escH(std)}</span>
+          </div>
+        </div>
       </button>`;
     }).join('');
   }

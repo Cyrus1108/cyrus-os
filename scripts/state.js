@@ -12,12 +12,16 @@ const MR_DEFAULT=[
   {id:'mr8',t:'Bath',mins:6,d:false},
 ];
 
-/* Migration: strip the removed "Prep meals" item from any loaded morning list
-   (existing Supabase/LS rows still carry it). Returns true if anything changed. */
+/* Migration: strip removed items and deduplicate by id from any loaded morning list.
+   (Supabase rows may carry mr4/Prep meals or duplicate mr5/Walk entries.) */
 function cleanMorning(){
   if(!S.mr || !Array.isArray(S.mr.list)) return false;
   const before = S.mr.list.length;
+  // 1. Remove explicitly retired items
   S.mr.list = S.mr.list.filter(i => i.id !== 'mr4' && i.t !== 'Prep meals');
+  // 2. Deduplicate by id (keep first occurrence)
+  const seen = new Set();
+  S.mr.list = S.mr.list.filter(i => { if(seen.has(i.id)) return false; seen.add(i.id); return true; });
   return S.mr.list.length !== before;
 }
 const DEF_JP=[
