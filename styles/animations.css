@@ -5,16 +5,6 @@
 @keyframes editSlide{from{opacity:0;transform:translateX(-4px);}to{opacity:1;transform:translateX(0);}}
 @keyframes sessPulse{0%,100%{box-shadow:0 0 0 3px var(--brass-ghost);}50%{box-shadow:0 0 0 5px rgba(168,132,85,0.15);}}
 
-/* The 90 cell fill — jagged fragments rise from bottom when .on is added */
-@keyframes the90Assemble{
-  0%   { clip-path:polygon(0% 100%,17% 100%,33% 100%,50% 100%,67% 100%,83% 100%,100% 100%,100% 100%,0% 100%); }
-  22%  { clip-path:polygon(0% 84%, 17% 78%, 33% 88%, 50% 79%, 67% 87%, 83% 75%, 100% 83%, 100% 100%,0% 100%); }
-  42%  { clip-path:polygon(0% 62%, 17% 54%, 33% 65%, 50% 56%, 67% 67%, 83% 50%, 100% 60%, 100% 100%,0% 100%); }
-  62%  { clip-path:polygon(0% 38%, 17% 28%, 33% 40%, 50% 29%, 67% 42%, 83% 24%, 100% 35%, 100% 100%,0% 100%); }
-  82%  { clip-path:polygon(0% 10%, 17% 2%,  33% 12%, 50% 3%,  67% 14%, 83% 0%,  100% 8%,  100% 100%,0% 100%); }
-  100% { clip-path:polygon(0% 0%,  17% 0%,  33% 0%,  50% 0%,  67% 0%,  83% 0%,  100% 0%,  100% 100%,0% 100%); }
-}
-.the90-cell.on::before{ animation:the90Assemble var(--dur-base) var(--ease-press); }
 
 /* List row entrance — keeps rendering snappy (120 ms) */
 @keyframes rowEnter{ from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;} }

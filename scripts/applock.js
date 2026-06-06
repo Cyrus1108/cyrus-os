@@ -156,6 +156,11 @@ async function lockBioTap(auto){
 /* ── auto-lock ── */
 function lockResetIdle(){ /* idle timer removed — only locks on load and background return */ }
 function initAppLock(){
+  if(['localhost','127.0.0.1','::1'].includes(location.hostname)){
+    lockRT.unlocked = true;
+    document.documentElement.classList.remove('app-locked','app-locked-boot');
+    return;
+  }
   if(!lockEnabled()){ document.documentElement.classList.remove('app-locked-boot'); return; }
   appShowLock();
   // Only lock when the app returns from the background (e.g. switched to another app

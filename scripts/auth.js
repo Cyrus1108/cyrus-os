@@ -4,7 +4,28 @@ let currentSession = null;
 let currentUser = null;
 let appInitialized = false;
 
+function isLocalPreviewHost(){
+  return ['localhost','127.0.0.1','::1'].includes(location.hostname);
+}
+
+function enterLocalPreview(){
+  currentSession = null;
+  currentUser = null;
+  const overlay = document.getElementById('auth-overlay');
+  if(overlay) overlay.style.display = 'none';
+  document.body.classList.add('authed');
+  if(!appInitialized){
+    appInitialized = true;
+    if(typeof onAuthReady === 'function') onAuthReady();
+  }
+}
+
 async function initAuth(){
+  if(isLocalPreviewHost()){
+    enterLocalPreview();
+    return;
+  }
+
   const { data: { session } } = await sb.auth.getSession();
   await handleAuthChange(session);
 

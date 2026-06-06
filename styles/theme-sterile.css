@@ -114,8 +114,9 @@ html[data-theme="sterile"] .mr-pill.done{ border-color:var(--brass-soft) !import
 
 /* ── breathing glow on done check-in cells (restored) ── */
 html[data-theme="sterile"] .the90-cell.on{
+  background:var(--brass-soft) !important;
   border-color:var(--brass-soft) !important;
-  animation:lt-cellbreathe 2.8s ease-in-out infinite;
+  animation:none;
 }
 @keyframes lt-cellbreathe{
   0%,100%{ box-shadow:inset 0 0 0 1px rgba(251,251,69,.30),0 0 6px 0 rgba(251,251,69,.28); }
