@@ -339,20 +339,41 @@ button.check-btn.done{border-color:var(--brass);color:var(--brass);}
   border:.5px solid var(--hair);
   border-radius:var(--border-radius-md);
   cursor:pointer;font-family:var(--sans);
-  transition:background var(--dur-base) var(--ease-press),border-color var(--dur-base) var(--ease-press),transform var(--dur-fast) var(--ease-press);
+  transition:border-color var(--dur-base) var(--ease-press),transform var(--dur-fast) var(--ease-press);
   padding:0;
+  position:relative;
+  overflow:hidden;
+}
+/* Brass fill layer — animated in/out via clip-path */
+.the90-cell::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  background:var(--brass);
+  clip-path:polygon(0% 100%,17% 100%,33% 100%,50% 100%,67% 100%,83% 100%,100% 100%,100% 100%,0% 100%);
+  pointer-events:none;
+  z-index:0;
+  transition:clip-path var(--dur-fast) var(--ease-press);
+}
+.the90-cell.on::before{
+  clip-path:polygon(0% 0%,17% 0%,33% 0%,50% 0%,67% 0%,83% 0%,100% 0%,100% 100%,0% 100%);
 }
 .the90-cell:hover{border-color:var(--brass);transform:translateY(-2px);}
 .the90-cell:active{transform:translateY(0) scale(.94);}
 .the90-cell-id{
   font-family:var(--serif);font-size:11px;color:var(--mute);
   letter-spacing:.05em;
+  position:relative;z-index:1;
+  transition:color var(--dur-fast) var(--ease-press);
 }
 .the90-cell-mark{
   font-family:var(--serif);font-size:24px;font-weight:400;
   color:var(--ghost);line-height:1;
+  position:relative;z-index:1;
+  transition:color var(--dur-fast) var(--ease-press);
 }
-.the90-cell.on{background:var(--brass);border-color:var(--brass);}
+.the90-cell.on{border-color:var(--brass);}
 .the90-cell.on .the90-cell-id,
 .the90-cell.on .the90-cell-mark{color:var(--color-background-primary);}
 .the90-cell.off{border-color:var(--color-border-danger);}
