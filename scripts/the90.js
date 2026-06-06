@@ -457,5 +457,10 @@ function renderThe90Heatmap(){
     return `<div class="the90-h-row" data-id="${t.id}">${cells.join('')}</div>`;
   }).join('');
 
-  return `<div class="the90-h-grid">${rows}</div>`;
+  // ② full-height breathing bar over today's column (only while inside the 1..90 window)
+  const tDay = the90Day();
+  const todayCol = (tDay >= 1 && tDay <= total)
+    ? `<div class="the90-today-col" style="--col:${tDay}"></div>`
+    : '';
+  return `<div class="the90-h-grid">${rows}${todayCol}</div>`;
 }

@@ -39,14 +39,14 @@
   animation-delay:calc(var(--wave,0) * 7ms);
 }
 
-/* ② "Today" column breathing — heatmap cells are only ~4px wide, so the glow
-   must spill well past the cell. z-index lifts it over neighbours; the 5 stacked
-   today cells merge into one breathing vertical streak. */
-@keyframes todayBreathe{
-  0%,100%{ box-shadow:0 0 0 1px var(--brass), 0 0 2px var(--brass-glow); }
-  50%    { box-shadow:0 0 0 1px var(--brass-soft), 0 0 8px 1px var(--brass); }
+/* ② "Today" column breathing — a single full-height bar overlaid on today's
+   column (per-cell box-shadow was invisible on ~4px cells). The bar is aligned
+   to the exact column via --col + calc in components.css; here it just breathes. */
+@keyframes todayColBreathe{
+  0%,100%{ box-shadow:0 0 4px 1px var(--brass-glow); background:var(--brass-ghost); }
+  50%    { box-shadow:0 0 10px 2px var(--brass);     background:var(--brass-glow); }
 }
-.h-cell.h-today{ position:relative; z-index:2; animation:todayBreathe 2.2s var(--ease-silk) infinite; }
+.the90-today-col{ animation:todayColBreathe 2.2s var(--ease-silk) infinite; }
 
 /* ③ Countdown tagline breathing glow — the emotional core line, alive like a beacon */
 @keyframes taglineGlow{

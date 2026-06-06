@@ -456,6 +456,15 @@ button.check-btn.done{border-color:var(--brass);color:var(--brass);}
 .the90-h-grid{
   display:flex;flex-direction:column;gap:3px;
   padding:8px 0;
+  position:relative;
+}
+/* ② breathing marker over today's column. 90 cols, 1px gaps → exact left/width.
+   --col is today's day number (1..90); top/bottom match the grid's 8px padding. */
+.the90-today-col{
+  position:absolute; top:8px; bottom:8px;
+  left:calc((100% - 89px) / 90 * (var(--col) - 1) + (var(--col) - 1) * 1px);
+  width:calc((100% - 89px) / 90);
+  border-radius:1px; pointer-events:none; z-index:3;
 }
 .the90-h-row{
   display:grid;grid-template-columns:repeat(90,1fr);gap:1px;
