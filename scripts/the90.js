@@ -113,9 +113,41 @@ function toggleThe90Drawer(id){
 
 /* ── Animation gates (session-ephemeral) ──
    the90Cascaded:   heatmap diagonal wave plays once per load, never on toggle.
+   the90HeatObserver: IntersectionObserver that fires the cascade when the heatmap
+                      first scrolls into view (it sits below the fold + has
+                      content-visibility:auto, so a render-time trigger never shows).
    the90WasComplete: tracks all-5-done so the brass sweep fires only at the moment it flips true. */
 let the90Cascaded = false;
+let the90HeatObserver = null;
 let the90WasComplete = false;
+
+/* Arm a one-shot cascade: play the diagonal wave the moment the heatmap enters the viewport. */
+function the90ArmCascade(){
+  if(the90Cascaded || the90HeatObserver) return;
+  const host = document.getElementById('the90-heatmap');
+  if(!host) return;
+  const fire = () => {
+    if(the90Cascaded) return;
+    the90Cascaded = true;
+    const grid = host.querySelector('.the90-h-grid');
+    if(grid){
+      requestAnimationFrame(()=>{
+        grid.classList.add('cascade');
+        // Remove after the wave finishes so the today-cell breathing (②) regains control.
+        setTimeout(()=> grid.classList.remove('cascade'), 1100);
+      });
+    }
+  };
+  if(!('IntersectionObserver' in window)){ fire(); return; }
+  the90HeatObserver = new IntersectionObserver((entries)=>{
+    if(entries.some(e => e.isIntersecting)){
+      fire();
+      the90HeatObserver.disconnect();
+      the90HeatObserver = null;
+    }
+  }, { threshold: 0.15 });
+  the90HeatObserver.observe(host);
+}
 
 /* ── Hard-standard boxes — ephemeral expand state (not persisted) ── */
 const the90StdOpen = {};
@@ -327,17 +359,9 @@ function rThe90(){
 
   // Heatmap — 13 weeks x 5 targets
   document.getElementById('the90-heatmap').innerHTML = renderThe90Heatmap();
-  // ① diagonal cascade plays once per load only (never on toggle re-render).
-  // Remove .cascade after it finishes so the higher-specificity rule stops
-  // overriding the today-cell breathing (②) — control returns to .h-today.
-  if(!the90Cascaded){
-    const grid = document.querySelector('#the90-heatmap .the90-h-grid');
-    if(grid){
-      grid.classList.add('cascade');
-      setTimeout(()=> grid.classList.remove('cascade'), 1100);
-    }
-    the90Cascaded = true;
-  }
+  // ① diagonal cascade — armed via IntersectionObserver so it plays when the
+  // heatmap actually scrolls into view (one-shot per load). See the90ArmCascade.
+  the90ArmCascade();
 
   // Drawer contents (two-min entries + bad day minimums)
   document.getElementById('the90-twomin-body').innerHTML = meta.targets.map(t =>
