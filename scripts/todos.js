@@ -46,7 +46,10 @@ function toggleTdForm(){
   tdOpen=!tdOpen;
   document.getElementById('td-form').style.display = tdOpen?'block':'none';
   if(tdOpen){
-    document.getElementById('td-date').value = TODAY;
+    setDateField('td-date', TODAY);
+    setTimeField('td-time', '');
+    segPick('td-pri', 'mid');
+    segPick('td-remind', '15', 'onRemindSeg');
     rCats();
   }
 }
@@ -68,11 +71,13 @@ function addTodo(){
     created:TODAY
   });
   document.getElementById('td-text').value='';
-  document.getElementById('td-date').value='';
-  document.getElementById('td-time').value='';
+  setDateField('td-date','');
+  setTimeField('td-time','');
+  segPick('td-pri','mid');
+  segPick('td-remind','15','onRemindSeg');
+  document.getElementById('td-repeat').value='none';
   document.getElementById('td-repeat-custom').value='';
   document.getElementById('td-repeat-custom').style.display='none';
-  document.getElementById('td-remind').value='15';
   document.getElementById('td-rc').style.display='none';
   toggleTdForm();
   saveTodos(); rTodos();
@@ -115,22 +120,14 @@ function rTodos(){
           </select>
           <div class="field-row">
             <span class="field-label">截止</span>
-            <input id="etd-date" type="date" value="${t.date||''}" style="flex:1;">
-            <input id="etd-time" type="time" value="${(t.time||'').slice(0,5)}" style="flex:1;">
+            ${dateField('etd-date', t.date||'')}
           </div>
-          <select id="etd-pri" style="width:100%;">
-            <option value="high" ${t.pri==='high'?'selected':''}>高优先级</option>
-            <option value="mid" ${t.pri==='mid'?'selected':''}>中优先级</option>
-            <option value="low" ${t.pri==='low'?'selected':''}>低优先级</option>
-          </select>
-          <select id="etd-remind" onchange="toggleRemindCustom('etd-remind','etd-rc')" style="width:100%;">
-            <option value="0" ${t.remind===0?'selected':''}>不提醒</option>
-            <option value="5" ${t.remind===5?'selected':''}>截止前 5 分钟</option>
-            <option value="15" ${t.remind===15?'selected':''}>截止前 15 分钟</option>
-            <option value="60" ${t.remind===60?'selected':''}>截止前 1 小时</option>
-            <option value="1440" ${t.remind===1440?'selected':''}>截止前 1 天</option>
-            <option value="custom" ${![0,5,15,60,1440].includes(t.remind)?'selected':''}>自定义…</option>
-          </select>
+          <div class="field-row">
+            <span class="field-label">时间</span>
+            ${timeField('etd-time', (t.time||'').slice(0,5))}
+          </div>
+          ${segField('etd-pri', t.pri||'mid', [['high','高'],['mid','中'],['low','低']])}
+          ${chipField('etd-remind', [0,5,15,60,1440].includes(t.remind)?String(t.remind):'custom', [['0','不提醒'],['5','5分钟'],['15','15分钟'],['60','1小时'],['1440','1天'],['custom','自定义']], 'onRemindSeg')}
           ${remindCustomRow('etd', ![0,5,15,60,1440].includes(t.remind), decomposeRemind(t.remind).num, decomposeRemind(t.remind).unit)}
           <select id="etd-repeat" onchange="toggleEtdCustom()" style="width:100%;">
             <option value="none" ${t.repeat==='none'?'selected':''}>不重复</option>

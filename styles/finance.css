@@ -449,9 +449,33 @@ html[data-theme="sterile"] .fin-datebtn{ border-radius:0; }
 .fin-datebtn:hover{ border-color:var(--brass); }
 
 .fin-cal{
-  position:absolute; inset:0; z-index:1250; display:none;
+  position:fixed; inset:0; z-index:2400; display:none;
   background:rgba(0,0,0,0.5); align-items:center; justify-content:center; padding:20px;
 }
+
+/* themed chip row (reminder) — wraps, used by todo/academic forms */
+.fin-chiprow{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px; }
+.fin-chip{ padding:6px 12px; background:var(--color-background-secondary);
+  border:.5px solid var(--hair); border-radius:var(--border-radius-md);
+  color:var(--mute); font-size:12px; cursor:pointer;
+  transition:background var(--dur-base,200ms) var(--ease-press,ease),border-color var(--dur-base,200ms) var(--ease-press,ease); }
+html[data-theme="sterile"] .fin-chip{ border-radius:0; }
+.fin-chip.active{ background:var(--brass); color:var(--color-background-primary);
+  border-color:var(--brass); font-weight:600; }
+
+/* themed time picker columns (todo/academic time field) */
+.fin-tp-cols{ display:flex; gap:12px; }
+.fin-tp-col{ flex:1; }
+.fin-tp-lbl{ text-align:center; font-size:11px; color:var(--ghost); margin-bottom:6px;
+  font-family:var(--serif); letter-spacing:.1em; }
+.fin-tp-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:4px;
+  max-height:200px; overflow-y:auto; align-content:start; }
+.fin-tp-cell{ padding:8px 2px; background:var(--color-background-secondary);
+  border:.5px solid var(--hair); border-radius:var(--border-radius-md);
+  color:var(--mute); font-size:13px; font-family:var(--mono); cursor:pointer; }
+html[data-theme="sterile"] .fin-tp-cell{ border-radius:0; }
+.fin-tp-cell.sel{ background:var(--brass); color:var(--color-background-primary);
+  border-color:var(--brass); font-weight:600; }
 .fin-cal.open{ display:flex; }
 .fin-cal-card{
   width:100%; max-width:340px;

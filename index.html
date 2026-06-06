@@ -314,26 +314,30 @@
           <input id="f-name" placeholder="内容（作业 / 考试）" style="width:100%;">
           <div class="field-row">
             <span class="field-label">截止</span>
-            <input id="f-date" type="date" style="flex:1;">
+            <button type="button" class="fin-datebtn" onclick="finOpenCal('f-date')" style="flex:1;">📅 <span id="f-date-label">选择日期</span></button>
           </div>
           <div class="field-row">
             <span class="field-label">时间</span>
-            <input id="f-time" type="time" style="flex:1;">
+            <button type="button" class="fin-datebtn" onclick="openTimePicker('f-time')" style="flex:1;">🕐 <span id="f-time-label">选择时间</span></button>
           </div>
-          <select id="f-pri" style="width:100%;">
-            <option value="high">高优先级</option>
-            <option value="mid" selected>中优先级</option>
-            <option value="low">低优先级</option>
-          </select>
-          <select id="f-remind" onchange="toggleRemindCustom('f-remind','f-rc')" style="width:100%;">
-            <option value="0">不提醒</option>
-            <option value="15">截止前 15 分钟</option>
-            <option value="60" selected>截止前 1 小时</option>
-            <option value="240">截止前 4 小时</option>
-            <option value="1440">截止前 1 天</option>
-            <option value="2880">截止前 2 天</option>
-            <option value="custom">自定义…</option>
-          </select>
+          <input type="hidden" id="f-date" value="">
+          <input type="hidden" id="f-time" value="">
+          <div class="fin-seg" data-seg="f-pri">
+            <button type="button" class="fin-seg-btn" data-v="high" onclick="segPick('f-pri','high')">高</button>
+            <button type="button" class="fin-seg-btn active" data-v="mid" onclick="segPick('f-pri','mid')">中</button>
+            <button type="button" class="fin-seg-btn" data-v="low" onclick="segPick('f-pri','low')">低</button>
+          </div>
+          <input type="hidden" id="f-pri" value="mid">
+          <div class="fin-chiprow" data-seg="f-remind">
+            <button type="button" class="fin-chip" data-v="0" onclick="segPick('f-remind','0','onRemindSeg')">不提醒</button>
+            <button type="button" class="fin-chip" data-v="15" onclick="segPick('f-remind','15','onRemindSeg')">15分钟</button>
+            <button type="button" class="fin-chip active" data-v="60" onclick="segPick('f-remind','60','onRemindSeg')">1小时</button>
+            <button type="button" class="fin-chip" data-v="240" onclick="segPick('f-remind','240','onRemindSeg')">4小时</button>
+            <button type="button" class="fin-chip" data-v="1440" onclick="segPick('f-remind','1440','onRemindSeg')">1天</button>
+            <button type="button" class="fin-chip" data-v="2880" onclick="segPick('f-remind','2880','onRemindSeg')">2天</button>
+            <button type="button" class="fin-chip" data-v="custom" onclick="segPick('f-remind','custom','onRemindSeg')">自定义</button>
+          </div>
+          <input type="hidden" id="f-remind" value="60">
           <div id="f-rc" class="field-row" style="display:none;">
             <input id="f-rc-num" type="number" min="1" placeholder="数值" style="flex:1;">
             <select id="f-rc-unit" style="flex:1;">
@@ -454,22 +458,29 @@
         <select id="td-cat" style="width:100%;"></select>
         <div class="field-row">
           <span class="field-label">截止</span>
-          <input id="td-date" type="date" style="flex:1;">
-          <input id="td-time" type="time" style="flex:1;">
+          <button type="button" class="fin-datebtn" onclick="finOpenCal('td-date')" style="flex:1;">📅 <span id="td-date-label">选择日期</span></button>
         </div>
-        <select id="td-pri" style="width:100%;">
-          <option value="high">高优先级</option>
-          <option value="mid" selected>中优先级</option>
-          <option value="low">低优先级</option>
-        </select>
-        <select id="td-remind" onchange="toggleRemindCustom('td-remind','td-rc')" style="width:100%;">
-          <option value="0">不提醒</option>
-          <option value="5">截止前 5 分钟</option>
-          <option value="15" selected>截止前 15 分钟</option>
-          <option value="60">截止前 1 小时</option>
-          <option value="1440">截止前 1 天</option>
-          <option value="custom">自定义…</option>
-        </select>
+        <div class="field-row">
+          <span class="field-label">时间</span>
+          <button type="button" class="fin-datebtn" onclick="openTimePicker('td-time')" style="flex:1;">🕐 <span id="td-time-label">选择时间</span></button>
+        </div>
+        <input type="hidden" id="td-date" value="">
+        <input type="hidden" id="td-time" value="">
+        <div class="fin-seg" data-seg="td-pri">
+          <button type="button" class="fin-seg-btn" data-v="high" onclick="segPick('td-pri','high')">高</button>
+          <button type="button" class="fin-seg-btn active" data-v="mid" onclick="segPick('td-pri','mid')">中</button>
+          <button type="button" class="fin-seg-btn" data-v="low" onclick="segPick('td-pri','low')">低</button>
+        </div>
+        <input type="hidden" id="td-pri" value="mid">
+        <div class="fin-chiprow" data-seg="td-remind">
+          <button type="button" class="fin-chip" data-v="0" onclick="segPick('td-remind','0','onRemindSeg')">不提醒</button>
+          <button type="button" class="fin-chip" data-v="5" onclick="segPick('td-remind','5','onRemindSeg')">5分钟</button>
+          <button type="button" class="fin-chip active" data-v="15" onclick="segPick('td-remind','15','onRemindSeg')">15分钟</button>
+          <button type="button" class="fin-chip" data-v="60" onclick="segPick('td-remind','60','onRemindSeg')">1小时</button>
+          <button type="button" class="fin-chip" data-v="1440" onclick="segPick('td-remind','1440','onRemindSeg')">1天</button>
+          <button type="button" class="fin-chip" data-v="custom" onclick="segPick('td-remind','custom','onRemindSeg')">自定义</button>
+        </div>
+        <input type="hidden" id="td-remind" value="15">
         <div id="td-rc" class="field-row" style="display:none;">
           <input id="td-rc-num" type="number" min="1" placeholder="数值" style="flex:1;">
           <select id="td-rc-unit" style="flex:1;">

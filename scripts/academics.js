@@ -36,8 +36,12 @@ function addAcTask(){
   if(!sub||!name||!date)return;
   const maxPos = S.ac.reduce((m,t)=>Math.max(m,t.position||0),0);
   S.ac.push({id:crypto.randomUUID(),sub,name,date,time,pri,remind,done:false,position:maxPos+1});
-  ['f-sub','f-name','f-date','f-time'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('f-remind').value='60';
+  document.getElementById('f-sub').value='';
+  document.getElementById('f-name').value='';
+  setDateField('f-date','');
+  setTimeField('f-time','');
+  segPick('f-pri','mid');
+  segPick('f-remind','60','onRemindSeg');
   document.getElementById('f-rc').style.display='none';
   toggleAcForm();saveAC();rAC();rMetrics();
 }
@@ -70,23 +74,14 @@ function rAC(){
           <input id="ea-name" value="${escH(t.name)}" placeholder="内容" style="width:100%;">
           <div class="field-row">
             <span class="field-label">截止</span>
-            <input id="ea-date" type="date" value="${t.date}" style="flex:1;">
-            <input id="ea-time" type="time" value="${(t.time||'').slice(0,5)}" style="flex:1;">
+            ${dateField('ea-date', t.date||'')}
           </div>
-          <select id="ea-pri" style="width:100%;">
-            <option value="high" ${t.pri==='high'?'selected':''}>高优先级</option>
-            <option value="mid" ${t.pri==='mid'?'selected':''}>中优先级</option>
-            <option value="low" ${t.pri==='low'?'selected':''}>低优先级</option>
-          </select>
-          <select id="ea-remind" onchange="toggleRemindCustom('ea-remind','ea-rc')" style="width:100%;">
-            <option value="0" ${t.remind===0?'selected':''}>不提醒</option>
-            <option value="15" ${t.remind===15?'selected':''}>截止前 15 分钟</option>
-            <option value="60" ${t.remind===60?'selected':''}>截止前 1 小时</option>
-            <option value="240" ${t.remind===240?'selected':''}>截止前 4 小时</option>
-            <option value="1440" ${t.remind===1440?'selected':''}>截止前 1 天</option>
-            <option value="2880" ${t.remind===2880?'selected':''}>截止前 2 天</option>
-            <option value="custom" ${![0,15,60,240,1440,2880].includes(t.remind)?'selected':''}>自定义…</option>
-          </select>
+          <div class="field-row">
+            <span class="field-label">时间</span>
+            ${timeField('ea-time', (t.time||'').slice(0,5))}
+          </div>
+          ${segField('ea-pri', t.pri||'mid', [['high','高'],['mid','中'],['low','低']])}
+          ${chipField('ea-remind', [0,15,60,240,1440,2880].includes(t.remind)?String(t.remind):'custom', [['0','不提醒'],['15','15分钟'],['60','1小时'],['240','4小时'],['1440','1天'],['2880','2天'],['custom','自定义']], 'onRemindSeg')}
           ${remindCustomRow('ea', ![0,15,60,240,1440,2880].includes(t.remind), decomposeRemind(t.remind).num, decomposeRemind(t.remind).unit)}
           <div style="display:flex;gap:6px;">
             <button class="primary fx-btn" onclick="saveAcEdit('${t.id}')" style="flex:1;">保存</button>

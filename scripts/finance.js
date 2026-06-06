@@ -1367,7 +1367,9 @@ function finCalShow(html){
       const t=e.changedTouches[0], dy=t.clientY-cy, dx=t.clientX-cx; cy=null;
       if(dy>70 && Math.abs(dy)>Math.abs(dx)*1.5) finCalCancel();   // swipe down to dismiss
     }, {passive:true});
-    document.getElementById('finance-view').appendChild(o);
+    // Mount on body (not #finance-view) so the themed calendar is reusable
+    // app-wide — todo/academic forms on the main page use it too.
+    document.body.appendChild(o);
   }
   o.innerHTML = html;
   o.classList.add('open');

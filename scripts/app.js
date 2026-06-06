@@ -35,6 +35,86 @@ function remindCustomRow(prefix, isCustom, num, unit){
   </div>`;
 }
 
+/* ════ Themed form controls — replace native date/time/priority/reminder in
+   todo + academic forms with components matching the finance module's look.
+   Read side is unchanged: getElementById(id).value still returns the value. ════ */
+
+// Date: themed button + hidden input, reuses finance's themed calendar (finOpenCal).
+function dateField(id, val){
+  return `<button type="button" class="fin-datebtn" onclick="finOpenCal('${id}')">📅 <span id="${id}-label">${val?finDateLabel(val):'选择日期'}</span></button><input type="hidden" id="${id}" value="${val||''}">`;
+}
+function setDateField(id, ds){
+  const h=document.getElementById(id); if(h) h.value=ds||'';
+  const l=document.getElementById(id+'-label'); if(l) l.textContent = ds?finDateLabel(ds):'选择日期';
+}
+
+// Time: themed button + hidden input + lightweight HH:MM picker (below).
+function timeField(id, val){
+  return `<button type="button" class="fin-datebtn" onclick="openTimePicker('${id}')">🕐 <span id="${id}-label">${val?val:'选择时间'}</span></button><input type="hidden" id="${id}" value="${val||''}">`;
+}
+function setTimeField(id, hm){
+  const h=document.getElementById(id); if(h) h.value=hm||'';
+  const l=document.getElementById(id+'-label'); if(l) l.textContent = hm||'选择时间';
+}
+
+// Segmented (few options) / chip row (many options). onpick = optional global fn name.
+function segField(id, value, options, onpick){
+  const btns = options.map(([v,l])=>`<button type="button" class="fin-seg-btn ${String(v)===String(value)?'active':''}" data-v="${v}" onclick="segPick('${id}','${v}'${onpick?",'"+onpick+"'":''})">${l}</button>`).join('');
+  return `<div class="fin-seg" data-seg="${id}">${btns}</div><input type="hidden" id="${id}" value="${value}">`;
+}
+function chipField(id, value, options, onpick){
+  const chips = options.map(([v,l])=>`<button type="button" class="fin-chip ${String(v)===String(value)?'active':''}" data-v="${v}" onclick="segPick('${id}','${v}'${onpick?",'"+onpick+"'":''})">${l}</button>`).join('');
+  return `<div class="fin-chiprow" data-seg="${id}">${chips}</div><input type="hidden" id="${id}" value="${value}">`;
+}
+function segPick(id, v, onpick){
+  const h=document.getElementById(id); if(h) h.value=v;
+  document.querySelectorAll('[data-seg="'+id+'"] [data-v]').forEach(b=>b.classList.toggle('active', b.dataset.v===String(v)));
+  if(onpick && typeof window[onpick]==='function') window[onpick](id, v);
+}
+// Reminder chip handler → show/hide the custom "number×unit" row (`${prefix}-rc`).
+function onRemindSeg(id, v){
+  const wrap=document.getElementById(id.replace(/-remind$/,'')+'-rc');
+  if(wrap) wrap.style.display = (v==='custom') ? 'flex' : 'none';
+}
+
+/* ── Lightweight themed time picker (todo / academic only — finance has no time) ── */
+const _tp = { targetId:null, h:9, m:0 };
+function timePickerOpen(){ const c=document.getElementById('app-timepick'); return !!(c&&c.classList.contains('open')); }
+function openTimePicker(targetId){
+  const cur=((document.getElementById(targetId)||{}).value)||'09:00';
+  const [h,m]=cur.split(':').map(Number);
+  _tp.targetId=targetId; _tp.h=isNaN(h)?9:h; _tp.m=isNaN(m)?0:m;
+  _tpRender();
+}
+function _tpRender(){
+  let o=document.getElementById('app-timepick');
+  if(!o){ o=document.createElement('div'); o.id='app-timepick'; o.className='fin-cal';
+    o.addEventListener('click', e=>{ if(e.target===o) _tpClose(); });
+    document.body.appendChild(o); }
+  const pad=n=>String(n).padStart(2,'0');
+  const hh=Array.from({length:24},(_,i)=>i).map(h=>`<button type="button" class="fin-tp-cell ${h===_tp.h?'sel':''}" onclick="_tpSet('h',${h})">${pad(h)}</button>`).join('');
+  const mm=[0,5,10,15,20,25,30,35,40,45,50,55].map(m=>`<button type="button" class="fin-tp-cell ${m===_tp.m?'sel':''}" onclick="_tpSet('m',${m})">${pad(m)}</button>`).join('');
+  o.innerHTML=`<div class="fin-cal-card">
+    <div class="fin-cal-head"><span class="fin-cal-title">选择时间 · ${pad(_tp.h)}:${pad(_tp.m)}</span></div>
+    <div class="fin-tp-cols">
+      <div class="fin-tp-col"><div class="fin-tp-lbl">时</div><div class="fin-tp-grid">${hh}</div></div>
+      <div class="fin-tp-col"><div class="fin-tp-lbl">分</div><div class="fin-tp-grid">${mm}</div></div>
+    </div>
+    <div class="fin-cal-foot">
+      <button class="ghost fx-btn" onclick="_tpConfirm()">确定</button>
+      <button class="ghost fx-btn" onclick="_tpClose()">取消</button>
+    </div>
+  </div>`;
+  o.classList.add('open');
+}
+function _tpSet(k,v){ _tp[k]=v; _tpRender(); }
+function _tpConfirm(){ const pad=n=>String(n).padStart(2,'0'); setTimeField(_tp.targetId, pad(_tp.h)+':'+pad(_tp.m)); _tpClose(); }
+function _tpClose(){ const o=document.getElementById('app-timepick'); if(o) o.classList.remove('open'); }
+function timePickerKey(e){
+  if(e.key==='Escape'){ e.preventDefault(); _tpClose(); }
+  else if(e.key==='Enter'){ e.preventDefault(); _tpConfirm(); }
+}
+
 /* Ripple effect */
 function addRipple(e){
   const btn = e.currentTarget;

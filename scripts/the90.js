@@ -124,6 +124,10 @@ function toggleThe90Std(id){
    Guarded so it never fires while typing or while finance owns the keyboard. */
 function initThe90Keys(){
   document.addEventListener('keydown', (e)=>{
+    // Themed calendar / time picker popups (reused on the main page) own the
+    // keyboard while open — route to them before anything else.
+    if(typeof finCalOpen==='function' && finCalOpen()){ if(typeof finCalKey==='function') finCalKey(e); return; }
+    if(typeof timePickerOpen==='function' && timePickerOpen()){ timePickerKey(e); return; }
     // Finance overlay owns the keyboard while open — let finance.js handle 、 there
     if(typeof finUI !== 'undefined' && finUI.open) return;
     const tag = e.target.tagName;
