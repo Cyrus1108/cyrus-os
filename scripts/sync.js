@@ -171,6 +171,14 @@ async function pullHermes(){
   }));
 }
 
+async function pullMotiv(){
+  const { data } = await sb.from('motivation_videos').select('*')
+    .eq('user_id', currentUser.id).order('position');
+  S.motiv.videos = (data || []).map(r => ({
+    id: r.id, videoId: r.video_id, title: r.title || '', position: r.position || 0,
+  }));
+}
+
 /* ════════════ Finance (Phase 1) ════════════
    accounts + categories are small (replace-all on edit, like categories/todos).
    transactions can grow, so they use targeted single-row insert/update/delete
@@ -289,7 +297,7 @@ async function pullAll(force){
       await Promise.all([
         pullSettings(), pullMorning(), pullAcademics(),
         pullJapanese(), pullTrading(), pullCategories(), pullTodos(),
-        pullThe90Meta(), pullThe90Daily(), pullHermes(),
+        pullThe90Meta(), pullThe90Daily(), pullHermes(), pullMotiv(),
         pullFinAccounts(), pullFinCategories(), pullFinTransactions(), pullFinBudgets(),
         pullFinGoals(), pullFinRecurring(), pullFinSnapshots(),
       ]);
@@ -461,6 +469,17 @@ async function syncPushTodos(){
   if(ok) dirty.todos = false;
 }
 
+async function syncPushMotiv(){
+  if(!currentUser) return;
+  await waitForPull();
+  const ok = await replaceTable('motivation_videos', S.motiv.videos, v => ({
+    id: v.id, user_id: currentUser.id,
+    video_id: v.videoId, title: v.title || null,
+    position: v.position || 0,
+  }));
+  if(ok) dirty.motiv = false;
+}
+
 /* Hermes notices are read+dismiss only on the client — no full push.
    Dismiss stamps dismissed_at; the row stays for history but drops off the panel. */
 async function syncDismissHermes(id){
@@ -548,6 +567,8 @@ function subscribeRealtime(){
       async () => { await pullTodos(); rTodos(); rMetrics(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'hermes_notices', filter: `user_id=eq.${uid}` },
       async () => { await pullHermes(); rHermes(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'motivation_videos', filter: `user_id=eq.${uid}` },
+      async () => { await pullMotiv(); if(typeof rMotivation==='function') rMotivation(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'settings', filter: `user_id=eq.${uid}` },
       async () => { await pullSettings(); renderAll(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'the90_meta', filter: `user_id=eq.${uid}` },
@@ -611,6 +632,7 @@ async function rehydrateOnFocus(){
     if(dirty.settings) pushes.push(syncPushSettings());
     if(dirty.the90Meta) pushes.push(syncPushThe90Meta());
     if(dirty.the90Daily) pushes.push(syncPushThe90Daily());
+    if(dirty.motiv) pushes.push(syncPushMotiv());
     try{ await Promise.all(pushes); }catch(e){ console.error('[sync] flush', e); }
   }
 

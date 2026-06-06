@@ -25,6 +25,7 @@
 <link rel="stylesheet" href="./styles/animations.css">
 <link rel="stylesheet" href="./styles/theme-sterile.css">
 <link rel="stylesheet" href="./styles/finance.css">
+<link rel="stylesheet" href="./styles/motivation.css">
 
 <!-- Web fonts for the Sterile / Endfield theme -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -146,6 +147,7 @@
         <div class="eyebrow-mute" style="margin-bottom:10px;">Personal operating system</div>
       </div>
       <div style="text-align:right;">
+        <button id="motiv-btn" class="theme-btn" onclick="openMotivation()" title="动力中心" style="margin-bottom:8px;margin-right:6px;">◆ 动力</button>
         <button id="fin-btn" class="theme-btn" onclick="openFinance()" title="财务" style="margin-bottom:8px;margin-right:6px;">◆ 财务</button>
         <button id="theme-btn" class="theme-btn" onclick="toggleTheme()" title="切换主题" style="margin-bottom:8px;">◆ 终末</button>
         <div id="clock" class="clock"></div>
@@ -536,6 +538,21 @@
   <div id="fin-modal" class="fin-modal"><div class="fin-modal-card" id="fin-modal-card"></div></div>
 </div>
 
+<!-- ════ Motivation Center — full-screen YouTube video grid ════ -->
+<div id="motivation-view" class="motiv-view" aria-hidden="true">
+  <div class="motiv-top">
+    <button class="motiv-back" onclick="closeMotivation()">← 返回</button>
+    <div class="motiv-title">动力中心 · Motivation</div>
+  </div>
+  <div id="motiv-body" class="motiv-body"></div>
+</div>
+<div id="motiv-player" class="motiv-player" aria-hidden="true" onclick="if(event.target===this)closeMotivPlayer()">
+  <div class="motiv-player-card">
+    <button class="motiv-player-close" onclick="closeMotivPlayer()" aria-label="关闭">&#10005;</button>
+    <div id="motiv-player-frame" class="motiv-player-frame"></div>
+  </div>
+</div>
+
 <!-- Module scripts — order matters:
      1. supabase.js     creates the sb client (needs window.supabase from CDN)
      2. state.js        defines globals (S, TODAY, constants)
@@ -558,6 +575,7 @@
 <script src="./scripts/hermes.js"></script>
 <script src="./scripts/finance.js"></script>
 <script src="./scripts/finance-charts.js"></script>
+<script src="./scripts/motivation.js"></script>
 <script src="./scripts/applock.js"></script>
 <script src="./scripts/theme.js"></script>
 <script src="./scripts/ambient.js"></script>
