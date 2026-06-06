@@ -265,6 +265,32 @@ document.addEventListener('keydown', function(e){
   next.click(); // triggers segPick → updates hidden input + active class
 }, true);
 
+/* ── Number count-up animation ──
+   Smoothly rolls a numeric display from `from` to `to` over `dur` ms.
+   Uses easeInOut for a natural feel. Skips animation if reduced-motion is on. */
+function animateNumber(el, from, to, dur){
+  if(!el || from===to) return;
+  if(matchMedia('(prefers-reduced-motion:reduce)').matches){ el.textContent=to; return; }
+  const start=performance.now();
+  function tick(now){
+    const p=Math.min((now-start)/dur,1);
+    const e=p<0.5?2*p*p:-1+(4-2*p)*p; // easeInOut
+    el.textContent=Math.round(from+(to-from)*e);
+    if(p<1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+/* ── View Transitions helper ──
+   Wraps any DOM-mutating fn in document.startViewTransition when supported.
+   Falls back silently on unsupported browsers or when reduced-motion is on. */
+function withViewTransition(fn){
+  if(!document.startViewTransition || matchMedia('(prefers-reduced-motion:reduce)').matches){
+    fn(); return;
+  }
+  document.startViewTransition(fn);
+}
+
 /* Ripple effect */
 function addRipple(e){
   const btn = e.currentTarget;

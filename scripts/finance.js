@@ -240,7 +240,7 @@ function closeFinance(fromHash){
 }
 function finSwitchTab(tab){
   if(finUI.tab==='analytics' && tab!=='analytics' && typeof finAnaDestroy==='function') finAnaDestroy();
-  finUI.tab=tab; finUI.acctMgr=false; rFinance();
+  withViewTransition(()=>{ finUI.tab=tab; finUI.acctMgr=false; rFinance(); });
 }
 function finTogglePrivacy(){ finUI.privacy=!finUI.privacy; saveLSRaw('fin_privacy', finUI.privacy); finUpdateEye(); rFinance(); }
 function finUpdateEye(){ const e=document.getElementById('fin-eye'); if(e) e.textContent = finUI.privacy?'🙈':'👁'; }
@@ -374,7 +374,7 @@ function finSetLedgerView(v){
   finUI.ledgerView = v;
   saveLSRaw('fin_ledgerview', v);
   if(v==='calendar' && !finUI.calDay && finUI.month===TODAY.slice(0,7)) finUI.calDay = TODAY;
-  rFinance();
+  withViewTransition(rFinance);
 }
 function finRenderLedger(){
   const month = finUI.month;

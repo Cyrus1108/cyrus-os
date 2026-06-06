@@ -5,6 +5,36 @@
 @keyframes editSlide{from{opacity:0;transform:translateX(-4px);}to{opacity:1;transform:translateX(0);}}
 @keyframes sessPulse{0%,100%{box-shadow:0 0 0 3px var(--brass-ghost);}50%{box-shadow:0 0 0 5px rgba(168,132,85,0.15);}}
 
+/* The 90 cell spring — fires when .on is added */
+@keyframes the90Spring{
+  0%   { transform:scale(1);   }
+  45%  { transform:scale(1.18); }
+  70%  { transform:scale(0.95); }
+  100% { transform:scale(1);   }
+}
+.the90-cell.on{ animation:the90Spring var(--dur-slow) var(--ease-press); }
+
+/* List row entrance — keeps rendering snappy (120 ms) */
+@keyframes rowEnter{ from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;} }
+.todo-row,.row{ animation:rowEnter var(--dur-fast) var(--ease-press) both; }
+
+/* Staggered widget entrance on first load */
+@keyframes panelRise{ from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;} }
+.panel{ animation:panelRise var(--dur-slow) var(--ease-silk) both; }
+.panel:nth-child(1){ animation-delay:0ms; }
+.panel:nth-child(2){ animation-delay:40ms; }
+.panel:nth-child(3){ animation-delay:80ms; }
+.panel:nth-child(4){ animation-delay:120ms; }
+.panel:nth-child(5){ animation-delay:160ms; }
+.panel:nth-child(6){ animation-delay:200ms; }
+.panel:nth-child(7){ animation-delay:240ms; }
+.panel:nth-child(n+8){ animation-delay:280ms; }
+
+/* Card hover lift + press */
+.panel{ transition:transform var(--dur-fast) var(--ease-press); }
+.panel:hover{ transform:translateY(-1px); }
+.panel:active{ transform:translateY(0) scale(.99); }
+
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.01ms !important;transition-duration:.01ms !important;}
 }

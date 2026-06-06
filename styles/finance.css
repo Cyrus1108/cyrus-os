@@ -50,7 +50,7 @@ body.fin-locked{ overflow:hidden; }
 .fin-tab{
   flex:1; background:none; border:none; cursor:pointer;
   padding:10px 4px 12px; font-size:13px; color:var(--ghost);
-  border-bottom:2px solid transparent; transition:all .2s var(--ease-silk);
+  border-bottom:2px solid transparent; transition:border-color var(--dur-base) var(--ease-silk),color var(--dur-base) var(--ease-silk);
 }
 .fin-tab.active{ color:var(--brass); border-bottom-color:var(--brass); font-weight:600; }
 

@@ -116,7 +116,7 @@ function finRenderAnalytics(){
   </div>`;
 }
 
-function finAnaSetRange(r){ finAna.range=r; rFinance(); }
+function finAnaSetRange(r){ finAna.range=r; withViewTransition(rFinance); }
 function finAnaSetKind(k){ finAna.kind=k; rFinance(); }
 function finAnaSetDim(d){ finAna.dim=d; rFinance(); }
 function finAnaPickDate(which){

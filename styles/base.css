@@ -102,3 +102,33 @@ input[type=time]::-webkit-calendar-picker-indicator:hover{opacity:1;}
 
 input[type=checkbox]{transition:transform .15s var(--ease-press);cursor:pointer;}
 input[type=checkbox]:active{transform:scale(1.3);}
+
+/* ── View Transitions ── */
+/* Default cross-fade speed for all navigations (finance open/close, tab switch, etc.) */
+@keyframes vt-slide-in-right  { from { opacity:0; transform:translateX(18px); } to { opacity:1; transform:none; } }
+@keyframes vt-slide-out-left  { from { opacity:1; transform:none; } to { opacity:0; transform:translateX(-18px); } }
+@keyframes vt-fade-in         { from { opacity:0; } to { opacity:1; } }
+@keyframes vt-fade-out        { from { opacity:1; } to { opacity:0; } }
+
+::view-transition-old(root){
+  animation: var(--dur-base,200ms) var(--ease-silk) both vt-fade-out;
+}
+::view-transition-new(root){
+  animation: var(--dur-base,200ms) var(--ease-silk) both vt-fade-in;
+}
+/* Finance panel gets its own named transition → smoother region-level cross-fade */
+#finance-view { view-transition-name: finance-panel; }
+
+::view-transition-old(finance-panel){
+  animation: var(--dur-slow,320ms) var(--ease-drawer) both vt-fade-out;
+}
+::view-transition-new(finance-panel){
+  animation: var(--dur-slow,320ms) var(--ease-drawer) both vt-fade-in;
+}
+
+/* ── Paint containment ── */
+/* Isolates heavy repaint areas so the rest of the page stays fast */
+#finance-view { contain: layout paint; }
+#the90-panel  { contain: layout paint; }
+/* Heatmap (450 cells) doesn't render while off-screen */
+.the90-heatmap{ content-visibility:auto; contain-intrinsic-size:0 240px; }

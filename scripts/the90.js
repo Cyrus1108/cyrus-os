@@ -241,7 +241,11 @@ function rThe90(){
   document.getElementById('the90-week').innerHTML = weekStats;
 
   // Streak + Best week + next milestone
-  document.getElementById('the90-streak').textContent = computeThe90Streak();
+  const newStreak = computeThe90Streak();
+  const streakEl = document.getElementById('the90-streak');
+  const prevStreak = parseInt(streakEl.textContent) || 0;
+  if(typeof animateNumber==='function') animateNumber(streakEl, prevStreak, newStreak, 500);
+  else streakEl.textContent = newStreak;
   document.getElementById('the90-bestweek').textContent = computeThe90BestWeek();
   const nextMs = day < 30 ? 30 : day < 60 ? 60 : day < 90 ? 90 : null;
   document.getElementById('the90-milestone').textContent = nextMs
