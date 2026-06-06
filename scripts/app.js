@@ -75,7 +75,125 @@ function segPick(id, v, onpick){
 function onRemindSeg(id, v){
   const wrap=document.getElementById(id.replace(/-remind$/,'')+'-rc');
   if(wrap) wrap.style.display = (v==='custom') ? 'flex' : 'none';
+  if(_nav.active) _navRefresh(); // visible fields may have changed
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   Form keyboard navigator — ↑↓ moves between form fields,
+   Enter dives into the highlighted field, Esc returns to nav layer.
+   Works on both add forms (static) and edit forms (dynamic).
+   ══════════════════════════════════════════════════════════════════ */
+const _nav = { active:false, container:null, fields:[], idx:0 };
+
+// Selectors for navigable form elements, in tab order
+const _NAV_SEL = 'input[type=text],input:not([type]),.fin-datebtn,.fin-seg,.fin-chiprow,select,button.primary,button.ghost.fx-btn';
+
+function _navVisible(el){
+  if(!el) return false;
+  const s = window.getComputedStyle(el);
+  return s.display !== 'none' && s.visibility !== 'hidden' && el.offsetParent !== null;
+}
+
+function openFormNav(container, startIdx){
+  _nav.container = container;
+  _nav.active = true;
+  _nav.idx = startIdx || 0;
+  _navRefresh(_nav.idx);
+}
+
+function closeFormNav(){
+  _navClearHl();
+  _nav.active = false;
+  _nav.container = null;
+  _nav.fields = [];
+}
+
+function _navRefresh(idx){
+  if(!_nav.container) return;
+  _nav.fields = Array.from(_nav.container.querySelectorAll(_NAV_SEL))
+    .filter(_navVisible);
+  // exclude cancel/ghost buttons that aren't submit — keep only .primary + the close ghost
+  // (don't exclude anything; let user Tab to them naturally)
+  const target = idx !== undefined ? idx : _nav.idx;
+  _nav.idx = Math.max(0, Math.min(target, _nav.fields.length - 1));
+  _navClearHl();
+  const el = _nav.fields[_nav.idx];
+  if(el) el.classList.add('form-nav-hl');
+}
+
+function _navClearHl(){
+  if(_nav.container)
+    _nav.container.querySelectorAll('.form-nav-hl').forEach(e=>e.classList.remove('form-nav-hl'));
+}
+
+function _navIsTyping(){
+  const a = document.activeElement;
+  return a && _nav.container && _nav.container.contains(a) &&
+    (a.tagName==='INPUT' || a.tagName==='TEXTAREA' || a.tagName==='SELECT');
+}
+
+function _navIsInGroup(){
+  const a = document.activeElement;
+  return a && _nav.container && _nav.container.contains(a) &&
+    a.matches('.fin-seg-btn,.fin-chip');
+}
+
+function _navActivate(){
+  const el = _nav.fields[_nav.idx];
+  if(!el) return;
+  if(el.matches('input, textarea')){
+    _navClearHl(); el.focus(); if(el.select) el.select();
+    return;
+  }
+  if(el.matches('.fin-datebtn')){ el.click(); return; }
+  if(el.matches('.fin-seg')){
+    const btn = el.querySelector('.fin-seg-btn.active') || el.querySelector('.fin-seg-btn');
+    if(btn){ _navClearHl(); btn.focus(); }
+    return;
+  }
+  if(el.matches('.fin-chiprow')){
+    const chip = el.querySelector('.fin-chip.active') || el.querySelector('.fin-chip');
+    if(chip){ _navClearHl(); chip.focus(); }
+    return;
+  }
+  if(el.matches('select')){ _navClearHl(); el.focus(); return; }
+  el.click(); // primary/ghost button
+}
+
+document.addEventListener('keydown', function(e){
+  if(!_nav.active || !_nav.container) return;
+  // Themed pickers own the keyboard while open
+  if(typeof finCalOpen==='function' && finCalOpen()) return;
+  if(typeof timePickerOpen==='function' && timePickerOpen()) return;
+
+  // Inside a native input / select: only Esc exits back to nav
+  if(_navIsTyping()){
+    if(e.key==='Escape'){ e.preventDefault(); document.activeElement.blur(); _navRefresh(); }
+    return;
+  }
+  // Inside a seg/chip group (←→ already handled by capture): Esc exits back to nav
+  if(_navIsInGroup()){
+    if(e.key==='Escape'){ e.preventDefault(); document.activeElement.blur(); _navRefresh(); }
+    return;
+  }
+
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+    e.preventDefault(); e.stopPropagation();
+    _nav.idx = (_nav.idx + (e.key==='ArrowDown'?1:-1) + _nav.fields.length) % _nav.fields.length;
+    _navRefresh(_nav.idx);
+    return;
+  }
+  if(e.key==='Enter'){
+    e.preventDefault(); e.stopPropagation();
+    _navActivate();
+    return;
+  }
+  if(e.key==='Escape'){
+    e.preventDefault();
+    closeFormNav();
+    return;
+  }
+}, false);
 
 /* ── Lightweight themed time picker (todo / academic only — finance has no time) ── */
 const _tp = { targetId:null, h:9, m:0 };

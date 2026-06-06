@@ -1,6 +1,11 @@
 /* Academics — university coursework with reminders */
 let acOpen=false;
-function toggleAcForm(){acOpen=!acOpen;document.getElementById('ac-form').style.display=acOpen?'block':'none';}
+function toggleAcForm(){
+  acOpen=!acOpen;
+  document.getElementById('ac-form').style.display=acOpen?'block':'none';
+  if(acOpen){ requestAnimationFrame(()=>openFormNav(document.getElementById('ac-form'))); }
+  else { closeFormNav(); }
+}
 
 /* ════ Subject presets ════ */
 function toggleSubManage(){document.getElementById('sub-manage').classList.toggle('open');}
@@ -43,12 +48,12 @@ function addAcTask(){
   segPick('f-pri','mid');
   segPick('f-remind','60','onRemindSeg');
   document.getElementById('f-rc').style.display='none';
-  toggleAcForm();saveAC();rAC();rMetrics();
+  closeFormNav();toggleAcForm();saveAC();rAC();rMetrics();
 }
 function toggleAC(id){const t=S.ac.find(t=>t.id===id);if(t)t.done=!t.done;saveAC();rAC();rMetrics();}
 function delAC(id){if(editingAC===id)editingAC=null;S.ac=S.ac.filter(t=>t.id!==id);saveAC();rAC();rMetrics();}
 function startAcEdit(id){editingAC=id;rAC();}
-function cancelAcEdit(){editingAC=null;rAC();}
+function cancelAcEdit(){closeFormNav();editingAC=null;rAC();}
 function saveAcEdit(id){
   const t=S.ac.find(t=>t.id===id);if(!t)return;
   const sub=document.getElementById('ea-sub').value.trim();
@@ -59,7 +64,7 @@ function saveAcEdit(id){
   const remind=readRemind('ea-remind','ea-rc-num','ea-rc-unit');
   if(!sub||!name||!date)return;
   t.sub=sub;t.name=name;t.date=date;t.time=time;t.pri=pri;t.remind=remind;
-  editingAC=null;saveAC();rAC();rMetrics();
+  closeFormNav();editingAC=null;saveAC();rAC();rMetrics();
 }
 
 function rAC(){
@@ -118,6 +123,10 @@ function rAC(){
   renderSubjects();
   attachRipples();
   makeSortable(el, { itemSelector:'.row', handleSelector:'.drag-handle', onReorder:onReorderAC });
+  if(editingAC){
+    const box = el.querySelector('.edit-box');
+    if(box) requestAnimationFrame(()=>openFormNav(box));
+  }
 }
 function onReorderAC(ids){
   S.ac = reorderById(S.ac, ids);

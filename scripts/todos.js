@@ -51,6 +51,10 @@ function toggleTdForm(){
     segPick('td-pri', 'mid');
     segPick('td-remind', '15', 'onRemindSeg');
     rCats();
+    // Open form navigator so ↑↓/Enter keyboard flow works immediately
+    requestAnimationFrame(()=>openFormNav(document.getElementById('td-form')));
+  } else {
+    closeFormNav();
   }
 }
 function addTodo(){
@@ -79,6 +83,7 @@ function addTodo(){
   document.getElementById('td-repeat-custom').value='';
   document.getElementById('td-repeat-custom').style.display='none';
   document.getElementById('td-rc').style.display='none';
+  closeFormNav();
   toggleTdForm();
   saveTodos(); rTodos();
 }
@@ -193,6 +198,11 @@ function rTodos(){
   }).join('');
   attachRipples();
   makeSortable(el, { itemSelector:'.todo-row', handleSelector:'.drag-handle', onReorder:onReorderTodos });
+  // Open form navigator on the edit box if an item is being edited
+  if(editingTD){
+    const box = el.querySelector('.edit-box');
+    if(box) requestAnimationFrame(()=>openFormNav(box));
+  }
 }
 function onReorderTodos(ids){
   S.todos = reorderById(S.todos, ids);
@@ -253,7 +263,7 @@ function delTodo(id){
   saveTodos(); rTodos(); rMetrics();
 }
 function startTdEdit(id){editingTD=id;rTodos();}
-function cancelTdEdit(){editingTD=null;rTodos();}
+function cancelTdEdit(){closeFormNav();editingTD=null;rTodos();}
 function saveTdEdit(id){
   const t = S.todos.find(t=>t.id===id);if(!t)return;
   const text = document.getElementById('etd-text').value.trim();
@@ -266,7 +276,7 @@ function saveTdEdit(id){
   t.remind = readRemind('etd-remind', 'etd-rc-num', 'etd-rc-unit');
   t.repeat = document.getElementById('etd-repeat').value;
   t.customDays = parseInt(document.getElementById('etd-custom').value) || 0;
-  editingTD=null;saveTodos();rTodos();rMetrics();
+  closeFormNav();editingTD=null;saveTodos();rTodos();rMetrics();
 }
 function toggleEtdCustom(){
   const sel = document.getElementById('etd-repeat');

@@ -1,3 +1,13 @@
+/* ── Form keyboard navigator highlight ── */
+.form-nav-hl{
+  outline:2px solid var(--brass) !important;
+  outline-offset:3px;
+  border-radius:var(--border-radius-md);
+  position:relative;
+  z-index:1;
+}
+html[data-theme="sterile"] .form-nav-hl{ border-radius:0; }
+
 /* Creed */
 .creed-wrap{margin-top:2rem;position:relative;}
 .creed-trigger{width:100%;background:transparent;border:none;border-top:.5px solid var(--brass-ghost);border-bottom:.5px solid var(--brass-ghost);padding:14px 0;display:flex;align-items:center;justify-content:center;gap:14px;cursor:pointer;position:relative;font-family:var(--sans);transition:padding .5s var(--ease-silk),background .3s ease;}
