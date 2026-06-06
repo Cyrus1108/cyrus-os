@@ -39,12 +39,14 @@
   animation-delay:calc(var(--wave,0) * 7ms);
 }
 
-/* ② "Today" column breathing — gentle glow loop on the today cells in the heatmap */
+/* ② "Today" column breathing — heatmap cells are only ~4px wide, so the glow
+   must spill well past the cell. z-index lifts it over neighbours; the 5 stacked
+   today cells merge into one breathing vertical streak. */
 @keyframes todayBreathe{
-  0%,100%{ box-shadow:0 0 0 1px var(--brass); }
-  50%    { box-shadow:0 0 0 2px var(--brass), 0 0 6px var(--brass-glow); }
+  0%,100%{ box-shadow:0 0 0 1px var(--brass), 0 0 2px var(--brass-glow); }
+  50%    { box-shadow:0 0 0 1px var(--brass-soft), 0 0 8px 1px var(--brass); }
 }
-.h-cell.h-today{ animation:todayBreathe 2.4s var(--ease-silk) infinite; }
+.h-cell.h-today{ position:relative; z-index:2; animation:todayBreathe 2.2s var(--ease-silk) infinite; }
 
 /* ③ Countdown tagline breathing glow — the emotional core line, alive like a beacon */
 @keyframes taglineGlow{
@@ -53,14 +55,21 @@
 }
 .the90-tagline{ animation:taglineGlow 4s var(--ease-silk) infinite; }
 
-/* ④ All-done payoff — one-time brass shimmer sweep across today's check-in row.
-   .celebrate is added in JS the moment all 5 targets are met, removed after the sweep. */
-@keyframes the90Sweep{ to{ transform:translateX(120%); } }
+/* ④ All-done payoff — one-time celebration the moment all 5 targets are met.
+   At that point the 5 cells are already solid brass, so a brass sweep would be
+   invisible: use a WARM-WHITE shine (reads on brass) plus a glow-ring flash. */
+@keyframes the90Sweep{ to{ transform:translateX(130%); } }
+@keyframes the90CelebrateGlow{
+  0%  { box-shadow:0 0 0 0 transparent; }
+  35% { box-shadow:0 0 14px 2px var(--brass-glow); }
+  100%{ box-shadow:0 0 0 0 transparent; }
+}
+.the90-cells.celebrate{ animation:the90CelebrateGlow 800ms var(--ease-silk); }
 .the90-cells.celebrate::after{
-  content:''; position:absolute; inset:0; pointer-events:none; z-index:2;
-  background:linear-gradient(105deg,transparent 40%,var(--brass-glow) 50%,transparent 60%);
-  transform:translateX(-120%);
-  animation:the90Sweep var(--dur-slower) var(--ease-silk);
+  content:''; position:absolute; inset:0; pointer-events:none; z-index:3;
+  background:linear-gradient(105deg,transparent 35%,rgba(255,240,214,.55) 50%,transparent 65%);
+  transform:translateX(-130%);
+  animation:the90Sweep 750ms var(--ease-silk);
 }
 
 @media (prefers-reduced-motion:reduce){

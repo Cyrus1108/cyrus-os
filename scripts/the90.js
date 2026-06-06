@@ -331,14 +331,17 @@ function rThe90(){
     else msB.textContent = daysToMs;
   }
 
-  // ④ all-done payoff — fire the brass sweep once, the moment all targets flip to met.
+  // ④ all-done payoff — fire the warm-white shine + glow flash once, the moment all met.
   const metToday = meta.targets.filter(t => the90ScoreMet(todayScores[t.id], phase)).length;
   const allDone = meta.targets.length > 0 && metToday === meta.targets.length;
   if(allDone && !the90WasComplete){
     const cellsBox = document.getElementById('the90-cells');
     if(cellsBox){
+      cellsBox.classList.remove('celebrate');
+      // reflow so re-adding the class restarts the animation even on rapid re-complete
+      void cellsBox.offsetWidth;
       cellsBox.classList.add('celebrate');
-      setTimeout(()=> cellsBox.classList.remove('celebrate'), 700);
+      setTimeout(()=> cellsBox.classList.remove('celebrate'), 900);
     }
   }
   the90WasComplete = allDone;
@@ -377,17 +380,20 @@ function rThe90(){
 }
 
 function computeThe90Streak(){
-  // Longest current run of days where ≥3 of 5 targets were met
+  // Current run of days (most recent → back) meeting ≥3 of 5 targets.
+  // Today is PENDING: if it isn't met yet it neither counts nor breaks the run —
+  // you simply haven't extended your streak today. Only a genuine PAST miss ends it.
+  // (This is why it must not collapse to 0 the instant you uncheck today's 3rd target.)
   let streak = 0;
   for(let d = the90Day(); d >= 1; d--){
     const date = the90DateForDay(d);
     if(date > TODAY) continue;
     const day = S.the90.daily[date];
-    if(!day) break;
     const phase = the90Phase(d);
-    const met = S.the90.meta.targets.filter(t => the90ScoreMet(day.scores?.[t.id], phase)).length;
+    const met = day ? S.the90.meta.targets.filter(t => the90ScoreMet(day.scores?.[t.id], phase)).length : 0;
     if(met >= 3) streak++;
-    else break;
+    else if(date === TODAY) continue;   // pending today — don't count, don't break
+    else break;                         // a real past miss ends the run
   }
   return streak;
 }
