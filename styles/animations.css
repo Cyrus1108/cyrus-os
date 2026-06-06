@@ -27,6 +27,40 @@
 .panel:hover{ transform:translateY(-1px); }
 .panel:active{ transform:translateY(0) scale(.99); }
 
+/* ════════ The 90 — page animations ════════ */
+
+/* ① Heatmap cascade — diagonal wave on first render only (gated by .cascade in JS).
+   Per-cell delay comes from inline --wave (rowIndex + day). */
+@keyframes hCellIn{ from{opacity:0;transform:scale(.4);} to{opacity:1;transform:scale(1);} }
+.the90-h-grid.cascade .h-cell{
+  animation:hCellIn var(--dur-base) var(--ease-press) both;
+  animation-delay:calc(var(--wave,0) * 7ms);
+}
+
+/* ② "Today" column breathing — gentle glow loop on the today cells in the heatmap */
+@keyframes todayBreathe{
+  0%,100%{ box-shadow:0 0 0 1px var(--brass); }
+  50%    { box-shadow:0 0 0 2px var(--brass), 0 0 6px var(--brass-glow); }
+}
+.h-cell.h-today{ animation:todayBreathe 2.4s var(--ease-silk) infinite; }
+
+/* ③ Countdown tagline breathing glow — the emotional core line, alive like a beacon */
+@keyframes taglineGlow{
+  0%,100%{ text-shadow:none; opacity:.85; }
+  50%    { text-shadow:0 0 8px var(--brass-glow); opacity:1; }
+}
+.the90-tagline{ animation:taglineGlow 4s var(--ease-silk) infinite; }
+
+/* ④ All-done payoff — one-time brass shimmer sweep across today's check-in row.
+   .celebrate is added in JS the moment all 5 targets are met, removed after the sweep. */
+@keyframes the90Sweep{ to{ transform:translateX(120%); } }
+.the90-cells.celebrate::after{
+  content:''; position:absolute; inset:0; pointer-events:none; z-index:2;
+  background:linear-gradient(105deg,transparent 40%,var(--brass-glow) 50%,transparent 60%);
+  transform:translateX(-120%);
+  animation:the90Sweep var(--dur-slower) var(--ease-silk);
+}
+
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.01ms !important;transition-duration:.01ms !important;}
 }

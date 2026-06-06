@@ -303,9 +303,15 @@ button.check-btn.done{border-color:var(--brass);color:var(--brass);}
 }
 .the90-head-phase{
   font-size:9px;letter-spacing:.32em;text-transform:uppercase;
-  color:var(--mute);
   padding:3px 10px;border:.5px solid var(--brass-ghost);
+  /* ⑦ slow metallic sheen sweeping across the phase label */
+  background:linear-gradient(100deg,var(--mute) 30%,var(--brass) 50%,var(--mute) 70%);
+  background-size:200% 100%;
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;color:transparent;
+  animation:phaseSheen 6s linear infinite;
 }
+@keyframes phaseSheen{ to{ background-position:-200% 0; } }
 
 .the90-identity{
   font-family:var(--serif);font-style:italic;font-size:18px;
@@ -330,6 +336,7 @@ button.check-btn.done{border-color:var(--brass);color:var(--brass);}
 .the90-cells{
   display:grid;grid-template-columns:repeat(5,1fr);gap:8px;
   margin-bottom:6px;
+  position:relative;overflow:hidden;
 }
 .the90-cell{
   aspect-ratio:1;
@@ -426,6 +433,12 @@ button.check-btn.done{border-color:var(--brass);color:var(--brass);}
 .the90-week-stat{
   font-family:var(--mono);font-size:11px;color:var(--brass);
   text-align:center;letter-spacing:.04em;
+}
+/* ⑤ thin brass bar under each N/7, fills proportionally via --p (0..1) */
+.the90-week-bar{
+  display:block;height:2px;margin-top:3px;border-radius:1px;
+  background:var(--brass);transform-origin:left;transform:scaleX(var(--p,0));
+  transition:transform var(--dur-base) var(--ease-press);
 }
 
 .the90-stats{

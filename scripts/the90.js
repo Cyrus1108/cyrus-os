@@ -111,6 +111,12 @@ function toggleThe90Drawer(id){
   if(el) el.classList.toggle('open');
 }
 
+/* ── Animation gates (session-ephemeral) ──
+   the90Cascaded:   heatmap diagonal wave plays once per load, never on toggle.
+   the90WasComplete: tracks all-5-done so the brass sweep fires only at the moment it flips true. */
+let the90Cascaded = false;
+let the90WasComplete = false;
+
 /* ── Hard-standard boxes — ephemeral expand state (not persisted) ── */
 const the90StdOpen = {};
 function toggleThe90Std(id){
@@ -173,7 +179,17 @@ function rThe90(){
   const todayNote = S.the90.daily[TODAY]?.note || '';
 
   // Day X / 90 + phase chip
-  document.getElementById('the90-day').textContent = day < 1 ? '— PRE' : day > 90 ? 'COMPLETE' : `DAY ${day} / 90`;
+  // ⑧ day counter: roll the number up on first load (0→day); non-numeric states fall back to text.
+  const dayEl = document.getElementById('the90-day');
+  if(day < 1) dayEl.textContent = '— PRE';
+  else if(day > 90) dayEl.textContent = 'COMPLETE';
+  else {
+    let dayB = dayEl.querySelector('.n');
+    const prevDay = dayB ? (parseInt(dayB.textContent) || 0) : 0;
+    if(!dayB){ dayEl.innerHTML = `DAY <b class="n">${prevDay}</b> / 90`; dayB = dayEl.querySelector('.n'); }
+    if(typeof animateNumber==='function') animateNumber(dayB, prevDay, day, 500);
+    else dayB.textContent = day;
+  }
   document.getElementById('the90-phase').textContent = the90PhaseLabel(phase);
 
   // Identity statement removed per Cyrus's request — only the tagline (date + countdown) shows.
@@ -234,11 +250,20 @@ function rThe90(){
     const d = new Date(mon); d.setDate(mon.getDate()+i);
     return d.toLocaleDateString('sv-SE');
   });
-  const weekStats = meta.targets.map(t => {
-    const met = weekDates.filter(d => the90ScoreMet(S.the90.daily[d]?.scores?.[t.id], the90Phase(the90Day(d)))).length;
-    return `<span class="the90-week-stat">${met}/7</span>`;
-  }).join('');
-  document.getElementById('the90-week').innerHTML = weekStats;
+  // ⑤ N/7 number rolls up + a thin brass bar fills proportionally.
+  const weekMet = meta.targets.map(t =>
+    weekDates.filter(d => the90ScoreMet(S.the90.daily[d]?.scores?.[t.id], the90Phase(the90Day(d)))).length
+  );
+  const weekEl = document.getElementById('the90-week');
+  const prevWk = [...weekEl.querySelectorAll('.n')].map(e => parseInt(e.textContent) || 0);
+  weekEl.innerHTML = weekMet.map((met,i) =>
+    `<span class="the90-week-stat"><b class="n">${prevWk[i] || 0}</b>/7<i class="the90-week-bar" style="--p:${met/7}"></i></span>`
+  ).join('');
+  if(typeof animateNumber==='function'){
+    [...weekEl.querySelectorAll('.n')].forEach((b,i)=> animateNumber(b, prevWk[i] || 0, weekMet[i], 400));
+  } else {
+    [...weekEl.querySelectorAll('.n')].forEach((b,i)=> b.textContent = weekMet[i]);
+  }
 
   // Streak + Best week + next milestone
   const newStreak = computeThe90Streak();
@@ -246,11 +271,45 @@ function rThe90(){
   const prevStreak = parseInt(streakEl.textContent) || 0;
   if(typeof animateNumber==='function') animateNumber(streakEl, prevStreak, newStreak, 500);
   else streakEl.textContent = newStreak;
-  document.getElementById('the90-bestweek').textContent = computeThe90BestWeek();
+  // ⑥ Best week + Milestone roll their numbers up too (consistent with Streak).
+  const bestStr = computeThe90BestWeek();            // e.g. "23/35"
+  const bestNum = parseInt(bestStr) || 0;
+  const bestEl = document.getElementById('the90-bestweek');
+  let bestB = bestEl.querySelector('.n');
+  const prevBest = bestB ? (parseInt(bestB.textContent) || 0) : 0;
+  if(!bestB){ bestEl.innerHTML = `<b class="n">${prevBest}</b>/35`; bestB = bestEl.querySelector('.n'); }
+  if(typeof animateNumber==='function') animateNumber(bestB, prevBest, bestNum, 500);
+  else bestB.textContent = bestNum;
+
   const nextMs = day < 30 ? 30 : day < 60 ? 60 : day < 90 ? 90 : null;
-  document.getElementById('the90-milestone').textContent = nextMs
-    ? `DAY ${nextMs} · ${nextMs - day} 天`
-    : '已完成 90 天';
+  const msEl = document.getElementById('the90-milestone');
+  if(!nextMs){
+    msEl.textContent = '已完成 90 天';
+  } else {
+    const daysToMs = nextMs - day;
+    let msB = msEl.querySelector('.n');
+    const prevMs = msB ? (parseInt(msB.textContent) || 0) : 0;
+    // rebuild shell if structure missing or milestone target changed (suffix differs)
+    if(!msB || msEl.dataset.ms !== String(nextMs)){
+      msEl.innerHTML = `DAY ${nextMs} · <b class="n">${prevMs}</b> 天`;
+      msEl.dataset.ms = String(nextMs);
+      msB = msEl.querySelector('.n');
+    }
+    if(typeof animateNumber==='function') animateNumber(msB, prevMs, daysToMs, 500);
+    else msB.textContent = daysToMs;
+  }
+
+  // ④ all-done payoff — fire the brass sweep once, the moment all targets flip to met.
+  const metToday = meta.targets.filter(t => the90ScoreMet(todayScores[t.id], phase)).length;
+  const allDone = meta.targets.length > 0 && metToday === meta.targets.length;
+  if(allDone && !the90WasComplete){
+    const cellsBox = document.getElementById('the90-cells');
+    if(cellsBox){
+      cellsBox.classList.add('celebrate');
+      setTimeout(()=> cellsBox.classList.remove('celebrate'), 700);
+    }
+  }
+  the90WasComplete = allDone;
 
   // Life-tree cultivation-chamber telemetry HUD (sterile theme)
   const ltGrow = document.getElementById('lt-grow');
@@ -259,7 +318,6 @@ function rThe90(){
     document.getElementById('lt-streak').textContent = computeThe90Streak();
     document.getElementById('lt-phase').textContent = the90PhaseLabel(phase);
     document.getElementById('lt-left').textContent = (daysLeft > 0 ? daysLeft : 0) + '天';
-    const metToday = meta.targets.filter(t => the90ScoreMet(todayScores[t.id], phase)).length;
     document.getElementById('lt-today').textContent = metToday + '/' + meta.targets.length;
     const ch = document.getElementById('lifetree-chamber');
     if(ch) ch.classList.toggle('milestone', day === 30 || day === 60 || day === 90);
@@ -269,6 +327,17 @@ function rThe90(){
 
   // Heatmap — 13 weeks x 5 targets
   document.getElementById('the90-heatmap').innerHTML = renderThe90Heatmap();
+  // ① diagonal cascade plays once per load only (never on toggle re-render).
+  // Remove .cascade after it finishes so the higher-specificity rule stops
+  // overriding the today-cell breathing (②) — control returns to .h-today.
+  if(!the90Cascaded){
+    const grid = document.querySelector('#the90-heatmap .the90-h-grid');
+    if(grid){
+      grid.classList.add('cascade');
+      setTimeout(()=> grid.classList.remove('cascade'), 1100);
+    }
+    the90Cascaded = true;
+  }
 
   // Drawer contents (two-min entries + bad day minimums)
   document.getElementById('the90-twomin-body').innerHTML = meta.targets.map(t =>
@@ -332,7 +401,7 @@ function renderThe90Heatmap(){
   const meta = S.the90.meta;
   const total = 90;
 
-  const rows = meta.targets.map(t => {
+  const rows = meta.targets.map((t, rowIndex) => {
     const cells = [];
     for(let d = 1; d <= total; d++){
       const date = the90DateForDay(d);
@@ -352,7 +421,8 @@ function renderThe90Heatmap(){
         cls += score ? ' h-on' : ' h-miss';
       }
       if(isToday) cls += ' h-today';
-      cells.push(`<div class="${cls}" title="${t.id} · ${date}"></div>`);
+      // --wave = diagonal index (row + day) drives the one-time cascade delay
+      cells.push(`<div class="${cls}" style="--wave:${rowIndex + d}" title="${t.id} · ${date}"></div>`);
     }
     return `<div class="the90-h-row" data-id="${t.id}">${cells.join('')}</div>`;
   }).join('');
