@@ -447,6 +447,19 @@ html[data-theme="sterile"] .fin-catpick{ border-radius:0; }
 }
 html[data-theme="sterile"] .fin-datebtn{ border-radius:0; }
 .fin-datebtn:hover{ border-color:var(--brass); }
+.fin-datebtn:focus-visible{ outline:1.5px solid var(--brass); outline-offset:2px; }
+
+/* Focus styles for seg buttons and chips — makes keyboard position visible */
+.fin-seg-btn:focus-visible,
+.fin-chip:focus-visible{
+  outline:1.5px solid var(--brass); outline-offset:-2px; position:relative; z-index:1;
+}
+
+/* Time picker keyboard hint line */
+.fin-tp-hint{
+  text-align:center; font-size:10px; color:var(--ghost); margin-top:10px;
+  font-family:var(--mono); letter-spacing:.06em;
+}
 
 .fin-cal{
   position:fixed; inset:0; z-index:2400; display:none;

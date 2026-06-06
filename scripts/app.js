@@ -104,16 +104,48 @@ function _tpRender(){
       <button class="ghost fx-btn" onclick="_tpConfirm()">确定</button>
       <button class="ghost fx-btn" onclick="_tpClose()">取消</button>
     </div>
+    <div class="fin-tp-hint">↑↓ 时 · ←→ 分 · Enter 确定</div>
   </div>`;
   o.classList.add('open');
+  // Re-focus card after every re-render so arrow keys work without clicking
+  requestAnimationFrame(()=>{ const c=o.querySelector('.fin-cal-card'); if(c){ c.tabIndex=-1; c.focus({preventScroll:true}); } });
 }
 function _tpSet(k,v){ _tp[k]=v; _tpRender(); }
 function _tpConfirm(){ const pad=n=>String(n).padStart(2,'0'); setTimeField(_tp.targetId, pad(_tp.h)+':'+pad(_tp.m)); _tpClose(); }
 function _tpClose(){ const o=document.getElementById('app-timepick'); if(o) o.classList.remove('open'); }
 function timePickerKey(e){
+  const _MM=[0,5,10,15,20,25,30,35,40,45,50,55];
   if(e.key==='Escape'){ e.preventDefault(); _tpClose(); }
   else if(e.key==='Enter'){ e.preventDefault(); _tpConfirm(); }
+  else if(e.key==='ArrowUp'){   e.preventDefault(); _tpSet('h',(_tp.h-1+24)%24); }
+  else if(e.key==='ArrowDown'){ e.preventDefault(); _tpSet('h',(_tp.h+1)%24); }
+  else if(e.key==='ArrowLeft'){  e.preventDefault(); const i=_MM.indexOf(_tp.m); _tpSet('m',_MM[(i-1+12)%12]); }
+  else if(e.key==='ArrowRight'){ e.preventDefault(); const i=_MM.indexOf(_tp.m); _tpSet('m',_MM[(i+1)%12]); }
 }
+
+/* ── Keyboard navigation for seg/chip groups (priority, reminder chips) ──
+   When focused on any .fin-seg-btn or .fin-chip:
+   ← / ↑   →  previous option (wraps)
+   → / ↓   →  next option (wraps)
+   Uses capture phase + stopPropagation so it takes priority over page handlers
+   and doesn't accidentally trigger tab-switching (finNavTab) etc. */
+document.addEventListener('keydown', function(e){
+  const t = e.target;
+  if(!t || !t.closest) return;
+  if(!t.matches('.fin-seg-btn, .fin-chip')) return;
+  if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight'&&e.key!=='ArrowUp'&&e.key!=='ArrowDown') return;
+  const group = t.closest('[data-seg]');
+  if(!group) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const btns = Array.from(group.querySelectorAll('[data-v]'));
+  const idx = btns.indexOf(t);
+  if(idx < 0) return;
+  const fwd = (e.key==='ArrowRight' || e.key==='ArrowDown');
+  const next = btns[(idx + (fwd ? 1 : btns.length - 1)) % btns.length];
+  next.focus();
+  next.click(); // triggers segPick → updates hidden input + active class
+}, true);
 
 /* Ripple effect */
 function addRipple(e){
