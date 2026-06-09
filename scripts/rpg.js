@@ -161,7 +161,7 @@ function computeRPG(){
     title: RPG_TITLES[rank] || '',
     expInLevel: totalExp - curBase,
     expForLevel: nextBase - curBase,
-    attrs, todayExp: rpgTodayExp(),
+    attrs, counts, todayExp: rpgTodayExp(),
   };
 }
 
@@ -217,17 +217,30 @@ function rpgUpdateChallenge(attrs, silent){
   return changed;
 }
 
-/* ── passive skill tree (auto-unlocked from real data; no allocation) ── */
+/* ── real-life skills (curated, fully automatic from real data — no allocation, no
+   manual toggle). Each ACTIVE skill adds +10 to the displayed 战力 (rSysStatus
+   skillBonus). Five 修行 skills track the The 90 activities (active when that activity
+   was met on ≥ RPG_SKILL_REQ of the last 30 days, read from rpg.counts), two 外功
+   skills reach into other modules, and four 心法 skills mark character progression.
+   Tests receive (attrs, rpg); rpg.counts = per-target 30-day met counts from computeRPG.
+   NOTE: "AI Automation" is intentionally absent — it has no data signal to bind to yet.
+   Add it here once something in CyrusOS measures it (a todo tag, a tracked ritual, …). */
+const RPG_SKILL_REQ = 20;   // a The 90 activity becomes a skill at ≥ this many met-days / 30
 const RPG_SKILLS = [
-  { id:'sk_str', branch:'STR', name:'钢筋铁骨', desc:'力量 ≥ 25（睡眠 · 健身）',          test:(a)=>a.STR>=25 },
-  { id:'sk_agi', branch:'AGI', name:'疾风之步', desc:'敏捷 ≥ 25（睡眠 · 健身）',          test:(a)=>a.AGI>=25 },
-  { id:'sk_int', branch:'INT', name:'通明之识', desc:'智力 ≥ 25（睡眠 · 冥想 · 课业 · 性能量）', test:(a)=>a.INT>=25 },
-  { id:'sk_wis', branch:'WIS', name:'澄心之境', desc:'智慧 ≥ 25（睡眠 · 冥想 · 性能量）',  test:(a)=>a.WIS>=25 },
-  { id:'sk_vit', branch:'VIT', name:'不眠之躯', desc:'体力 ≥ 25（睡眠 · 性能量）',        test:(a)=>a.VIT>=25 },
-  { id:'sk_awaken',  branch:'CORE', name:'觉醒',     desc:'等级达到 5',     test:(a,r)=>r.level>=5 },
-  { id:'sk_hunter',  branch:'CORE', name:'狩猎本能', desc:'连续达标 7 天',  test:()=> (typeof computeThe90Streak==='function' && computeThe90Streak()>=7) },
-  { id:'sk_relent',  branch:'CORE', name:'不屈',     desc:'连续达标 30 天', test:()=> (typeof computeThe90Streak==='function' && computeThe90Streak()>=30) },
-  { id:'sk_monarch', branch:'CORE', name:'君主之威', desc:'晋升至 S 级',    test:(a,r)=>r.rank==='S' },
+  // 修行 · 五道 — the five The 90 activities, auto-active from real check-ins
+  { id:'sk_sleep',   name:'养元', desc:'近 30 天「21:30 上床」≥ '+RPG_SKILL_REQ+' 天 · 睡眠养体力', test:(a,r)=> ((r.counts&&r.counts.I)||0)   >= RPG_SKILL_REQ },
+  { id:'sk_zen',     name:'止水', desc:'近 30 天「10 分钟冥想」≥ '+RPG_SKILL_REQ+' 天 · 心神澄明',   test:(a,r)=> ((r.counts&&r.counts.II)||0)  >= RPG_SKILL_REQ },
+  { id:'sk_study',   name:'精进', desc:'近 30 天「课业全 A」≥ '+RPG_SKILL_REQ+' 天 · 学问不辍',     test:(a,r)=> ((r.counts&&r.counts.III)||0) >= RPG_SKILL_REQ },
+  { id:'sk_iron',    name:'淬体', desc:'近 30 天「健身」≥ '+RPG_SKILL_REQ+' 天 · 钢筋铁骨',         test:(a,r)=> ((r.counts&&r.counts.IV)||0)  >= RPG_SKILL_REQ },
+  { id:'sk_essence', name:'固本', desc:'近 30 天「性能量管理」≥ '+RPG_SKILL_REQ+' 天 · 炼精化气',   test:(a,r)=> ((r.counts&&r.counts.V)||0)   >= RPG_SKILL_REQ },
+  // 外功 — reach into the other modules
+  { id:'sk_lang',    name:'言灵', desc:'N2 连续打卡 ≥ 14 天',  test:()=> (S.jp && S.jp.streak>=14) },
+  { id:'sk_wealth',  name:'财基', desc:'净资产站稳 RM 10,000', test:()=> (typeof finNetWorthMYR==='function' && finNetWorthMYR()>=10000) },
+  // 心法 · 进阶 — character progression
+  { id:'sk_awaken',  name:'觉醒',     desc:'等级达到 5',     test:(a,r)=>r.level>=5 },
+  { id:'sk_hunter',  name:'狩猎本能', desc:'连续达标 7 天',  test:()=> (typeof computeThe90Streak==='function' && computeThe90Streak()>=7) },
+  { id:'sk_relent',  name:'不屈',     desc:'连续达标 30 天', test:()=> (typeof computeThe90Streak==='function' && computeThe90Streak()>=30) },
+  { id:'sk_monarch', name:'君主之威', desc:'晋升至 S 级',    test:(a,r)=>r.rank==='S' },
 ];
 
 // net worth converted to MYR — base may be TWD; fxRates.MYR = base units per 1 MYR,
