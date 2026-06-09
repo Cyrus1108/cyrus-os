@@ -133,7 +133,7 @@ let S={
      (level/exp/attrs/rank) is computed from real data by computeRPG().
      seenLevel = highest level already celebrated (de-dupes the LEVEL UP modal).
      achievements = { achievementId: unlockedAtISO } */
-  rpg:{ seenLevel:1, achievements:{} },
+  rpg:{ seenLevel:1, achievements:{}, bonusExp:0, daily:{} },
 };
 
 let editingAC=null, editingJP=null, editingTR=null, editingTD=null;

@@ -3,29 +3,87 @@
    tokens.css; the holographic tricks are re-skinned from theme-sterile.css. */
 
 body.sys-locked{ overflow:hidden; }
+:root{ --sys-glass:rgba(253,252,249,.93); }
+@media (prefers-color-scheme:dark){ :root{ --sys-glass:rgba(26,23,19,.9); } }
 
-/* ── view shell (slide-up like finance) ── */
+/* ── HUD shell: a glass window floating over the dimmed/blurred page ── */
 .sys-view{
   position:fixed; inset:0; z-index:1200;
-  background:var(--color-background-primary);
-  display:flex; flex-direction:column;
-  transform:translateY(100%);
-  transition:transform .42s var(--ease-drawer);
-  visibility:hidden;
+  display:flex; align-items:center; justify-content:center; padding:18px;
+  opacity:0; visibility:hidden;
+  transition:opacity var(--dur-base) var(--ease-silk),visibility var(--dur-base) var(--ease-silk);
 }
-.sys-view.open{ transform:translateY(0); visibility:visible; }
-.sys-top{
-  display:flex; align-items:center; gap:12px;
-  padding:16px 18px 12px; border-bottom:.5px solid var(--hair);
+.sys-view.open{ opacity:1; visibility:visible; }
+.sys-backdrop{
+  position:absolute; inset:0;
+  background:rgba(20,16,11,.45);
+  -webkit-backdrop-filter:blur(5px); backdrop-filter:blur(5px);
 }
+.sys-window{
+  position:relative; z-index:1; width:100%; max-width:460px; max-height:86vh;
+  display:flex; flex-direction:column; overflow:hidden;
+  background:var(--sys-glass);
+  border:.5px solid var(--brass); border-radius:var(--border-radius-lg);
+  box-shadow:0 26px 80px -22px rgba(0,0,0,.6), 0 0 42px -12px var(--brass-glow);
+  animation:sysWinIn var(--dur-slow) var(--ease-press) both;
+}
+@keyframes sysWinIn{ from{ opacity:0; transform:translateY(16px) scale(.97); } to{ opacity:1; transform:none; } }
+.sys-top{ display:flex; align-items:center; gap:12px; padding:14px 16px 10px; }
+.sys-title{ flex:1; font-family:var(--mono); font-size:12px; letter-spacing:.24em; text-transform:uppercase; color:var(--brass); }
 .sys-back{
-  background:none; border:none; color:var(--mute); font-size:14px;
-  cursor:pointer; padding:6px 8px; border-radius:var(--border-radius-md);
-  transition:color var(--dur-base) var(--ease-silk),background var(--dur-base) var(--ease-silk);
+  background:none; border:.5px solid var(--hair); color:var(--mute);
+  width:28px; height:28px; line-height:1; font-size:13px; cursor:pointer; border-radius:var(--border-radius-md);
+  transition:color var(--dur-base) var(--ease-silk),border-color var(--dur-base) var(--ease-silk);
 }
-.sys-back:hover{ color:var(--ink); background:var(--color-background-secondary); }
-.sys-title{ flex:1; font-family:var(--serif); font-size:20px; color:var(--ink); letter-spacing:.04em; }
-.sys-body{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:16px 14px 48px; }
+.sys-back:hover{ color:var(--brass); border-color:var(--brass); }
+.sys-tabs{ display:flex; gap:2px; padding:0 12px; border-bottom:.5px solid var(--hair); }
+.sys-tab{
+  flex:1; background:none; border:none; cursor:pointer; font-family:var(--sans);
+  padding:9px 4px 11px; font-size:12px; color:var(--ghost); border-bottom:2px solid transparent;
+  transition:color var(--dur-base) var(--ease-silk),border-color var(--dur-base) var(--ease-silk);
+}
+.sys-tab.active{ color:var(--brass); border-bottom-color:var(--brass); font-weight:600; }
+.sys-body{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:14px 14px 20px; }
+
+/* ── quests tab ── */
+.sys-q-card{ position:relative; overflow:hidden; padding:14px 14px 13px; margin-bottom:12px; border:.5px solid var(--hair); border-radius:var(--border-radius-md); background:var(--color-background-secondary); }
+.sys-q-card.sys-q-main{ border-color:var(--brass-ghost); }
+.sys-q-card-head{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.sys-q-tag{ font-family:var(--mono); font-size:9px; letter-spacing:.14em; text-transform:uppercase; padding:2px 7px; border-radius:3px; background:var(--color-background-tertiary); color:var(--mute); }
+.sys-q-tag.main{ background:var(--brass); color:var(--color-background-primary); }
+.sys-q-tag.chal{ background:var(--brass-ghost); color:var(--brass); }
+.sys-q-reward{ margin-left:auto; font-family:var(--mono); font-size:11px; color:var(--brass); }
+.sys-q-reward.done{ color:var(--mute); }
+.sys-q-title{ font-family:var(--serif); font-size:15px; color:var(--ink); margin-bottom:6px; }
+.sys-q-desc{ font-size:11px; color:var(--ghost); }
+.sys-q-bar{ height:6px; border-radius:4px; background:var(--color-background-tertiary); border:.5px solid var(--hair); overflow:hidden; margin:4px 0 7px; }
+.sys-q-bar > i{ display:block; height:100%; background:linear-gradient(90deg,var(--brass),var(--brass-soft)); box-shadow:0 0 8px var(--brass-glow); transition:width var(--dur-slower) var(--ease-silk); }
+.sys-q-challenge.done{ opacity:.7; }
+.sys-q-challenge .sys-q-title{ font-family:var(--sans); font-size:14px; }
+.sys-q-daily{ display:flex; flex-direction:column; gap:2px; margin-bottom:6px; }
+.sys-q-line{ display:flex; align-items:center; gap:9px; font-size:13px; color:var(--ink); padding:5px 2px; }
+.sys-q-line .sys-q-check{ font-size:13px; color:var(--ghost); width:16px; text-align:center; }
+.sys-q-line.done{ color:var(--mute); }
+.sys-q-line.done .sys-q-check{ color:var(--brass); }
+.sys-q-sides{ display:flex; flex-direction:column; gap:6px; }
+.sys-q-side{ display:flex; align-items:center; gap:9px; padding:8px 10px; border:.5px solid var(--hair); border-radius:var(--border-radius-md); background:var(--color-background-secondary); }
+.sys-q-side-tag{ font-family:var(--mono); font-size:9px; letter-spacing:.08em; padding:2px 6px; border-radius:3px; background:var(--brass-ghost); color:var(--brass); flex:none; }
+.sys-q-side-tag.td{ background:var(--color-background-tertiary); color:var(--mute); }
+.sys-q-side-name{ flex:1; font-size:12px; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sys-q-side-due{ font-family:var(--mono); font-size:10px; color:var(--ghost); flex:none; }
+.sys-empty{ text-align:center; color:var(--ghost); font-style:italic; font-family:var(--serif); font-size:13px; padding:24px; }
+
+/* ── skills tab ── */
+.sys-skill-row{ display:grid; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); gap:10px; margin-bottom:6px; }
+.sys-skill{ text-align:center; padding:12px 8px; border:.5px solid var(--hair); border-radius:var(--border-radius-md); background:var(--color-background-secondary); transition:border-color var(--dur-base) var(--ease-silk),transform var(--dur-fast) var(--ease-press); }
+.sys-skill.on{ border-color:var(--brass-ghost); }
+.sys-skill.on:hover{ transform:translateY(-2px); border-color:var(--brass); }
+.sys-skill.off{ opacity:.4; }
+.sys-skill-node{ font-size:22px; margin-bottom:5px; }
+.sys-skill.on .sys-skill-node{ color:var(--brass); text-shadow:0 0 12px var(--brass-glow); }
+.sys-skill.off .sys-skill-node{ color:var(--ghost); }
+.sys-skill-name{ font-size:12px; font-family:var(--serif); color:var(--ink); margin-bottom:3px; }
+.sys-skill-cond{ font-size:9.5px; color:var(--ghost); line-height:1.35; }
 
 /* ── corner brackets (shared by status card + celebration) ── */
 .sys-corner{ position:absolute; width:12px; height:12px; pointer-events:none; z-index:3; }

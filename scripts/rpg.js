@@ -106,7 +106,7 @@ function rpgTodayExp(){
   return e;
 }
 function computeRPG(){
-  const totalExp = rpgTotalExp();
+  const totalExp = rpgTotalExp() + ((S.rpg && S.rpg.bonusExp) || 0);
   const level = rpgLevelFromExp(totalExp);
   const curBase = rpgExpForLevel(level);
   const nextBase = rpgExpForLevel(level+1);
@@ -121,6 +121,66 @@ function computeRPG(){
     attrs, todayExp: rpgTodayExp(),
   };
 }
+
+/* ── daily challenge (targets your weakest attribute) ── */
+function rpgAttrToTargetId(attrKey){
+  for(const tid in RPG_ATTR_MAP){ if(RPG_ATTR_MAP[tid].key===attrKey) return tid; }
+  return null;
+}
+function rpgWeakestAttr(attrs){
+  let mk=null, mv=Infinity;
+  for(const tid of RPG_ATTR_ORDER){ const k=RPG_ATTR_MAP[tid].key; if(attrs[k] < mv){ mv=attrs[k]; mk=k; } }
+  return mk;
+}
+function rpgTargetMetToday(targetId){
+  if(typeof the90Phase!=='function' || typeof the90Day!=='function' || typeof the90ScoreMet!=='function') return false;
+  const today = S.the90 && S.the90.daily && S.the90.daily[TODAY];
+  if(!today) return false;
+  const phase = the90Phase(the90Day());
+  return the90ScoreMet((today.scores||{})[targetId], phase);
+}
+const RPG_CHALLENGE_TEXT = {
+  STR: { verb:'完成今日「健身」目标', tip:'让身体记住力量。' },
+  AGI: { verb:'完成今日「篮球」目标', tip:'保持身手的灵敏。' },
+  INT: { verb:'完成今日「日语」目标', tip:'离 N2 再近一步。' },
+  WIS: { verb:'完成今日「赚钱」目标', tip:'让钱开始为你工作。' },
+  VIT: { verb:'完成今日「睡眠」目标', tip:'恢复，是更强的开始。' },
+};
+const RPG_CHALLENGE_EXP = 20;
+// Roll today's challenge + auto-grant when the weak pillar is completed.
+// Returns true if S.rpg changed. `silent` suppresses the toast (first-load backfill).
+function rpgUpdateChallenge(attrs, silent){
+  let changed = false;
+  if(!S.rpg.daily || S.rpg.daily.date !== TODAY){
+    const weak = rpgWeakestAttr(attrs);
+    S.rpg.daily = { date:TODAY, attr:weak, claimed:false };
+    changed = true;
+  }
+  const d = S.rpg.daily;
+  if(d && d.date===TODAY && !d.claimed){
+    const tid = rpgAttrToTargetId(d.attr);
+    if(tid && rpgTargetMetToday(tid)){
+      d.claimed = true;
+      S.rpg.bonusExp = (S.rpg.bonusExp||0) + RPG_CHALLENGE_EXP;
+      changed = true;
+      if(!silent) sysToast('[ 系统 ] 每日挑战完成 +' + RPG_CHALLENGE_EXP + ' 经验');
+    }
+  }
+  return changed;
+}
+
+/* ── passive skill tree (auto-unlocked from real data; no allocation) ── */
+const RPG_SKILLS = [
+  { id:'sk_str', branch:'STR', name:'钢筋铁骨', desc:'近 30 天健身达成 ≥15 天', test:(a)=>a.STR>=25 },
+  { id:'sk_agi', branch:'AGI', name:'疾风之步', desc:'近 30 天篮球达成 ≥15 天', test:(a)=>a.AGI>=25 },
+  { id:'sk_int', branch:'INT', name:'多语之脑', desc:'近 30 天日语达成 ≥15 天', test:(a)=>a.INT>=25 },
+  { id:'sk_wis', branch:'WIS', name:'市场之眼', desc:'近 30 天赚钱达成 ≥15 天', test:(a)=>a.WIS>=25 },
+  { id:'sk_vit', branch:'VIT', name:'不眠之躯', desc:'近 30 天睡眠达成 ≥15 天', test:(a)=>a.VIT>=25 },
+  { id:'sk_awaken',  branch:'CORE', name:'觉醒',     desc:'等级达到 5',     test:(a,r)=>r.level>=5 },
+  { id:'sk_hunter',  branch:'CORE', name:'狩猎本能', desc:'连续达标 7 天',  test:()=> (typeof computeThe90Streak==='function' && computeThe90Streak()>=7) },
+  { id:'sk_relent',  branch:'CORE', name:'不屈',     desc:'连续达标 30 天', test:()=> (typeof computeThe90Streak==='function' && computeThe90Streak()>=30) },
+  { id:'sk_monarch', branch:'CORE', name:'君主之威', desc:'晋升至 S 级',    test:(a,r)=>r.rank==='S' },
+];
 
 /* ── achievements (tested against real data) ── */
 const RPG_ACHIEVEMENTS = [
@@ -139,12 +199,19 @@ const RPG_ACHIEVEMENTS = [
 ];
 
 /* ── orchestration: recompute, fire level-ups + achievements, persist ── */
-let _rpgLastExp = null;
+let _rpgLastExp = null, _rpgChallengeGranted = false;
 function rpgAfterChange(){
   if(!S.rpg) return;
-  const rpg = computeRPG();
-  const firstRun = (S.rpg.seenLevel===1 && Object.keys(S.rpg.achievements||{}).length===0 && (rpg.level>1 || rpg.totalExp>0));
+  const probe = computeRPG();
+  const firstRun = (S.rpg.seenLevel===1 && Object.keys(S.rpg.achievements||{}).length===0 && (probe.level>1 || probe.totalExp>0));
   let changed = false;
+
+  // daily challenge: roll today's + auto-grant when the weak pillar is done (silent on first load)
+  const beforeBonus = S.rpg.bonusExp || 0;
+  if(rpgUpdateChallenge(probe.attrs, firstRun)) changed = true;
+  _rpgChallengeGranted = (S.rpg.bonusExp || 0) > beforeBonus;
+
+  const rpg = computeRPG(); // includes any fresh challenge bonus
 
   if(firstRun){
     // silent backfill so an existing user doesn't get a flood of pop-ups on first load
@@ -152,7 +219,7 @@ function rpgAfterChange(){
     for(const a of RPG_ACHIEVEMENTS){ try{ if(a.test(rpg)) S.rpg.achievements[a.id] = new Date().toISOString(); }catch(e){} }
     changed = true;
   } else {
-    if(_rpgLastExp != null && rpg.totalExp > _rpgLastExp){
+    if(!_rpgChallengeGranted && _rpgLastExp != null && rpg.totalExp > _rpgLastExp){
       sysToast('[ 系统 ] +' + (rpg.totalExp - _rpgLastExp) + ' 经验');
     }
     if(rpg.level > (S.rpg.seenLevel || 1)){
@@ -239,8 +306,8 @@ function sysCloseModal(){
   _celebrateDone();
 }
 
-/* ── full-screen view (hash-routed like finance/motivation) ── */
-const sysUI = { open:false };
+/* ── HUD window view (hash-routed; floats over the dimmed page) ── */
+const sysUI = { open:false, tab:'status' };
 function openSystem(fromHash){
   const v = document.getElementById('system-view'); if(!v) return;
   sysUI.open = true;
@@ -262,13 +329,26 @@ function sysHashRoute(){
 }
 window.addEventListener('hashchange', sysHashRoute);
 
-/* ── render the System / Character view ── */
+function sysSwitchTab(tab){
+  sysUI.tab = tab;
+  if(typeof withViewTransition==='function') withViewTransition(rSystem); else rSystem();
+}
+
+/* ── render the HUD (dispatch by tab) ── */
 function rSystem(){
   if(!sysUI.open) return;
+  document.querySelectorAll('#system-view .sys-tab').forEach(b=> b.classList.toggle('active', b.dataset.tab===sysUI.tab));
   const body = document.getElementById('sys-body'); if(!body) return;
+  if(sysUI.tab==='quests') rSysQuests(body);
+  else if(sysUI.tab==='skills') rSysSkills(body);
+  else rSysStatus(body);
+  if(typeof attachRipples==='function') attachRipples();
+}
+
+/* ── tab: STATUS (level / attrs / achievements / log) ── */
+function rSysStatus(body){
   const rpg = computeRPG();
   const pct = rpg.expForLevel>0 ? Math.min(100, Math.round(rpg.expInLevel/rpg.expForLevel*100)) : 0;
-
   const attrRows = RPG_ATTR_ORDER.map(tid=>{
     const m = RPG_ATTR_MAP[tid];
     const val = rpg.attrs[m.key];
@@ -280,7 +360,6 @@ function rSystem(){
       <span class="sys-attr-val" data-attr="${m.key}">10</span>
     </div>`;
   }).join('');
-
   const achCards = RPG_ACHIEVEMENTS.map(a=>{
     const locked = !S.rpg.achievements[a.id];
     const masked = a.hidden && locked;
@@ -290,7 +369,6 @@ function rSystem(){
       <div class="sys-ach-desc">${masked?'隐藏成就':escH(a.desc)}</div>
     </div>`;
   }).join('');
-
   const logLines = Object.entries(S.rpg.achievements || {})
     .map(([id,ts])=>({ a:RPG_ACHIEVEMENTS.find(x=>x.id===id), ts }))
     .filter(x=>x.a)
@@ -298,7 +376,6 @@ function rSystem(){
     .slice(0,8)
     .map(x=>`<div class="sys-log-line"><span class="sys-log-time">${String(x.ts||'').slice(5,10)}</span> 解锁成就「${escH(x.a.name)}」</div>`)
     .join('');
-
   body.innerHTML = `
     <div class="sys-card">
       <div class="sys-corner tl"></div><div class="sys-corner tr"></div><div class="sys-corner bl"></div><div class="sys-corner br"></div>
@@ -317,7 +394,6 @@ function rSystem(){
     <div class="sys-achs">${achCards}</div>
     ${logLines ? `<div class="sys-sec-label">系统日志 · LOG</div><div class="sys-log">${logLines}</div>` : ''}
   `;
-
   if(typeof animateNumber==='function'){
     RPG_ATTR_ORDER.forEach(tid=>{
       const m = RPG_ATTR_MAP[tid];
@@ -331,7 +407,85 @@ function rSystem(){
       if(el) el.textContent = rpg.attrs[m.key];
     });
   }
-  if(typeof attachRipples==='function') attachRipples();
+}
+
+/* ── tab: QUESTS (main / daily + challenge / side) ── */
+function rSysQuests(body){
+  const targets = rpgTargets();
+  const day = (typeof the90Day==='function') ? the90Day() : 0;
+  const phase = (typeof the90Phase==='function') ? the90Phase(day) : '';
+  const phaseLabel = (typeof the90PhaseLabel==='function') ? the90PhaseLabel(phase) : phase;
+  const streak = (typeof computeThe90Streak==='function') ? computeThe90Streak() : 0;
+  const mainPct = day>0 ? Math.min(100, Math.round(day/90*100)) : 0;
+  const todayScores = (S.the90 && S.the90.daily && S.the90.daily[TODAY] && S.the90.daily[TODAY].scores) || {};
+
+  const dailyLines = targets.map(t=>{
+    const met = (typeof the90ScoreMet==='function') && the90ScoreMet(todayScores[t.id], phase);
+    return `<div class="sys-q-line ${met?'done':''}"><span class="sys-q-check">${met?'✓':'○'}</span>${escH(t.label)}</div>`;
+  }).join('');
+
+  const d = S.rpg.daily || {};
+  const chAttrM = d.attr ? RPG_ATTR_MAP[rpgAttrToTargetId(d.attr)] : null;
+  const chText = d.attr ? RPG_CHALLENGE_TEXT[d.attr] : null;
+  const chHtml = (d.date===TODAY && chText) ? `
+    <div class="sys-q-card sys-q-challenge ${d.claimed?'done':''}">
+      <div class="sys-q-card-head"><span class="sys-q-tag chal">每日挑战</span>
+        <span class="sys-q-reward ${d.claimed?'done':''}">${d.claimed?'已完成 +'+RPG_CHALLENGE_EXP:'+'+RPG_CHALLENGE_EXP+' EXP'}</span></div>
+      <div class="sys-q-title">${escH(chText.verb)}</div>
+      <div class="sys-q-desc">弱项强化 · ${chAttrM?escH(chAttrM.name):''}　·　${escH(chText.tip)}</div>
+    </div>` : '';
+
+  const acPending = (S.ac||[]).filter(t=>!t.done).slice(0,6);
+  const tdPending = (S.todos||[]).filter(t=>!t.done && t.date)
+    .sort((a,b)=>String(a.date).localeCompare(String(b.date))).slice(0,6);
+  const sideCards = [
+    ...acPending.map(t=>`<div class="sys-q-side"><span class="sys-q-side-tag">学业</span><span class="sys-q-side-name">${escH((t.sub?t.sub+' · ':'')+t.name)}</span><span class="sys-q-side-due">${t.date?escH(String(t.date).slice(5)):''}</span></div>`),
+    ...tdPending.map(t=>`<div class="sys-q-side"><span class="sys-q-side-tag td">待办</span><span class="sys-q-side-name">${escH(t.text)}</span><span class="sys-q-side-due">${escH(String(t.date).slice(5))}</span></div>`),
+  ].join('') || '<div class="sys-empty">暂无支线任务。</div>';
+
+  body.innerHTML = `
+    <div class="sys-sec-label">主线 · MAIN QUEST</div>
+    <div class="sys-q-card sys-q-main">
+      <div class="sys-corner tl"></div><div class="sys-corner tr"></div><div class="sys-corner bl"></div><div class="sys-corner br"></div>
+      <div class="sys-q-card-head"><span class="sys-q-tag main">THE 90</span><span class="sys-q-reward">${day>90?'已完成':'DAY '+day+' / 90'}</span></div>
+      <div class="sys-q-title">90 天的蜕变${phaseLabel?' · '+escH(phaseLabel):''}</div>
+      <div class="sys-q-bar"><i style="width:${mainPct}%"></i></div>
+      <div class="sys-q-desc">当前连续达标 ${streak} 天</div>
+    </div>
+    <div class="sys-sec-label">日常 · DAILY</div>
+    ${chHtml}
+    <div class="sys-q-daily">${dailyLines}</div>
+    <div class="sys-sec-label">支线 · SIDE QUESTS</div>
+    <div class="sys-q-sides">${sideCards}</div>
+  `;
+}
+
+/* ── tab: SKILLS (passive, auto-unlocked tree) ── */
+function rSysSkills(body){
+  const rpg = computeRPG();
+  const groups = [
+    { key:'CORE', label:'核心 · CORE' },
+    { key:'STR',  label:'力量 · STR' },
+    { key:'AGI',  label:'敏捷 · AGI' },
+    { key:'INT',  label:'智力 · INT' },
+    { key:'WIS',  label:'智慧 · WIS' },
+    { key:'VIT',  label:'体力 · VIT' },
+  ];
+  let html = '';
+  for(const g of groups){
+    const skills = RPG_SKILLS.filter(s=>s.branch===g.key);
+    if(!skills.length) continue;
+    const nodes = skills.map(s=>{
+      let un=false; try{ un = s.test(rpg.attrs, rpg); }catch(e){}
+      return `<div class="sys-skill ${un?'on':'off'}">
+        <div class="sys-skill-node">${un?'✦':'◇'}</div>
+        <div class="sys-skill-name">${un?escH(s.name):'? ? ?'}</div>
+        <div class="sys-skill-cond">${escH(s.desc)}</div>
+      </div>`;
+    }).join('');
+    html += `<div class="sys-sec-label">${g.label}</div><div class="sys-skill-row">${nodes}</div>`;
+  }
+  body.innerHTML = html;
 }
 
 // Honour a deep-link to #system on first load.

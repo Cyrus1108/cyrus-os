@@ -185,6 +185,8 @@ async function pullRPG(){
   if(data){
     S.rpg.seenLevel = data.seen_level || 1;
     S.rpg.achievements = data.achievements || {};
+    S.rpg.bonusExp = data.bonus_exp || 0;
+    S.rpg.daily = data.daily || {};
   }
 }
 
@@ -496,6 +498,8 @@ async function syncPushRPG(){
     user_id: currentUser.id,
     seen_level: S.rpg.seenLevel || 1,
     achievements: S.rpg.achievements || {},
+    bonus_exp: S.rpg.bonusExp || 0,
+    daily: S.rpg.daily || {},
     updated_at: new Date().toISOString(),
   });
   logIfError('push rpg_state', res);
