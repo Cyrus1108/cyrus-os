@@ -15,6 +15,8 @@ const RPG_ATTR_MAP = {
 };
 const RPG_ATTR_ORDER = ['V','II','IV','III','I']; // STR, AGI, INT, WIS, VIT
 const RPG_TITLES = { E:'觉醒者', D:'挑战者', C:'攀登者', B:'破限者', A:'支配者', S:'君主' };
+// per-pillar hues — MUST mirror the .sa-* colours in system.css (used for SVG fills)
+const RPG_ATTR_COLOR = { STR:'#c66a45', AGI:'#94a05c', INT:'#cda63f', WIS:'#d6c391', VIT:'#9c6b3e' };
 
 /* ── pure helpers ── */
 function rpgTargets(){
@@ -432,6 +434,78 @@ function rpgPenaltyActive(){
   const d = S.rpg && S.rpg.daily;
   return !!(d && d.date===TODAY && d.penalty && !d.claimed);
 }
+
+/* ── attribute radar (SVG, hand-rolled to match the brass HUD) ──
+   Plots the 5 current attribute values as a pentagon. Value 10→centre, 40→edge. */
+function rpgRadarSVG(rpg){
+  const ids = RPG_ATTR_ORDER, n = ids.length;
+  const cx=110, cy=94, R=64;
+  const ang = i => (-Math.PI/2) + i*(2*Math.PI/n);
+  const P = (i,r)=>[cx+Math.cos(ang(i))*r, cy+Math.sin(ang(i))*r];
+  const fmt = p => p[0].toFixed(1)+','+p[1].toFixed(1);
+  const polyAt = r => ids.map((_,i)=>fmt(P(i,r))).join(' ');
+
+  let rings=''; [0.25,0.5,0.75,1].forEach(f=>{ rings += `<polygon class="rdr-ring" points="${polyAt(f*R)}"/>`; });
+  let spokes=''; ids.forEach((_,i)=>{ const p=P(i,R); spokes += `<line class="rdr-spoke" x1="${cx}" y1="${cy}" x2="${p[0].toFixed(1)}" y2="${p[1].toFixed(1)}"/>`; });
+
+  const data = ids.map((id,i)=>{
+    const k = RPG_ATTR_MAP[id].key;
+    const v = rpg.attrs[k];
+    const r = Math.max(0, Math.min(1,(v-10)/30)) * R;
+    return { i, v, name:RPG_ATTR_MAP[id].name, pt:P(i,r), color:RPG_ATTR_COLOR[k]||'#a88455' };
+  });
+  let dots='', labels='';
+  data.forEach(d=>{
+    dots += `<circle class="rdr-dot" cx="${d.pt[0].toFixed(1)}" cy="${d.pt[1].toFixed(1)}" r="2.6" fill="${d.color}"/>`;
+    const lp = P(d.i, R+15);
+    const anchor = lp[0] < cx-6 ? 'end' : (lp[0] > cx+6 ? 'start' : 'middle');
+    labels += `<text class="rdr-label" x="${lp[0].toFixed(1)}" y="${lp[1].toFixed(1)}" text-anchor="${anchor}" fill="${d.color}">${d.name}<tspan class="rdr-lv" dx="4">${d.v}</tspan></text>`;
+  });
+  return `<svg class="sys-radar" viewBox="0 0 220 190" role="img" aria-label="属性雷达图">
+    <defs><radialGradient id="rdrFill" cx="50%" cy="50%" r="50%">
+      <stop class="rdr-s0" offset="0%"/><stop class="rdr-s1" offset="100%"/>
+    </radialGradient></defs>
+    ${rings}${spokes}
+    <polygon class="rdr-data" points="${data.map(d=>fmt(d.pt)).join(' ')}" fill="url(#rdrFill)"/>
+    ${dots}${labels}
+  </svg>`;
+}
+
+/* ── growth curve (SVG sparkline) ──
+   战力 (combat power) = Σ of the 5 attributes = 50 + Σ(daily met-count over the
+   trailing 30 days). Derived for each past anchor by sliding the window over the
+   frozen The 90 data — no stored history needed. Returns {cur, delta, svg}. */
+function rpgGrowthSVG(days){
+  days = days || 30; const W = 30;
+  const total = days + W - 1;
+  const mets = [];                                  // oldest → newest daily met-count
+  for(let i=total-1;i>=0;i--){
+    const dt = new Date(TODAY+'T00:00:00+08:00'); dt.setDate(dt.getDate()-i);
+    const ds = dt.toLocaleDateString('sv-SE');
+    mets.push(ds<=TODAY ? rpgMetOn(ds) : 0);
+  }
+  const series = []; let sum = 0;
+  for(let i=0;i<W;i++) sum += mets[i];
+  series.push(50 + sum);
+  for(let j=1;j<days;j++){ sum += mets[W-1+j] - mets[j-1]; series.push(50 + sum); }
+
+  const N = series.length;
+  const min = Math.min.apply(null,series), max = Math.max.apply(null,series);
+  const pad = (max-min)*0.18 || 6, lo = min-pad, hi = max+pad;
+  const X = i => (i/(N-1))*100;
+  const Y = v => 30 - ((v-lo)/(hi-lo))*27 - 1.5;
+  const line = series.map((v,i)=>X(i).toFixed(2)+','+Y(v).toFixed(2)).join(' ');
+  const area = '0,30 '+line+' 100,30';
+  return {
+    cur: series[N-1], delta: series[N-1]-series[0],
+    svg: `<svg class="sys-growth" viewBox="0 0 100 30" preserveAspectRatio="none" role="img" aria-label="战力成长曲线">
+      <polygon class="grw-area" points="${area}"/>
+      <polyline class="grw-line" points="${line}"/>
+      <circle class="grw-end" cx="${X(N-1).toFixed(2)}" cy="${Y(series[N-1]).toFixed(2)}" r="1.7"/>
+    </svg>`
+  };
+}
+
 function rSysStatus(body){
   const rpg = computeRPG();
   const pct = rpg.expForLevel>0 ? Math.min(100, Math.round(rpg.expInLevel/rpg.expForLevel*100)) : 0;
@@ -473,6 +547,8 @@ function rSysStatus(body){
     .slice(0,8)
     .map(x=>`<div class="sys-log-line"><span class="sys-log-time">${String(x.ts||'').slice(5,10)}</span> 解锁成就「${escH(x.a.name)}」</div>`)
     .join('');
+  const g = rpgGrowthSVG(30);
+  const _gd = g.delta>0 ? ('↑ +'+g.delta) : (g.delta<0 ? ('↓ '+g.delta) : '— 持平');
   body.innerHTML = `
     <div class="sys-card">
       <div class="sys-corner tl"></div><div class="sys-corner tr"></div><div class="sys-corner bl"></div><div class="sys-corner br"></div>
@@ -486,7 +562,14 @@ function rSysStatus(body){
       </div>
     </div>
     <div class="sys-sec-label">属性 · ATTRIBUTES</div>
+    <div class="sys-radar-wrap">${rpgRadarSVG(rpg)}</div>
     <div class="sys-attrs">${attrRows}</div>
+    <div class="sys-sec-label">成长轨迹 · GROWTH</div>
+    <div class="sys-growth-head">
+      <span class="sys-growth-now">战力 <b>${g.cur}</b></span>
+      <span class="sys-growth-delta ${g.delta>=0?'up':'down'}">近 30 天 ${_gd}</span>
+    </div>
+    ${g.svg}
     <div class="sys-sec-label">成就 · ACHIEVEMENTS</div>
     <div class="sys-achs">${achCards}</div>
     ${logLines ? `<div class="sys-sec-label">系统日志 · LOG</div><div class="sys-log">${logLines}</div>` : ''}

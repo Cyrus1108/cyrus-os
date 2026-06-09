@@ -306,6 +306,37 @@ body.sys-locked{ overflow:hidden; }
 .sys-attr-bar > i{ background:var(--ac, var(--brass)); }
 .sys-attr-val{ color:var(--ac, var(--brass)); }
 
+/* ── attribute radar (hand-rolled SVG) ── */
+.sys-radar-wrap{ display:flex; justify-content:center; margin:2px 0 8px; }
+.sys-radar{ width:100%; max-width:300px; height:auto; overflow:visible; }
+.rdr-ring{ fill:none; stroke:var(--hair); stroke-width:.5; }
+.rdr-spoke{ stroke:var(--hair); stroke-width:.5; }
+.rdr-s0{ stop-color:var(--brass-soft); stop-opacity:.42; }
+.rdr-s1{ stop-color:var(--brass); stop-opacity:.10; }
+.rdr-data{
+  stroke:var(--brass); stroke-width:1.5; vector-effect:non-scaling-stroke;
+  filter:drop-shadow(0 0 4px var(--brass-glow));
+  transform-box:fill-box; transform-origin:center;
+  animation:rdrIn .6s var(--ease-press) both;
+}
+@keyframes rdrIn{ from{ transform:scale(.15); opacity:0; } to{ transform:scale(1); opacity:1; } }
+.rdr-dot{ filter:drop-shadow(0 0 3px var(--brass-glow)); }
+.rdr-label{ font-family:var(--sans); font-size:9px; }
+.rdr-lv{ font-family:var(--mono); font-size:9px; font-weight:600; }
+
+/* ── growth curve (战力 / combat power, last 30 days) ── */
+.sys-growth-head{ display:flex; align-items:baseline; justify-content:space-between; margin:0 2px 6px; }
+.sys-growth-now{ font-family:var(--serif); font-size:13px; color:var(--mute); }
+.sys-growth-now b{ font-family:var(--serif); font-size:21px; color:var(--brass); letter-spacing:.01em; margin-left:2px; }
+.sys-growth-delta{ font-family:var(--mono); font-size:10px; letter-spacing:.04em; }
+.sys-growth-delta.up{ color:var(--brass); }
+.sys-growth-delta.down{ color:var(--mute); }
+.sys-growth{ width:100%; height:46px; display:block; }
+.grw-area{ fill:var(--brass); opacity:.10; }
+.grw-line{ fill:none; stroke:var(--brass); stroke-width:1.5; vector-effect:non-scaling-stroke; }
+.grw-end{ fill:var(--brass-soft); filter:drop-shadow(0 0 3px var(--brass-glow)); }
+@media (prefers-reduced-motion:reduce){ .rdr-data{ animation:none !important; } }
+
 /* ── achievements grid ── */
 /* D · one horizontal-scroll row instead of a tall grid → keeps the first screen
    focused on the status card + attributes. The right edge fades to hint overflow. */
