@@ -4,20 +4,31 @@
 
    Cumulative level/EXP comes from The 90's historical check-ins (frozen → monotonic),
    so a level once gained never drops. Attributes reflect recent 30-day form.
-   The 90 targets → attributes:  V 健身→STR · II 篮球→AGI · IV 日语→INT · III 赚钱→WIS · I 睡眠→VIT */
+   The 90 activities feed attributes MANY-TO-MANY (see RPG_ACTIVITY_ATTR); an
+   attribute is the weighted average of its feeders; 战力 = sum of the five. */
 
-// icons carry U+FE0E (text-presentation selector) so they never render as
-// full-colour OS emoji and stay monochrome with the brass / sterile palette
-const RPG_ATTR_MAP = {
-  V:  { key:'STR', name:'力量', icon:'⚔︎' },   // 健身
-  II: { key:'AGI', name:'敏捷', icon:'➹︎' },   // 篮球
-  IV: { key:'INT', name:'智力', icon:'✦︎' },   // 日语
-  III:{ key:'WIS', name:'智慧', icon:'☯︎' },   // 赚钱
-  I:  { key:'VIT', name:'体力', icon:'❀︎' },   // 睡眠
+// the five RPG attributes (display). icons carry U+FE0E (text-presentation) so
+// they stay monochrome with the brass / sterile palette.
+const RPG_ATTRS = [
+  { key:'STR', name:'力量', icon:'⚔︎' },
+  { key:'AGI', name:'敏捷', icon:'➹︎' },
+  { key:'INT', name:'智力', icon:'✦︎' },
+  { key:'WIS', name:'智慧', icon:'☯︎' },
+  { key:'VIT', name:'体力', icon:'❀︎' },
+];
+const RPG_ATTR_ORDER = ['STR','AGI','INT','WIS','VIT'];
+const RPG_ATTR_NAME = { STR:'力量', AGI:'敏捷', INT:'智力', WIS:'智慧', VIT:'体力' };
+// activity (the90 target id) → attribute weights. Sleep (I) is the foundation →
+// full weight to all five; the others feed only their directly-related attributes.
+const RPG_ACTIVITY_ATTR = {
+  I:   { STR:1, AGI:1, INT:1, WIS:1, VIT:1 },   // 睡眠
+  II:  { INT:1, WIS:1 },                         // 冥想
+  III: { INT:1 },                               // 课业
+  IV:  { STR:1, AGI:1 },                         // 健身
+  V:   { VIT:1, WIS:1, INT:1 },                  // 性能量管理
 };
-const RPG_ATTR_ORDER = ['V','II','IV','III','I']; // STR, AGI, INT, WIS, VIT
 const RPG_TITLES = { E:'觉醒者', D:'挑战者', C:'攀登者', B:'破限者', A:'支配者', S:'君主' };
-// per-pillar hues — MUST mirror the .sa-* colours in system.css (used for SVG fills)
+// per-attr hues — MUST mirror the .sa-* colours in system.css (used for SVG fills)
 const RPG_ATTR_COLOR = { STR:'#c66a45', AGI:'#94a05c', INT:'#cda63f', WIS:'#d6c391', VIT:'#9c6b3e' };
 
 /* ── pure helpers ── */
@@ -74,9 +85,11 @@ function rpgRank(L){
   if(L>=10) return 'D';
   return 'E';
 }
-function rpgAttrValueAt(targetId, anchor){
-  // recent form anchored at `anchor`: 10 + days-met in the 30 days ending there (→ 10..40)
-  let count = 0;
+function rpgTargetMetCounts(anchor){
+  // days-met in the 30 days ending at `anchor`, per the90 target id (phase-aware)
+  const counts = {};
+  for(const t of rpgTargets()) counts[t.id] = 0;
+  if(typeof the90Phase!=='function' || typeof the90Day!=='function' || typeof the90ScoreMet!=='function') return counts;
   const base = new Date(anchor + 'T00:00:00+08:00');
   for(let i=0;i<30;i++){
     const d = new Date(base); d.setDate(base.getDate() - i);
@@ -84,14 +97,24 @@ function rpgAttrValueAt(targetId, anchor){
     if(ds > TODAY) continue;
     const day = S.the90 && S.the90.daily && S.the90.daily[ds];
     if(!day) continue;
-    if(typeof the90Phase==='function' && typeof the90Day==='function' && typeof the90ScoreMet==='function'){
-      const phase = the90Phase(the90Day(ds));
-      if(the90ScoreMet((day.scores||{})[targetId], phase)) count++;
-    }
+    const phase = the90Phase(the90Day(ds));
+    const scores = day.scores || {};
+    for(const t of rpgTargets()){ if(the90ScoreMet(scores[t.id], phase)) counts[t.id]++; }
   }
-  return 10 + count;
+  return counts;
 }
-function rpgAttrValue(targetId){ return rpgAttrValueAt(targetId, TODAY); }
+// attribute = 10 + 30 × weighted-avg of its feeder activities' 30-day met-fraction (→ 10..40)
+function rpgAttrFromCounts(attrKey, counts){
+  let wsum = 0, num = 0;
+  for(const tid in RPG_ACTIVITY_ATTR){
+    const w = RPG_ACTIVITY_ATTR[tid][attrKey]; if(!w) continue;
+    num += w * ((counts[tid] || 0) / 30);
+    wsum += w;
+  }
+  return wsum ? Math.round(10 + 30 * num / wsum) : 10;
+}
+function rpgAttrValueAt(attrKey, anchor){ return rpgAttrFromCounts(attrKey, rpgTargetMetCounts(anchor)); }
+function rpgAttrValue(attrKey){ return rpgAttrValueAt(attrKey, TODAY); }
 function rpgPerfectToday(){
   const n = rpgTargets().length;
   return n>0 && rpgMetOn(TODAY) === n;
@@ -131,7 +154,8 @@ function computeRPG(){
   const nextBase = rpgExpForLevel(level+1);
   const rank = rpgRank(level);
   const attrs = {};
-  for(const tid of RPG_ATTR_ORDER){ attrs[RPG_ATTR_MAP[tid].key] = rpgAttrValue(tid); }
+  const counts = rpgTargetMetCounts(TODAY);
+  for(const k of RPG_ATTR_ORDER){ attrs[k] = rpgAttrFromCounts(k, counts); }
   return {
     totalExp, level, rank,
     title: RPG_TITLES[rank] || '',
@@ -141,14 +165,10 @@ function computeRPG(){
   };
 }
 
-/* ── daily challenge (targets your weakest attribute) ── */
-function rpgAttrToTargetId(attrKey){
-  for(const tid in RPG_ATTR_MAP){ if(RPG_ATTR_MAP[tid].key===attrKey) return tid; }
-  return null;
-}
+/* ── daily challenge (strengthens your weakest attribute) ── */
 function rpgWeakestAttr(attrs){
   let mk=null, mv=Infinity;
-  for(const tid of RPG_ATTR_ORDER){ const k=RPG_ATTR_MAP[tid].key; if(attrs[k] < mv){ mv=attrs[k]; mk=k; } }
+  for(const k of RPG_ATTR_ORDER){ if(attrs[k] < mv){ mv=attrs[k]; mk=k; } }
   return mk;
 }
 function rpgTargetMetToday(targetId){
@@ -158,31 +178,36 @@ function rpgTargetMetToday(targetId){
   const phase = the90Phase(the90Day());
   return the90ScoreMet((today.scores||{})[targetId], phase);
 }
-const RPG_CHALLENGE_TEXT = {
-  STR: { verb:'完成今日「健身」目标', tip:'让身体记住力量。' },
-  AGI: { verb:'完成今日「篮球」目标', tip:'保持身手的灵敏。' },
-  INT: { verb:'完成今日「日语」目标', tip:'离 N2 再近一步。' },
-  WIS: { verb:'完成今日「赚钱」目标', tip:'让钱开始为你工作。' },
-  VIT: { verb:'完成今日「睡眠」目标', tip:'恢复，是更强的开始。' },
-};
+// pick the activity to do for a weak attribute: a feeder NOT done today, highest
+// weight. On a weight tie, prefer a non-sleep feeder — 睡眠 (I) feeds every
+// attribute so it would otherwise win every day, and "21:30 上床" isn't a
+// daytime-actionable challenge. Fall back to sleep only when it's the sole option.
+function rpgChallengeActivity(attrKey){
+  let best = null, bestW = 0;
+  for(const tid in RPG_ACTIVITY_ATTR){
+    const w = RPG_ACTIVITY_ATTR[tid][attrKey]; if(!w) continue;
+    if(rpgTargetMetToday(tid)) continue;            // already done today → skip
+    if(w > bestW || (w === bestW && best === 'I' && tid !== 'I')){ bestW = w; best = tid; }
+  }
+  return best;                                       // null when every feeder is done today
+}
 const RPG_CHALLENGE_EXP = 20;
-// Roll today's challenge + auto-grant when the weak pillar is completed.
+// Roll today's challenge + auto-grant when the chosen activity is completed.
 // Returns true if S.rpg changed. `silent` suppresses the toast (first-load backfill).
 function rpgUpdateChallenge(attrs, silent){
   let changed = false;
   if(!S.rpg.daily || S.rpg.daily.date !== TODAY){
     const prev = S.rpg.daily;
     // missed yesterday's challenge → the System carries a penalty into today
-    const missed = !!(prev && prev.attr && !prev.claimed && prev.date && prev.date < TODAY);
+    const missed = !!(prev && prev.target && !prev.claimed && prev.date && prev.date < TODAY);
     const weak = rpgWeakestAttr(attrs);
-    S.rpg.daily = { date:TODAY, attr:weak, claimed:false, penalty:missed };
+    S.rpg.daily = { date:TODAY, attr:weak, target:rpgChallengeActivity(weak), claimed:false, penalty:missed };
     changed = true;
     if(missed && !silent) sysToast('系统 · 检测到昨日的懈怠 — 惩罚任务已下达');
   }
   const d = S.rpg.daily;
-  if(d && d.date===TODAY && !d.claimed){
-    const tid = rpgAttrToTargetId(d.attr);
-    if(tid && rpgTargetMetToday(tid)){
+  if(d && d.date===TODAY && !d.claimed && d.target){
+    if(rpgTargetMetToday(d.target)){
       d.claimed = true;
       S.rpg.bonusExp = (S.rpg.bonusExp||0) + RPG_CHALLENGE_EXP;
       changed = true;
@@ -194,11 +219,11 @@ function rpgUpdateChallenge(attrs, silent){
 
 /* ── passive skill tree (auto-unlocked from real data; no allocation) ── */
 const RPG_SKILLS = [
-  { id:'sk_str', branch:'STR', name:'钢筋铁骨', desc:'近 30 天健身达成 ≥15 天', test:(a)=>a.STR>=25 },
-  { id:'sk_agi', branch:'AGI', name:'疾风之步', desc:'近 30 天篮球达成 ≥15 天', test:(a)=>a.AGI>=25 },
-  { id:'sk_int', branch:'INT', name:'多语之脑', desc:'近 30 天日语达成 ≥15 天', test:(a)=>a.INT>=25 },
-  { id:'sk_wis', branch:'WIS', name:'市场之眼', desc:'近 30 天赚钱达成 ≥15 天', test:(a)=>a.WIS>=25 },
-  { id:'sk_vit', branch:'VIT', name:'不眠之躯', desc:'近 30 天睡眠达成 ≥15 天', test:(a)=>a.VIT>=25 },
+  { id:'sk_str', branch:'STR', name:'钢筋铁骨', desc:'力量 ≥ 25（睡眠 · 健身）',          test:(a)=>a.STR>=25 },
+  { id:'sk_agi', branch:'AGI', name:'疾风之步', desc:'敏捷 ≥ 25（睡眠 · 健身）',          test:(a)=>a.AGI>=25 },
+  { id:'sk_int', branch:'INT', name:'通明之识', desc:'智力 ≥ 25（睡眠 · 冥想 · 课业 · 性能量）', test:(a)=>a.INT>=25 },
+  { id:'sk_wis', branch:'WIS', name:'澄心之境', desc:'智慧 ≥ 25（睡眠 · 冥想 · 性能量）',  test:(a)=>a.WIS>=25 },
+  { id:'sk_vit', branch:'VIT', name:'不眠之躯', desc:'体力 ≥ 25（睡眠 · 性能量）',        test:(a)=>a.VIT>=25 },
   { id:'sk_awaken',  branch:'CORE', name:'觉醒',     desc:'等级达到 5',     test:(a,r)=>r.level>=5 },
   { id:'sk_hunter',  branch:'CORE', name:'狩猎本能', desc:'连续达标 7 天',  test:()=> (typeof computeThe90Streak==='function' && computeThe90Streak()>=7) },
   { id:'sk_relent',  branch:'CORE', name:'不屈',     desc:'连续达标 30 天', test:()=> (typeof computeThe90Streak==='function' && computeThe90Streak()>=30) },
@@ -510,15 +535,16 @@ function rpgRadarSVG(rpg){
   rings += `<polygon class="rdr-cap" points="${polyAt(R)}"/>`;           // B · 40-cap potential ring
   let spokes=''; ids.forEach((_,i)=>{ const p=P(i,R); spokes += `<line class="rdr-spoke" x1="${cx}" y1="${cy}" x2="${p[0].toFixed(1)}" y2="${p[1].toFixed(1)}"/>`; });
 
-  // A · ghost polygon — attributes as of 30 days ago
+  // A · ghost polygon — attributes as of 30 days ago (one window scan, reused for all 5)
   const ga = new Date(TODAY+'T00:00:00+08:00'); ga.setDate(ga.getDate()-30);
   const gas = ga.toLocaleDateString('sv-SE');
-  const ghostPts = ids.map((id,i)=>fmt(P(i, rad(rpgAttrValueAt(id, gas))))).join(' ');
+  const ghostCounts = (typeof rpgTargetMetCounts==='function') ? rpgTargetMetCounts(gas) : {};
+  const ghostPts = ids.map((k,i)=>fmt(P(i, rad(rpgAttrFromCounts(k, ghostCounts))))).join(' ');
 
   const weak = (typeof rpgWeakestAttr==='function') ? rpgWeakestAttr(rpg.attrs) : null;
-  const data = ids.map((id,i)=>{
-    const k = RPG_ATTR_MAP[id].key, v = rpg.attrs[k];
-    return { i, k, v, name:RPG_ATTR_MAP[id].name, pt:P(i, rad(v)), color:RPG_ATTR_COLOR[k]||'#a88455' };
+  const data = ids.map((k,i)=>{
+    const v = rpg.attrs[k];
+    return { i, k, v, name:RPG_ATTR_NAME[k]||k, pt:P(i, rad(v)), color:RPG_ATTR_COLOR[k]||'#a88455' };
   });
   let dots='', labels='';
   data.forEach(d=>{
@@ -541,24 +567,40 @@ function rpgRadarSVG(rpg){
 }
 
 /* ── growth curve (SVG) ──
-   战力 (combat power) = Σ of the 5 attributes = 50 + Σ(daily met-count over the
-   trailing 30 days). Derived for each past anchor by sliding the window over the
-   frozen The 90 data — no stored history. Smoothed curve + vertical-gradient area
-   + The 90 phase milestones (C). Returns {cur, delta, svg}. */
+   战力 (combat power) = Σ of the 5 attribute values (each 10–40, so 50–200).
+   Derived for each past anchor by sliding a 30-day window over the frozen The 90
+   data and re-running the many-to-many attribute formula — no stored history.
+   Smoothed curve + vertical-gradient area + The 90 phase milestones (C).
+   Returns {cur, delta, svg}. */
 function rpgGrowthSVG(days){
   days = days || 30; const W = 30;
   const total = days + W - 1;
-  const mets = [], dates = [];                       // oldest → newest
+  const dates = [];                                  // oldest → newest
+  const dayMet = [];                                 // per-day per-target met (1/0)
+  const tids = rpgTargets().map(t=>t.id);
+  const havePhase = typeof the90Phase==='function' && typeof the90Day==='function' && typeof the90ScoreMet==='function';
   const base = new Date(TODAY+'T00:00:00+08:00');
   for(let i=total-1;i>=0;i--){
     const dt = new Date(base); dt.setDate(base.getDate()-i);
     const ds = dt.toLocaleDateString('sv-SE'); dates.push(ds);
-    mets.push(ds<=TODAY ? rpgMetOn(ds) : 0);
+    const m = {};
+    const day = ds<=TODAY && havePhase && S.the90 && S.the90.daily && S.the90.daily[ds];
+    if(day){
+      const phase = the90Phase(the90Day(ds)); const scores = day.scores || {};
+      for(const tid of tids) m[tid] = the90ScoreMet(scores[tid], phase) ? 1 : 0;
+    }
+    dayMet.push(m);
   }
-  const series = []; let sum = 0;
-  for(let i=0;i<W;i++) sum += mets[i];
-  series.push(50 + sum);
-  for(let j=1;j<days;j++){ sum += mets[W-1+j] - mets[j-1]; series.push(50 + sum); }
+  // rolling 30-day per-target counts → 战力 = Σ of the 5 attribute values at each anchor
+  const power = c => RPG_ATTR_ORDER.reduce((s,k)=>s+rpgAttrFromCounts(k,c),0);
+  const counts = {}; for(const tid of tids) counts[tid]=0;
+  for(let i=0;i<W;i++){ const m=dayMet[i]; for(const tid of tids) counts[tid]+=(m[tid]||0); }
+  const series = [power(counts)];
+  for(let j=1;j<days;j++){
+    const out=dayMet[j-1], inn=dayMet[W-1+j];
+    for(const tid of tids) counts[tid] += (inn[tid]||0) - (out[tid]||0);
+    series.push(power(counts));
+  }
 
   const N = series.length;
   const min = Math.min.apply(null,series), max = Math.max.apply(null,series);
@@ -600,8 +642,7 @@ function rSysStatus(body){
   const rpg = computeRPG();
   const pct = rpg.expForLevel>0 ? Math.min(100, Math.round(rpg.expInLevel/rpg.expForLevel*100)) : 0;
   const debuff = rpgPenaltyActive() ? '<span class="sys-debuff" title="未完成的惩罚任务">⚠︎ 衰弱</span>' : '';
-  const attrRows = RPG_ATTR_ORDER.map(tid=>{
-    const m = RPG_ATTR_MAP[tid];
+  const attrRows = RPG_ATTRS.map(m=>{
     const val = rpg.attrs[m.key];
     const apct = Math.min(100, Math.max(0, Math.round((val-10)/30*100)));
     return `<div class="sys-attr sa-${m.key}">
@@ -668,8 +709,7 @@ function rSysStatus(body){
   // openSystem (the cover-lift reveal). Re-renders (tab switch / remote sync) must
   // NOT replay the count-up, which made the panel "reboot" (reset to 10 + re-count)
   // on every render.
-  RPG_ATTR_ORDER.forEach(tid=>{
-    const m = RPG_ATTR_MAP[tid];
+  RPG_ATTRS.forEach(m=>{
     const el = body.querySelector(`.sys-attr-val[data-attr="${m.key}"]`);
     if(el) el.textContent = rpg.attrs[m.key];
   });
@@ -691,20 +731,21 @@ function rSysQuests(body){
   }).join('');
 
   const d = S.rpg.daily || {};
-  const chAttrM = d.attr ? RPG_ATTR_MAP[rpgAttrToTargetId(d.attr)] : null;
-  const chText = d.attr ? RPG_CHALLENGE_TEXT[d.attr] : null;
-  const penaltyHtml = rpgPenaltyActive() && chText ? `
+  const chTarget = d.target ? targets.find(t=>t.id===d.target) : null;
+  const chAttrName = d.attr ? (RPG_ATTR_NAME[d.attr] || '') : '';
+  const chVerb = chTarget ? ('完成今日「' + chTarget.label + '」') : '';
+  const penaltyHtml = rpgPenaltyActive() && chVerb ? `
     <div class="sys-q-card sys-q-penalty">
       <div class="sys-q-card-head"><span class="sys-q-tag penalty">⚠︎ 惩罚任务</span><span class="sys-q-reward penalty">解除衰弱</span></div>
-      <div class="sys-q-title">${escH(chText.verb)}</div>
+      <div class="sys-q-title">${escH(chVerb)}</div>
       <div class="sys-q-desc">昨日的弱点仍未直面。「系统」在注视——完成它，解除「衰弱」。</div>
     </div>` : '';
-  const chHtml = (d.date===TODAY && chText) ? `
+  const chHtml = (d.date===TODAY && chVerb) ? `
     <div class="sys-q-card sys-q-challenge ${d.claimed?'done':''}">
       <div class="sys-q-card-head"><span class="sys-q-tag chal">每日挑战</span>
         <span class="sys-q-reward ${d.claimed?'done':''}">${d.claimed?'已完成 +'+RPG_CHALLENGE_EXP:'+'+RPG_CHALLENGE_EXP+' EXP'}</span></div>
-      <div class="sys-q-title">${escH(chText.verb)}</div>
-      <div class="sys-q-desc">弱项强化 · ${chAttrM?escH(chAttrM.name):''}　·　${escH(chText.tip)}</div>
+      <div class="sys-q-title">${escH(chVerb)}</div>
+      <div class="sys-q-desc">弱项强化 · ${escH(chAttrName)}　·　直面你最弱的属性，让「系统」为你重写它。</div>
     </div>` : '';
 
   const acPending = (S.ac||[]).filter(t=>!t.done).slice(0,6);
