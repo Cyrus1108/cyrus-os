@@ -287,20 +287,116 @@ async function checkReminders(env) {
   }
 }
 
+/* ════════════ System (RPG) push — morning task + nightly settle ════════════
+   At 08:00 local: today's challenge (your weakest pillar over the last 30 days).
+   At 20:30 local (before the 21:30 phone-away ritual): the day's settle —
+   all-clear praise / zero-progress warning / partial nudge. Hard "GM" voice.
+   Computed server-side from the90_daily (the scoring rule is tiny + stable). */
+
+const SYS_TZ_OFFSET = 8 * 3600 * 1000;            // Asia/Taipei, no DST
+const SYS_START = '2026-05-11';                   // The 90 — day 1
+const SYS_TARGETS = [
+  { id:'I', label:'睡眠' }, { id:'II', label:'篮球' }, { id:'III', label:'赚钱' },
+  { id:'IV', label:'日语' }, { id:'V', label:'健身' },
+];
+function sysDayOf(dateStr){
+  const d = new Date(dateStr + 'T00:00:00+08:00');
+  const s = new Date(SYS_START + 'T00:00:00+08:00');
+  return Math.floor((d - s) / 86400000) + 1;
+}
+function sysPhaseOf(day){ return day <= 30 ? 'standardize' : (day <= 60 ? 'stabilize' : 'optimize'); }
+function sysMet(score, phase){ return phase === 'stabilize' ? (typeof score === 'number' ? score > 0 : !!score) : !!score; }
+
+async function sbUpsert(env, table, body, onConflict) {
+  const res = await fetch(`${sbBase(env)}/${table}?on_conflict=${onConflict}`, {
+    method: 'POST',
+    headers: { ...sbHeaders(env), Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) console.error('sbUpsert failed', table, res.status, await res.text());
+}
+
+async function checkSystemPush(env, forceSlot) {
+  const localNow = new Date(Date.now() + SYS_TZ_OFFSET);
+  const hh = localNow.getUTCHours(), mm = localNow.getUTCMinutes();
+  let slot = forceSlot || null;
+  if (!slot) {
+    if (hh === 8 && mm < 10) slot = 'morning';
+    else if (hh === 20 && mm >= 30 && mm < 40) slot = 'night';
+  }
+  if (!slot) return;
+
+  const today = localNow.toISOString().slice(0, 10);
+  const start30 = new Date(localNow.getTime() - 29 * 86400000).toISOString().slice(0, 10);
+
+  const subs = await sbSelect(env, `push_subscriptions?select=id,endpoint,p256dh,auth,user_id`);
+  if (!subs.length) return;
+  const byUser = new Map();
+  for (const s of subs) { if (!byUser.has(s.user_id)) byUser.set(s.user_id, []); byUser.get(s.user_id).push(s); }
+
+  // who already received this slot today (claim-first dedup → at-most-once per day)
+  const sent = await sbSelect(env, `system_push_log?select=user_id&slot=eq.${slot}&sent_on=eq.${today}`);
+  const sentSet = new Set(sent.map((r) => r.user_id));
+
+  for (const [uid, usubs] of byUser) {
+    if (!forceSlot && sentSet.has(uid)) continue;
+
+    const daily = await sbSelect(env, `the90_daily?select=date,scores&user_id=eq.${uid}&date=gte.${start30}&date=lte.${today}`);
+    const cnt = { I:0, II:0, III:0, IV:0, V:0 };
+    let todayMet = 0;
+    for (const row of daily) {
+      const ph = sysPhaseOf(sysDayOf(row.date));
+      const sc = row.scores || {};
+      for (const t of SYS_TARGETS) {
+        if (sysMet(sc[t.id], ph)) { cnt[t.id]++; if (row.date === today) todayMet++; }
+      }
+    }
+    let weak = SYS_TARGETS[0];
+    for (const t of SYS_TARGETS) { if (cnt[t.id] < cnt[weak.id]) weak = t; }
+    const total = SYS_TARGETS.length;
+
+    let body;
+    if (slot === 'morning') {
+      body = `今日狩猎目标已生成 — 直面你的弱点「${weak.label}」。`;
+    } else if (todayMet >= total) {
+      body = `今日五项全清。君主的轨迹，已被记录。`;
+    } else if (todayMet <= 0) {
+      body = `检测到今日零进度。再不行动，衰弱将至。`;
+    } else {
+      body = `今日 ${todayMet}/${total} — 还差 ${total - todayMet} 项，别让今天留白。`;
+    }
+
+    // claim the slot before sending so a double cron tick can't double-buzz
+    if (!forceSlot) await sbUpsert(env, 'system_push_log', { user_id: uid, slot, sent_on: today }, 'user_id,slot');
+    for (const s of usubs) {
+      try { await sendPush(env, s, { title: '[ 系统 ]', body, tag: `sys-${slot}`, url: './#system' }); }
+      catch (e) { console.error('[sys-push] sendPush threw', e.message); }
+    }
+  }
+}
+
 /* ════════════ Worker entry points ════════════ */
 
 export default {
   // Cron trigger (every minute)
   async scheduled(event, env, ctx) {
     ctx.waitUntil(checkReminders(env));
+    ctx.waitUntil(checkSystemPush(env));
   },
 
-  // Optional HTTP endpoint for manual testing: hit /test to run the cron logic on demand
+  // Optional HTTP endpoints for manual testing.
+  //   /test                     → run the reminder cron now
+  //   /test-system?slot=night   → run a System push now (slot=morning|night), bypassing dedup
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname === '/test') {
       await checkReminders(env);
       return new Response('OK — checkReminders ran\n');
+    }
+    if (url.pathname === '/test-system') {
+      const slot = url.searchParams.get('slot') === 'morning' ? 'morning' : 'night';
+      await checkSystemPush(env, slot);
+      return new Response(`OK — checkSystemPush(${slot}) ran\n`);
     }
     return new Response('cyrus-os-reminders cron worker\n');
   },
