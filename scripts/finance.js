@@ -34,18 +34,33 @@ function finMoney(amt, currency, opts){
 function finBaseMoney(amt, opts){ return finMoney(amt, S.fin.baseCurrency||'TWD', opts); }
 
 /* ── derived numbers ── */
-function finBalance(acctId){
-  const a = S.fin.accounts.find(x=>x.id===acctId); if(!a) return 0;
-  let bal = a.initialBalance||0;
-  for(const t of S.fin.transactions){
-    if(t.type==='expense' && t.accountId===acctId) bal -= t.amount;
-    else if(t.type==='income' && t.accountId===acctId) bal += t.amount;
-    else if(t.type==='transfer'){
-      if(t.accountId===acctId) bal -= t.amount;
-      if(t.toAccountId===acctId) bal += (t.toAmount!=null ? t.toAmount : t.amount);
+/* All account balances in ONE forward pass over the ledger → {acctId: balance}.
+   The transfer asymmetry (toAmount-vs-amount, for cross-currency transfers) is
+   preserved EXACTLY as the old per-account loop. Rebuilt per render (forced at the
+   top of rFinance) so an in-place edit never serves a stale balance; the ref/length
+   check covers sync array swaps and add/delete between forced rebuilds. */
+let _finBal = { tx:null, accLen:-1, map:Object.create(null) };
+function finBalances(force){
+  const tx = S.fin.transactions || [], acc = S.fin.accounts || [];
+  if(force || _finBal.tx !== tx || _finBal.accLen !== acc.length){
+    const map = Object.create(null);
+    for(const a of acc) map[a.id] = a.initialBalance || 0;
+    for(const t of tx){
+      if(t.type==='expense'){ if(t.accountId in map) map[t.accountId] -= t.amount; }
+      else if(t.type==='income'){ if(t.accountId in map) map[t.accountId] += t.amount; }
+      else if(t.type==='transfer'){
+        if(t.accountId in map) map[t.accountId] -= t.amount;
+        if(t.toAccountId in map) map[t.toAccountId] += (t.toAmount!=null ? t.toAmount : t.amount);
+      }
     }
+    _finBal = { tx, accLen:acc.length, map };
   }
-  return bal;
+  return _finBal.map;
+}
+function finBalance(acctId){
+  let m = finBalances();
+  if(!(acctId in m)) m = finBalances(true);   // account added since the last build
+  return (acctId in m) ? m[acctId] : 0;        // 0 only when the account doesn't exist
 }
 function finNetWorth(){
   let assets=0, liab=0;
@@ -66,8 +81,24 @@ function finTotals(txs){
   }
   return { income:inc, expense:exp, net:inc-exp };
 }
-function finAcct(id){ return S.fin.accounts.find(a=>a.id===id); }
-function finCat(id){ return S.fin.categories.find(c=>c.id===id); }
+// O(1) id→object lookups (rebuilt when the array is replaced or changes length;
+// in-place field edits keep object identity, so the cached entry stays live)
+let _finAcctIdx = { src:null, len:-1, map:new Map() };
+function finAcct(id){
+  const arr = S.fin.accounts || [];
+  if(_finAcctIdx.src !== arr || _finAcctIdx.len !== arr.length){
+    _finAcctIdx = { src:arr, len:arr.length, map:new Map(arr.map(a=>[a.id, a])) };
+  }
+  return _finAcctIdx.map.get(id);
+}
+let _finCatIdx = { src:null, len:-1, map:new Map() };
+function finCat(id){
+  const arr = S.fin.categories || [];
+  if(_finCatIdx.src !== arr || _finCatIdx.len !== arr.length){
+    _finCatIdx = { src:arr, len:arr.length, map:new Map(arr.map(c=>[c.id, c])) };
+  }
+  return _finCatIdx.map.get(id);
+}
 function finSelectableAccounts(){ return S.fin.accounts.filter(a=>a.status!==FIN_ACCT_STATUS.INACTIVE); }
 function finTxUsesCategory(catId){ return S.fin.transactions.some(t=>t.categoryId===catId); }
 function finTxUsesAccount(acctId){ return S.fin.transactions.some(t=>t.accountId===acctId||t.toAccountId===acctId); }
@@ -249,6 +280,8 @@ function finUpdateEye(){ const e=document.getElementById('fin-eye'); if(e) e.tex
 function rFinance(){
   if(!finUI.open) return;
   const body = document.getElementById('fin-body'); if(!body) return;
+  if(typeof finBalances==='function') finBalances(true);   // one fresh balance pass for the whole render
+
   document.querySelectorAll('#finance-view .fin-tab').forEach(b=>{
     b.classList.toggle('active', b.dataset.tab===finUI.tab);
   });
@@ -980,10 +1013,15 @@ function finSetRate(c, v){
   if(typeof saveFinConfig==='function') saveFinConfig();
   rFinance();
 }
+let _finSearchT = null;
 function finDoSearch(q){
   finUI.search = q;
-  const el = document.getElementById('fin-search-results');
-  if(el) el.innerHTML = finSearchResults();
+  // debounce the filter+render so each keystroke doesn't re-scan the whole ledger
+  clearTimeout(_finSearchT);
+  _finSearchT = setTimeout(()=>{
+    const el = document.getElementById('fin-search-results');
+    if(el) el.innerHTML = finSearchResults();
+  }, 150);
 }
 function finSearchResults(){
   const q = finUI.search.trim().toLowerCase();

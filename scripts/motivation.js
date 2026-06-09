@@ -44,35 +44,67 @@ function motivHashRoute(){
 }
 window.addEventListener('hashchange', motivHashRoute);
 
-/* ── render grid + add form ── */
+/* ── render grid + add form (incremental: reuse card nodes keyed by video id, so a
+   local add/delete OR a remote realtime change updates in place instead of
+   rebuilding the whole grid and re-decoding every thumbnail) ── */
 function rMotivation(){
   if(!motivUI.open) return;
   const body = document.getElementById('motiv-body'); if(!body) return;
   const vids = (S.motiv && S.motiv.videos) || [];
-  const cards = vids.map(v => `
-    <div class="motiv-card" onclick="playMotiv('${v.id}')">
-      <div class="motiv-thumb">
-        <img src="https://img.youtube.com/vi/${v.videoId}/mqdefault.jpg" alt="" loading="lazy" width="320" height="180" decoding="async">
-        <span class="motiv-play">&#9658;</span>
+
+  // static shell built once (keeps the inputs + their focus/value across renders)
+  if(!body.querySelector('.motiv-add')){
+    body.innerHTML = `
+      <div class="motiv-add">
+        <input id="motiv-url" class="motiv-input" type="text" placeholder="贴上 YouTube 链接…">
+        <input id="motiv-name" class="motiv-input motiv-input-name" type="text" placeholder="标题（可留空，自动抓取）">
+        <button class="motiv-add-btn" onclick="addMotivVideo()">添加</button>
       </div>
-      <div class="motiv-card-title">${escH(v.title || '未命名')}</div>
-      <button class="motiv-del" onclick="event.stopPropagation();delMotivVideo('${v.id}')" title="删除" aria-label="删除">&#10005;</button>
-    </div>`).join('');
-  body.innerHTML = `
-    <div class="motiv-add">
-      <input id="motiv-url" class="motiv-input" type="text" placeholder="贴上 YouTube 链接…">
-      <input id="motiv-name" class="motiv-input motiv-input-name" type="text" placeholder="标题（可留空，自动抓取）">
-      <button class="motiv-add-btn" onclick="addMotivVideo()">添加</button>
-    </div>
-    <div id="motiv-msg" class="motiv-msg" aria-live="polite"></div>
-    ${vids.length
-      ? `<div class="motiv-grid">${cards}</div>`
-      : `<div class="motiv-empty">还没有视频。贴一条 YouTube（不公开）链接，建立你的动力库。</div>`}
-  `;
-  ['motiv-url','motiv-name'].forEach(id=>{
-    const el = document.getElementById(id);
-    if(el) el.addEventListener('keydown', e=>{ if(e.key==='Enter') addMotivVideo(); });
-  });
+      <div id="motiv-msg" class="motiv-msg" aria-live="polite"></div>
+      <div id="motiv-grid" class="motiv-grid"></div>
+      <div id="motiv-empty" class="motiv-empty" hidden>还没有视频。贴一条 YouTube（不公开）链接，建立你的动力库。</div>`;
+    ['motiv-url','motiv-name'].forEach(id=>{
+      const el = document.getElementById(id);
+      if(el) el.addEventListener('keydown', e=>{ if(e.key==='Enter') addMotivVideo(); });
+    });
+  }
+
+  const grid = document.getElementById('motiv-grid');
+  const emptyEl = document.getElementById('motiv-empty');
+  if(emptyEl) emptyEl.hidden = vids.length > 0;
+  if(grid) grid.hidden = vids.length === 0;
+  if(!grid) return;
+
+  // reconcile cards by id — reuse nodes (no thumbnail re-request), add/remove/reorder
+  const have = new Map();
+  grid.querySelectorAll('.motiv-card[data-vid]').forEach(c => have.set(c.dataset.vid, c));
+  const want = new Set(vids.map(v => v.id));
+  have.forEach((node, id) => { if(!want.has(id)) node.remove(); });
+
+  let prev = null;
+  for(const v of vids){
+    let card = have.get(v.id);
+    if(!card){
+      card = document.createElement('div');
+      card.className = 'motiv-card';
+      card.dataset.vid = v.id;
+      card.setAttribute('onclick', `playMotiv('${v.id}')`);
+      card.innerHTML = `
+        <div class="motiv-thumb">
+          <img src="https://img.youtube.com/vi/${v.videoId}/mqdefault.jpg" alt="" loading="lazy" width="320" height="180" decoding="async">
+          <span class="motiv-play">&#9658;</span>
+        </div>
+        <div class="motiv-card-title">${escH(v.title || '未命名')}</div>
+        <button class="motiv-del" onclick="event.stopPropagation();delMotivVideo('${v.id}')" title="删除" aria-label="删除">&#10005;</button>`;
+    } else {
+      const t = card.querySelector('.motiv-card-title');
+      const title = escH(v.title || '未命名');
+      if(t && t.innerHTML !== title) t.innerHTML = title;   // title-only edits stay cheap
+    }
+    const ref = prev ? prev.nextSibling : grid.firstChild;
+    if(card !== ref) grid.insertBefore(card, ref);
+    prev = card;
+  }
   if(typeof attachRipples==='function') attachRipples(body);
 }
 
