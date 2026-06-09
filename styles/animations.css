@@ -9,6 +9,9 @@
 /* List row entrance — keeps rendering snappy (120 ms) */
 @keyframes rowEnter{ from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;} }
 .todo-row,.row{ animation:rowEnter var(--dur-fast) var(--ease-press) both; }
+/* once booted, re-renders (e.g. checking a box) must NOT replay the entrance fade,
+   or the whole list flickers on every toggle */
+body.booted .todo-row, body.booted .row{ animation:none; }
 
 /* Staggered widget entrance on first load */
 @keyframes panelRise{ from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;} }

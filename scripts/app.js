@@ -403,6 +403,9 @@ async function init(){
   checkNotifBanner();
   checkReminders();
   setInterval(checkReminders, 30000);
+  // after the first-paint entrance animations settle, stop list rows from replaying
+  // their fade-in on every re-render (a toggle re-render would otherwise flicker)
+  setTimeout(()=>document.body.classList.add('booted'), 1500);
 
   /* Sync layer (Stage 2b): overlay Supabase data on top of the LS-rendered UI,
      then subscribe to Realtime for cross-device updates. */

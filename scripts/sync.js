@@ -574,47 +574,53 @@ async function finDeleteTx(id){
 
 /* ════════════ REALTIME ════════════ */
 
+/* Coalesce realtime bursts: replaceTable() upserts EVERY row on each local change,
+   so one edit echoes back as N postgres_changes events. Debounce per table so the
+   whole burst collapses into a single pull+render instead of N flickering renders. */
+const _rtT = {};
+function rtCoalesce(key, fn, ms){ clearTimeout(_rtT[key]); _rtT[key] = setTimeout(fn, ms || 300); }
+
 function subscribeRealtime(){
   if(realtimeChannel || !currentUser) return;
   const uid = currentUser.id;
 
   realtimeChannel = sb.channel('cyrus-os-' + uid)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'morning', filter: `user_id=eq.${uid}` },
-      async () => { await pullMorning(); rMR(); })
+      () => rtCoalesce('morning', async () => { await pullMorning(); rMR(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'academics', filter: `user_id=eq.${uid}` },
-      async () => { await pullAcademics(); rAC(); rMetrics(); })
+      () => rtCoalesce('academics', async () => { await pullAcademics(); rAC(); rMetrics(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'japanese', filter: `user_id=eq.${uid}` },
-      async () => { await pullJapanese(); rJP(); rMetrics(); })
+      () => rtCoalesce('japanese', async () => { await pullJapanese(); rJP(); rMetrics(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'trading', filter: `user_id=eq.${uid}` },
-      async () => { await pullTrading(); rTR(); rMetrics(); })
+      () => rtCoalesce('trading', async () => { await pullTrading(); rTR(); rMetrics(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'categories', filter: `user_id=eq.${uid}` },
-      async () => { await pullCategories(); rCats(); rTodos(); })
+      () => rtCoalesce('categories', async () => { await pullCategories(); rCats(); rTodos(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'todos', filter: `user_id=eq.${uid}` },
-      async () => { await pullTodos(); rTodos(); rMetrics(); })
+      () => rtCoalesce('todos', async () => { await pullTodos(); rTodos(); rMetrics(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'hermes_notices', filter: `user_id=eq.${uid}` },
-      async () => { await pullHermes(); rHermes(); })
+      () => rtCoalesce('hermes_notices', async () => { await pullHermes(); rHermes(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'motivation_videos', filter: `user_id=eq.${uid}` },
-      async () => { await pullMotiv(); if(typeof rMotivation==='function') rMotivation(); })
+      () => rtCoalesce('motivation_videos', async () => { await pullMotiv(); if(typeof rMotivation==='function') rMotivation(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'rpg_state', filter: `user_id=eq.${uid}` },
-      async () => { await pullRPG(); if(typeof rSystem==='function') rSystem(); })
+      () => rtCoalesce('rpg_state', async () => { await pullRPG(); if(typeof rSystem==='function') rSystem(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'settings', filter: `user_id=eq.${uid}` },
-      async () => { await pullSettings(); renderAll(); })
+      () => rtCoalesce('settings', async () => { await pullSettings(); renderAll(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'the90_meta', filter: `user_id=eq.${uid}` },
-      async () => { await pullThe90Meta(); rThe90(); })
+      () => rtCoalesce('the90_meta', async () => { await pullThe90Meta(); rThe90(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'the90_daily', filter: `user_id=eq.${uid}` },
-      async () => { await pullThe90Daily(); rThe90(); })
+      () => rtCoalesce('the90_daily', async () => { await pullThe90Daily(); rThe90(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'fin_accounts', filter: `user_id=eq.${uid}` },
-      async () => { await pullFinAccounts(); if(typeof rFinance==='function') rFinance(); })
+      () => rtCoalesce('fin_accounts', async () => { await pullFinAccounts(); if(typeof rFinance==='function') rFinance(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'fin_categories', filter: `user_id=eq.${uid}` },
-      async () => { await pullFinCategories(); if(typeof rFinance==='function') rFinance(); })
+      () => rtCoalesce('fin_categories', async () => { await pullFinCategories(); if(typeof rFinance==='function') rFinance(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'fin_transactions', filter: `user_id=eq.${uid}` },
-      async () => { await pullFinTransactions(); if(typeof rFinance==='function') rFinance(); })
+      () => rtCoalesce('fin_transactions', async () => { await pullFinTransactions(); if(typeof rFinance==='function') rFinance(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'fin_budgets', filter: `user_id=eq.${uid}` },
-      async () => { await pullFinBudgets(); if(typeof rFinance==='function') rFinance(); })
+      () => rtCoalesce('fin_budgets', async () => { await pullFinBudgets(); if(typeof rFinance==='function') rFinance(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'fin_goals', filter: `user_id=eq.${uid}` },
-      async () => { await pullFinGoals(); if(typeof rFinance==='function') rFinance(); })
+      () => rtCoalesce('fin_goals', async () => { await pullFinGoals(); if(typeof rFinance==='function') rFinance(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'fin_recurring', filter: `user_id=eq.${uid}` },
-      async () => { await pullFinRecurring(); if(typeof rFinance==='function') rFinance(); })
+      () => rtCoalesce('fin_recurring', async () => { await pullFinRecurring(); if(typeof rFinance==='function') rFinance(); }))
     .subscribe((status, err) => {
       console.log('[realtime]', status);
       if(err) console.error('[realtime] error', err);
