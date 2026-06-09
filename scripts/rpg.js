@@ -376,6 +376,7 @@ function sysCloseModal(){
 const sysUI = { open:false, tab:'status' };
 function openSystem(fromHash){
   const v = document.getElementById('system-view'); if(!v) return;
+  clearTimeout(sysUI._closeT); v.classList.remove('sys-closing');   // cancel an in-flight furl
   sysUI.open = true;
   v.classList.add('open'); v.setAttribute('aria-hidden','false');
   document.body.classList.add('sys-locked');
@@ -404,12 +405,25 @@ function openSystem(fromHash){
 }
 function closeSystem(fromHash){
   const v = document.getElementById('system-view'); if(!v) return;
+  if(!sysUI.open) return;                                   // already closing/closed
   sysUI.open = false;
   if(window.Sfx) Sfx.close();
-  clearTimeout(sysUI._enterT); clearTimeout(sysUI._enterClsT);
-  v.classList.remove('open'); v.classList.remove('sys-entering'); v.setAttribute('aria-hidden','true');
-  document.body.classList.remove('sys-locked');
+  clearTimeout(sysUI._enterT); clearTimeout(sysUI._enterClsT); clearTimeout(sysUI._closeT);
+  v.classList.remove('sys-entering'); v.setAttribute('aria-hidden','true');
   if(!fromHash && location.hash==='#system') history.replaceState(null,'',location.pathname+location.search);
+  const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches;
+  if(reduce){
+    v.classList.remove('open'); document.body.classList.remove('sys-locked');
+    return;
+  }
+  // furl the scroll back up the same way it opened, then hide it. Keep .sys-closing
+  // after: its both-fill holds the window furled/invisible, so dropping .open won't
+  // flash the full window back during the view's fade-out. openSystem clears it.
+  v.classList.add('sys-closing');
+  sysUI._closeT = setTimeout(()=>{
+    v.classList.remove('open');
+    document.body.classList.remove('sys-locked');
+  }, 500);
 }
 function sysHashRoute(){
   if(location.hash==='#system'){ if(!sysUI.open) openSystem(true); }

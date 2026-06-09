@@ -58,6 +58,19 @@ body.sys-locked{ overflow:hidden; }
   65% { opacity:.35; } /* fades as scroll opens */
   100%{ opacity:0; }
 }
+/* exit — the scroll furls back the SAME way it opened: rolls up into the centre
+   strip and fades, the brass seam glowing at the fold as it closes. Snappier than
+   the open (you want to dismiss, not wait). */
+.sys-view.sys-closing .sys-window{ animation:sysScrollClose 500ms cubic-bezier(0.5,0,0.78,0.2) both; transform-origin:center center; }
+@keyframes sysScrollClose{
+  0%  { clip-path:inset(0%  0 0%  0); opacity:1; }
+  80% { clip-path:inset(45% 0 45% 0); opacity:1; }
+  100%{ clip-path:inset(50% 0 50% 0); opacity:0; }
+}
+.sys-view.sys-closing .sys-window::after{ animation:sysFoldClose 500ms ease both; }
+@keyframes sysFoldClose{ 0%{ opacity:0; } 55%{ opacity:1; } 100%{ opacity:0; } }
+.sys-view.sys-closing .sys-backdrop{ animation:sysBackFade 500ms var(--ease-silk) both; }
+@keyframes sysBackFade{ from{ opacity:1; } to{ opacity:0; } }
 @media (prefers-reduced-motion:reduce){
   .sys-view.open .sys-window,.sys-view.open .sys-window::after{ animation:none !important; clip-path:none !important; opacity:1 !important; }
 }
