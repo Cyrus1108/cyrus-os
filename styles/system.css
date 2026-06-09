@@ -148,6 +148,13 @@ body.sys-locked{ overflow:hidden; }
   transition:color var(--dur-base) var(--ease-silk),border-color var(--dur-base) var(--ease-silk);
 }
 .sys-back:hover{ color:var(--brass); border-color:var(--brass); }
+/* sound toggle in the title bar — monochrome ♪, diagonal slash when muted */
+.sys-mute{ position:relative; font-size:15px; line-height:1; }
+.sys-mute.sfx-muted{ color:var(--ghost); }
+.sys-mute.sfx-muted::after{
+  content:''; position:absolute; left:5px; right:5px; top:50%; height:1.5px;
+  background:currentColor; border-radius:1px; transform:translateY(-50%) rotate(-22deg);
+}
 .sys-tabs{ display:flex; gap:2px; padding:0 12px; border-bottom:.5px solid var(--hair); }
 .sys-tab{
   flex:1; background:none; border:none; cursor:pointer; font-family:var(--sans);

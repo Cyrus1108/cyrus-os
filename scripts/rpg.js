@@ -238,6 +238,7 @@ function rpgAfterChange(){
     for(const a of RPG_ACHIEVEMENTS){ try{ if(a.test(rpg)) S.rpg.achievements[a.id] = new Date().toISOString(); }catch(e){} }
     changed = true;
   } else {
+    if(_rpgChallengeGranted && window.Sfx) Sfx.quest();
     if(!_rpgChallengeGranted && _rpgLastExp != null && rpg.totalExp > _rpgLastExp){
       sysToast('[ 系统 ] +' + (rpg.totalExp - _rpgLastExp) + ' 经验');
     }
@@ -268,6 +269,7 @@ function sysToast(msg){
   if(!t){ t = document.createElement('div'); t.id='sys-toast'; t.className='sys-toast'; document.body.appendChild(t); }
   t.textContent = msg;
   t.classList.add('show');
+  if(window.Sfx) Sfx.toast();
   clearTimeout(t._timer);
   t._timer = setTimeout(()=> t.classList.remove('show'), 1800);
 }
@@ -311,6 +313,12 @@ function sysShowModal(p){
   }
   m.innerHTML = `<div class="sys-modal-back" onclick="sysCloseModal()"></div>${card}`;
   m.classList.add('open'); m.setAttribute('aria-hidden','false');
+  if(window.Sfx){
+    if(p.type==='levelup'){
+      if(typeof rpgRank==='function' && rpgRank(p.from)!==rpgRank(p.to)) Sfx.rankup();
+      else Sfx.levelup();
+    } else { Sfx.achievement(); }
+  }
   if(p.type==='levelup'){
     const num = document.getElementById('sys-cele-num');
     if(num && typeof animateNumber==='function') animateNumber(num, p.from, p.to, 700);
@@ -334,6 +342,7 @@ function openSystem(fromHash){
   sysUI.open = true;
   v.classList.add('open'); v.setAttribute('aria-hidden','false');
   document.body.classList.add('sys-locked');
+  if(window.Sfx){ Sfx.open(); const mb=v.querySelector('.sys-mute'); if(mb) mb.classList.toggle('sfx-muted', Sfx.muted); }
   if(!fromHash && location.hash!=='#system') location.hash='system';
   rSystem();
   // Entrance ceremony: the boot cover masks the HUD while the window unfurls.
@@ -346,6 +355,7 @@ function openSystem(fromHash){
 function closeSystem(fromHash){
   const v = document.getElementById('system-view'); if(!v) return;
   sysUI.open = false;
+  if(window.Sfx) Sfx.close();
   clearTimeout(sysUI._enterT);
   v.classList.remove('open'); v.setAttribute('aria-hidden','true');
   document.body.classList.remove('sys-locked');
