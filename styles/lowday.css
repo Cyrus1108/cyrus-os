@@ -1,0 +1,109 @@
+/* Low Day (低谷日) — circuit-breaker state. Calm, not alarming: the point is to
+   lower pressure, not raise it. Reuses the brass theme tokens. */
+
+/* ── top banner (only while a low day is active) ── */
+.lowday-banner{ display:none; }
+.lowday-banner.show{
+  display:block; margin:0 0 14px; padding:11px 14px;
+  border:.5px solid var(--brass-ghost); border-left:2px solid var(--brass);
+  border-radius:var(--border-radius-md);
+  background:linear-gradient(90deg, color-mix(in srgb, var(--brass) 9%, transparent), transparent 70%);
+}
+.lowday-banner-row{ display:flex; align-items:center; gap:10px; }
+.lowday-banner-tag{
+  font-family:var(--serif); font-size:12px; letter-spacing:.12em; color:var(--brass);
+  border:.5px solid var(--brass-ghost); border-radius:4px; padding:2px 8px; white-space:nowrap;
+}
+.lowday-banner-msg{ font-size:12px; color:var(--mute); flex:1; }
+.lowday-cross-btn{
+  font-family:var(--serif); font-size:12px; color:var(--brass); cursor:pointer;
+  background:transparent; border:.5px solid var(--brass); border-radius:5px; padding:5px 12px;
+  transition:background var(--dur-fast) var(--ease-silk), box-shadow var(--dur-fast) var(--ease-silk);
+}
+.lowday-cross-btn:hover{ background:color-mix(in srgb, var(--brass) 14%, transparent); box-shadow:0 0 12px var(--brass-glow); }
+.lowday-trig-row{ display:flex; align-items:center; gap:8px; margin-top:9px; }
+.lowday-trig-row label{ font-size:10.5px; color:var(--ghost); white-space:nowrap; }
+.lowday-trig-row input{
+  flex:1; font-size:11px; color:var(--ink); background:var(--color-background-tertiary);
+  border:.5px solid var(--hair); border-radius:5px; padding:5px 8px; font-family:var(--mono);
+}
+.lowday-trig-row input::placeholder{ color:var(--ghost); }
+
+/* ── mechanism-enforced lock of strategic / judgment surfaces (spec §3.3) ──
+   minimal-action checklists stay fully usable; only decision surfaces lock. */
+body.low-day #ac-form,
+body.low-day #sub-manage,
+body.low-day #tr-new-form,
+body.low-day #td-form{ display:none !important; }
+body.low-day #the90-standards{ opacity:.4; pointer-events:none; }
+body.low-day #t-bias{ opacity:.45; pointer-events:none; }
+/* a calm, faint dimming so it's visibly a different mode — never harsh */
+body.low-day{ }
+
+/* ── amplitude row (in the The 90 panel) — filled EVERY day ── */
+.the90-amp{ display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin:10px 0 2px; }
+.lowday-amp-label{ font-size:11px; color:var(--ghost); letter-spacing:.04em; }
+.lowday-amp-dots{ display:inline-flex; gap:5px; }
+.lowday-amp-dot{
+  width:22px; height:22px; border-radius:50%; cursor:pointer;
+  font-family:var(--mono); font-size:10px; color:var(--ghost);
+  background:var(--color-background-tertiary); border:.5px solid var(--hair);
+  transition:border-color var(--dur-fast) var(--ease-silk), color var(--dur-fast) var(--ease-silk), background var(--dur-fast) var(--ease-silk), box-shadow var(--dur-fast) var(--ease-silk);
+}
+.lowday-amp-dot.fill{ color:var(--brass); border-color:var(--brass-ghost); }
+.lowday-amp-dot.sel{ color:var(--ink); border-color:var(--brass); background:color-mix(in srgb, var(--brass) 16%, transparent); box-shadow:0 0 8px var(--brass-glow); }
+.lowday-amp-dot:hover{ border-color:var(--brass); }
+.lowday-amp-hint{ font-size:10px; color:var(--mute); }
+.lowday-enter-link{
+  margin-left:auto; font-size:10.5px; color:var(--ghost); cursor:pointer;
+  background:transparent; border:.5px solid var(--hair); border-radius:5px; padding:3px 9px;
+  transition:color var(--dur-fast) var(--ease-silk), border-color var(--dur-fast) var(--ease-silk);
+}
+.lowday-enter-link:hover{ color:var(--brass); border-color:var(--brass-ghost); }
+.lowday-amp-state{ margin-left:auto; font-size:10.5px; color:var(--brass); letter-spacing:.06em; }
+
+/* ── protocol modal (verbatim text; shown only on entry; not auto-closed) ── */
+.lowday-modal{ position:fixed; inset:0; z-index:1200; display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity var(--dur-base) var(--ease-silk); padding:24px; }
+.lowday-modal.open{ opacity:1; pointer-events:auto; }
+.lowday-modal-back{ position:absolute; inset:0; background:rgba(8,7,5,.7); backdrop-filter:blur(3px); }
+.lowday-card{
+  position:relative; max-width:430px; width:100%; max-height:86vh; overflow:auto;
+  padding:24px 22px 20px; border:.5px solid var(--brass-ghost); border-radius:var(--border-radius-md);
+  background:var(--color-background-secondary); box-shadow:0 24px 80px rgba(0,0,0,.5), inset 0 0 40px color-mix(in srgb, var(--brass) 4%, transparent);
+  transform:scale(.96); transition:transform var(--dur-base) var(--ease-press); }
+.lowday-modal.open .lowday-card{ transform:scale(1); }
+.lowday-kicker{ font-family:var(--mono); font-size:10px; letter-spacing:.18em; color:var(--brass-soft); text-align:center; margin-bottom:14px; }
+.lowday-p-title{ font-family:var(--serif); font-size:14px; color:var(--ink); line-height:1.6; margin-bottom:14px; }
+.lowday-p-items{ display:flex; flex-direction:column; gap:11px; }
+.lowday-p-item{ display:flex; gap:10px; align-items:flex-start; }
+.lowday-p-n{ flex:0 0 20px; height:20px; border-radius:50%; display:grid; place-items:center;
+  font-family:var(--mono); font-size:11px; color:var(--brass); border:.5px solid var(--brass-ghost); margin-top:1px; }
+.lowday-p-t{ font-size:12.5px; color:var(--mute); line-height:1.7; }
+.lowday-p-foot{ margin-top:15px; padding-top:13px; border-top:.5px solid var(--hair);
+  font-size:12px; color:var(--ghost); line-height:1.7; }
+.lowday-enter-btn{
+  display:block; width:100%; margin-top:18px; padding:11px; cursor:pointer;
+  font-family:var(--serif); font-size:13px; letter-spacing:.04em; color:var(--brass);
+  background:color-mix(in srgb, var(--brass) 10%, transparent); border:.5px solid var(--brass); border-radius:6px;
+  transition:background var(--dur-fast) var(--ease-silk), box-shadow var(--dur-fast) var(--ease-silk); }
+.lowday-enter-btn:hover{ background:color-mix(in srgb, var(--brass) 20%, transparent); box-shadow:0 0 16px var(--brass-glow); }
+
+/* ── 状态 tab: adversity ledger (渡) persistent block + low-day state chip ── */
+.sys-adversity{
+  display:flex; align-items:center; gap:12px; margin:10px 0 4px; padding:10px 14px;
+  border:.5px solid var(--hair); border-left:2px solid var(--brass); border-radius:var(--border-radius-md);
+  background:color-mix(in srgb, var(--brass) 5%, transparent); }
+.sys-adversity-num{ font-family:var(--serif); font-size:24px; color:var(--brass); text-shadow:0 0 12px var(--brass-glow); line-height:1; }
+.sys-adversity-meta{ display:flex; flex-direction:column; gap:2px; }
+.sys-adversity-title{ font-size:12px; color:var(--ink); font-family:var(--serif); letter-spacing:.04em; }
+.sys-adversity-sub{ font-size:10px; color:var(--ghost); }
+.sys-state-low{ font-family:var(--serif); font-size:11px; color:var(--brass); margin-left:8px;
+  border:.5px solid var(--brass-ghost); border-radius:4px; padding:1px 7px; }
+
+/* ── amplitude sparkline (状态 tab) ── */
+.sys-amp{ width:100%; height:34px; display:block; margin-top:4px; }
+.sys-amp .amp-base{ stroke:var(--hair); stroke-width:.5; }
+.sys-amp .amp-line{ fill:none; stroke:var(--brass-soft); stroke-width:1.2; vector-effect:non-scaling-stroke; }
+.sys-amp .amp-dot{ fill:var(--brass-soft); }
+.sys-amp .amp-end{ fill:var(--brass); filter:drop-shadow(0 0 4px var(--brass-glow)); }

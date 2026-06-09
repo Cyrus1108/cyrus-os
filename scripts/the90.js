@@ -378,6 +378,10 @@ function rThe90(){
   // Today's note
   const noteEl = document.getElementById('the90-note');
   if(noteEl && document.activeElement !== noteEl) noteEl.value = todayNote;
+
+  // Today's amplitude (1–5) row + discreet Low Day entry — owned by lowday.js
+  const ampEl = document.getElementById('the90-amp');
+  if(ampEl && typeof lowdayAmpRowHtml === 'function') ampEl.innerHTML = lowdayAmpRowHtml();
 }
 
 function computeThe90Streak(){
@@ -392,7 +396,10 @@ function computeThe90Streak(){
     const day = S.the90.daily[date];
     const phase = the90Phase(d);
     const met = day ? S.the90.meta.targets.filter(t => the90ScoreMet(day.scores?.[t.id], phase)).length : 0;
-    if(met >= 3) streak++;
+    // Low Day drops the day's pass-bar to ONE minimal action (≥1 instead of ≥3) — the
+    // mechanism behind 「底线永远留在最低」. A low day with 0 met still breaks the run.
+    const bar = (typeof lowDayOn === 'function' && lowDayOn(date)) ? 1 : 3;
+    if(met >= bar) streak++;
     else if(date === TODAY) continue;   // pending today — don't count, don't break
     else break;                         // a real past miss ends the run
   }

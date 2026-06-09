@@ -304,6 +304,10 @@ const RPG_ACHIEVEMENTS = [
   { id:'fin_nw_50k',  cat:'finance', tier:'silver',   name:'渐入佳境', desc:'净资产突破 RM 50,000',  hidden:false, test:()=> finNetWorthMYR()>=50000 },
   { id:'fin_nw_100k', cat:'finance', tier:'gold',     name:'富甲一方', desc:'净资产突破 RM 100,000', hidden:false, test:()=> finNetWorthMYR()>=100000 },
   { id:'fin_nw_250k', cat:'finance', tier:'platinum', name:'富可敌国', desc:'净资产突破 RM 250,000', hidden:true,  test:()=> finNetWorthMYR()>=250000 },
+  // 逆境 · ADVERSITY — the Adversity Ledger (渡): low days entered and crossed
+  { id:'cross1',  cat:'adversity', tier:'bronze',   name:'初渡', desc:'第一次穿越低谷日',  hidden:false, test:()=> (typeof adversityLedger==='function' && adversityLedger()>=1) },
+  { id:'cross7',  cat:'adversity', tier:'gold',     name:'渡厄', desc:'穿越低谷日 7 次',  hidden:false, test:()=> (typeof adversityLedger==='function' && adversityLedger()>=7) },
+  { id:'cross30', cat:'adversity', tier:'platinum', name:'渡劫', desc:'穿越低谷日 30 次', hidden:true,  test:()=> (typeof adversityLedger==='function' && adversityLedger()>=30) },
 ];
 // gallery categories — fixed render order + labels (X/N count shown per section)
 const RPG_ACH_CATS = [
@@ -317,6 +321,7 @@ const RPG_ACH_CATS = [
   { key:'japanese',    label:'语学 · JAPANESE' },
   { key:'crossdomain', label:'修行 · DISCIPLINE' },
   { key:'finance',     label:'财富 · FINANCE' },
+  { key:'adversity',   label:'逆境 · ADVERSITY' },
 ];
 /* tier → EXP (flat: achievements are a recognition layer, not a shortcut — the
    daily The 90 grind stays the dominant level driver). RPG_ACH_TIER is built FROM
@@ -362,6 +367,8 @@ const RPG_ACH_PROG = {
   fin_nw_10k:   ()=>[Math.round(finNetWorthMYR()), 10000],
   fin_nw_50k:   ()=>[Math.round(finNetWorthMYR()), 50000],
   fin_nw_100k:  ()=>[Math.round(finNetWorthMYR()), 100000],
+  cross1:       ()=>[(typeof adversityLedger==='function'?adversityLedger():0), 1],
+  cross7:       ()=>[(typeof adversityLedger==='function'?adversityLedger():0), 7],
 };
 
 /* ── orchestration: recompute, fire level-ups + achievements, persist ── */
@@ -743,6 +750,10 @@ function rSysStatus(body){
   const rpg = computeRPG();
   const pct = rpg.expForLevel>0 ? Math.min(100, Math.round(rpg.expInLevel/rpg.expForLevel*100)) : 0;
   const debuff = rpgPenaltyActive() ? '<span class="sys-debuff" title="未完成的惩罚任务">⚠︎ 衰弱</span>' : '';
+  const lowChip = (typeof isLowDayActive==='function' && isLowDayActive()) ? '<span class="sys-state-low" title="低谷日进行中 · 只做最小动作">低谷日</span>' : '';
+  const ledger = (typeof adversityLedger==='function') ? adversityLedger() : 0;
+  const ledgerSub = ledger>0 ? ('穿越低谷 '+ledger+' 次 · 不想动时依然动了') : '你的第一次穿越，会记在这里';
+  const ampSpark = (typeof lowdayAmpSparkSVG==='function') ? lowdayAmpSparkSVG(30) : '';
   const attrRows = RPG_ATTRS.map(m=>{
     const val = rpg.attrs[m.key];
     const apct = Math.min(100, Math.max(0, Math.round((val-10)/30*100)));
@@ -778,11 +789,15 @@ function rSysStatus(body){
       <div class="sys-scan"></div>
       <div class="sys-rank-badge">${rpg.rank}</div>
       <div class="sys-card-main">
-        <div class="sys-kicker">[ STATUS ]${debuff}</div>
+        <div class="sys-kicker">[ STATUS ]${debuff}${lowChip}</div>
         <div class="sys-level">Lv <span id="sys-level-num">${rpg.level}</span><span class="sys-title"> · ${escH(rpg.title)}</span></div>
         <div class="sys-exp"><i style="width:${pct}%"></i></div>
         <div class="sys-exp-text">${rpg.expInLevel} / ${rpg.expForLevel} EXP　·　今日 +${rpg.todayExp}</div>
       </div>
+    </div>
+    <div class="sys-adversity">
+      <div class="sys-adversity-num">${ledger}</div>
+      <div class="sys-adversity-meta"><div class="sys-adversity-title">渡 · 逆境账户</div><div class="sys-adversity-sub">${ledgerSub}</div></div>
     </div>
     <div class="sys-sec-label">属性 · ATTRIBUTES</div>
     <div class="sys-radar-wrap">${rpgRadarSVG(rpg)}</div>
@@ -793,6 +808,7 @@ function rSysStatus(body){
       <span class="sys-growth-delta ${g.delta>=0?'up':'down'}">近 30 天 ${_gd}</span>
     </div>
     ${g.svg}
+    ${ampSpark ? `<div class="sys-sec-label">振幅 · AMPLITUDE</div>${ampSpark}` : ''}
     <div class="sys-sec-label">技能 · SKILLS</div>
     <div class="sys-skill-row">${skillStrip}</div>
     ${logLines ? `<div class="sys-sec-label">系统日志 · LOG</div><div class="sys-log">${logLines}</div>` : ''}

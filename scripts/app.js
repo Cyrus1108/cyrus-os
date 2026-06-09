@@ -345,7 +345,7 @@ function rMetrics(){
   updateShowDoneBtn();
 }
 
-function renderAll(){rDate();rMR();rAC();rJP();rTR();rCats();rTodos();if(typeof rThe90==='function') rThe90();if(typeof rHermes==='function') rHermes();if(typeof rMotivation==='function') rMotivation();rMetrics();if(typeof rpgAfterChange==='function') rpgAfterChange();attachRipples();}
+function renderAll(){rDate();rMR();rAC();rJP();rTR();rCats();rTodos();if(typeof rThe90==='function') rThe90();if(typeof rLowDay==='function') rLowDay();if(typeof rHermes==='function') rHermes();if(typeof rMotivation==='function') rMotivation();rMetrics();if(typeof rpgAfterChange==='function') rpgAfterChange();attachRipples();}
 
 function onAuthReady(){
   /* Called by auth.js once a Supabase session is established.
