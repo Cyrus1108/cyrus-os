@@ -26,16 +26,17 @@ body.sys-locked{ overflow:hidden; }
   border:.5px solid var(--brass); border-radius:var(--border-radius-lg);
   box-shadow:0 26px 80px -22px rgba(0,0,0,.6), 0 0 42px -12px var(--brass-glow);
 }
-/* entrance: re-plays every open (selector keyed on .open). scale-up + fade + boot scan. */
-.sys-view.open .sys-window{ animation:sysWinIn 420ms var(--ease-press) both; }
-@keyframes sysWinIn{ 0%{ opacity:0; transform:translateY(22px) scale(.92); } 60%{ opacity:1; } 100%{ opacity:1; transform:none; } }
+/* entrance: a scroll unrolling top → down (clip-path reveal) with a brass "rod"
+   leading the unfurl. Re-plays every open (selector keyed on .open). */
+.sys-view.open .sys-window{ animation:sysScrollOpen 560ms var(--ease-drawer) both; transform-origin:top center; }
+@keyframes sysScrollOpen{ 0%{ clip-path:inset(0 0 100% 0); } 100%{ clip-path:inset(0 0 0 0); } }
 .sys-window::after{
-  content:''; position:absolute; left:0; right:0; top:0; height:2px; z-index:6; pointer-events:none; opacity:0;
-  background:linear-gradient(90deg, transparent, var(--brass), transparent);
-  box-shadow:0 0 16px 2px var(--brass-glow);
+  content:''; position:absolute; left:0; right:0; top:0; height:3px; z-index:6; pointer-events:none; opacity:0; border-radius:2px;
+  background:linear-gradient(90deg, transparent, var(--brass) 18%, var(--brass-soft) 50%, var(--brass) 82%, transparent);
+  box-shadow:0 0 18px 3px var(--brass-glow);
 }
-.sys-view.open .sys-window::after{ animation:sysBoot 540ms var(--ease-silk) both; }
-@keyframes sysBoot{ 0%{ top:0; opacity:1; } 90%{ opacity:.85; } 100%{ top:100%; opacity:0; } }
+.sys-view.open .sys-window::after{ animation:sysScrollRod 560ms var(--ease-drawer) both; }
+@keyframes sysScrollRod{ 0%{ top:0; opacity:1; } 95%{ opacity:1; } 100%{ top:calc(100% - 3px); opacity:0; } }
 .sys-top{ display:flex; align-items:center; gap:12px; padding:14px 16px 10px; }
 .sys-title{ flex:1; font-family:var(--mono); font-size:12px; letter-spacing:.24em; text-transform:uppercase; color:var(--brass); }
 .sys-back{
