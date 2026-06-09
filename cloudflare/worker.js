@@ -295,9 +295,11 @@ async function checkReminders(env) {
 
 const SYS_TZ_OFFSET = 8 * 3600 * 1000;            // Asia/Taipei, no DST
 const SYS_START = '2026-05-11';                   // The 90 — day 1
+// order MUST mirror RPG_ATTR_ORDER (rpg.js) so weakest-pillar tie-breaking
+// matches the in-app daily challenge that actually grants the EXP.
 const SYS_TARGETS = [
-  { id:'I', label:'睡眠' }, { id:'II', label:'篮球' }, { id:'III', label:'赚钱' },
-  { id:'IV', label:'日语' }, { id:'V', label:'健身' },
+  { id:'V', label:'健身' }, { id:'II', label:'篮球' }, { id:'IV', label:'日语' },
+  { id:'III', label:'赚钱' }, { id:'I', label:'睡眠' },
 ];
 function sysDayOf(dateStr){
   const d = new Date(dateStr + 'T00:00:00+08:00');
