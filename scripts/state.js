@@ -73,16 +73,16 @@ const DEF_FIN_CATS = [
 
 const CREED_VARIANTS = [
   {id:'anger',body:`如果你今天没有把时间花在这五件事的任何一件上 ——
-    <div class="creed-pillars">睡眠 &nbsp;·&nbsp; 篮球 &nbsp;·&nbsp; 赚钱 &nbsp;·&nbsp; 日本語 &nbsp;·&nbsp; 健身</div>
+    <div class="creed-pillars">睡眠 &nbsp;·&nbsp; 冥想 &nbsp;·&nbsp; 课业 &nbsp;·&nbsp; 健身 &nbsp;·&nbsp; 性能量</div>
     那你在花时间，成为谁？
     <span class="creed-close">No one accidentally becomes who they want to be.</span>`},
   {id:'contract',body:`Five pillars. Nothing else earns your time.
-    <div class="creed-pillars">睡眠 &nbsp;·&nbsp; 篮球 &nbsp;·&nbsp; 赚钱 &nbsp;·&nbsp; 日本語 &nbsp;·&nbsp; 健身</div>
+    <div class="creed-pillars">睡眠 &nbsp;·&nbsp; 冥想 &nbsp;·&nbsp; 课业 &nbsp;·&nbsp; 健身 &nbsp;·&nbsp; 性能量</div>
     不是爱好。是通往你想成为的那个人的五条路。
     空闲时间 = 默认投入其中之一。
     <span class="creed-close">如果你在做其他事，问一句：这件事为什么值得偷走我的未来？</span>`},
   {id:'inertia',body:`底线永远留在最低，只让天花板往上长 —— 靠惯性拉，不靠自律推。
-    <div class="creed-pillars">睡眠 &nbsp;·&nbsp; 篮球 &nbsp;·&nbsp; 赚钱 &nbsp;·&nbsp; 日本語 &nbsp;·&nbsp; 健身</div>
+    <div class="creed-pillars">睡眠 &nbsp;·&nbsp; 冥想 &nbsp;·&nbsp; 课业 &nbsp;·&nbsp; 健身 &nbsp;·&nbsp; 性能量</div>
     系统靠横向加新的小习惯长大，不靠把一个习惯纵向拔高。
     <span class="creed-close">Raise the ceiling. Never the floor.</span>`}
 ];

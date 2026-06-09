@@ -11,12 +11,14 @@
 const THE_90_START = '2026-05-11';
 const THE_90_END = '2026-08-09';
 
+// Fallback only — the live targets come from Supabase the90_meta (S.the90.meta.targets).
+// Kept in sync with the real 5 so the standard/twoMin/badDay fallbacks never show stale text.
 const THE_90_TARGETS_DEFAULT = [
-  { id: 'I',   label: '睡眠',   twoMin: '21:30 前手机放到客厅充电',    badDay: '灯关 + 闭眼躺平，手机不过夜',  standard: '23:00 前入睡，睡满 7 小时' },
-  { id: 'II',  label: '篮球',   twoMin: '拿起球拍一拍',                 badDay: '10 分钟传球练习',              standard: '完成一次 ≥30 分钟的练球/打球' },
-  { id: 'III', label: '赚钱',   twoMin: '打开交易/学习页面 5 分钟',     badDay: '看一条市场资讯 + 记录',        standard: '完成当日交易/学习计划并复盘' },
-  { id: 'IV',  label: '日语',   twoMin: '打开 Anki 翻 5 张卡',          badDay: '听一段日语音频',               standard: '完成当日 Anki + 一项学习任务' },
-  { id: 'V',   label: '健身',   twoMin: '换上健身服站到垫子上',         badDay: '10 俯卧撑 + 10 深蹲',          standard: '完成当日训练 ≥30 分钟' },
+  { id: 'I',   label: '21:30 上床',   twoMin: '把手机放到客厅充电器',   badDay: '21:30 灯关 + 闭眼躺平',  standard: '21:30 上床、灯关无手机，实际睡满 7 小时' },
+  { id: 'II',  label: '10 分钟冥想',  twoMin: '坐到瑜伽垫 + 打开计时器', badDay: '1 分钟深呼吸 × 3 次',    standard: '完整 10 分钟、不中断的专注冥想' },
+  { id: 'III', label: '课业全 A',     twoMin: '打开课本翻到当前页',     badDay: '看课程笔记 5 分钟',      standard: '当天所有课业任务按时完成，质量达 A 水平' },
+  { id: 'IV',  label: '每周健身 5 天', twoMin: '换上健身服',            badDay: '10 俯卧撑 + 10 深蹲',    standard: '完成当日训练（力量/有氧 ≥30 分钟），本周累计 ≥5 天' },
+  { id: 'V',   label: '性能量管理',   twoMin: '冲动时去阳台站 30 秒',   badDay: '冲动时做 10 俯卧撑代替', standard: '早上绝对不释放；12:30–13:00 后才视情况，非必要或忙碌则保留' },
 ];
 
 const THE_90_IDENTITIES = [
