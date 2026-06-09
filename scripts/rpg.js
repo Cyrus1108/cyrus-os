@@ -217,6 +217,24 @@ const RPG_ACHIEVEMENTS = [
   { id:'perfectwk',name:'影之支配', desc:'连续 7 天五项全清',      hidden:true,  test:()=> rpgPerfectStreak()>=7 },
 ];
 
+/* progress hints for LOCKED, non-hidden achievements → [current, target].
+   Turns a dead "locked" badge into an aspirational "5 / 7". Hidden ones stay
+   masked (no progress, preserve the mystery). */
+function _the90StreakSafe(){ return (typeof computeThe90Streak==='function') ? computeThe90Streak() : 0; }
+function _the90DaySafe(){ return (typeof the90Day==='function') ? the90Day() : 0; }
+const RPG_ACH_PROG = {
+  streak3:  ()=>[_the90StreakSafe(), 3],
+  streak7:  ()=>[_the90StreakSafe(), 7],
+  streak30: ()=>[_the90StreakSafe(), 30],
+  day30:    ()=>[_the90DaySafe(), 30],
+  day60:    ()=>[_the90DaySafe(), 60],
+  day90:    ()=>[_the90DaySafe(), 90],
+  perfect:  ()=>[rpgMetOn(TODAY), rpgTargets().length || 5],
+  n2_10:    ()=>[((S.jp && S.jp.streak) || 0), 10],
+  n2_30:    ()=>[((S.jp && S.jp.streak) || 0), 30],
+  lv10:     (r)=>[r.level, 10],
+};
+
 /* ── orchestration: recompute, fire level-ups + achievements, persist ── */
 let _rpgLastExp = null, _rpgChallengeGranted = false;
 function rpgAfterChange(){
@@ -422,7 +440,7 @@ function rSysStatus(body){
     const m = RPG_ATTR_MAP[tid];
     const val = rpg.attrs[m.key];
     const apct = Math.min(100, Math.max(0, Math.round((val-10)/30*100)));
-    return `<div class="sys-attr">
+    return `<div class="sys-attr sa-${m.key}">
       <span class="sys-attr-icon">${m.icon}</span>
       <span class="sys-attr-name">${m.name}<i>${m.key}</i></span>
       <span class="sys-attr-bar"><i style="width:${apct}%"></i></span>
@@ -432,10 +450,20 @@ function rSysStatus(body){
   const achCards = RPG_ACHIEVEMENTS.map(a=>{
     const locked = !S.rpg.achievements[a.id];
     const masked = a.hidden && locked;
+    let progHtml = '';
+    if(locked && !masked && typeof RPG_ACH_PROG[a.id]==='function'){
+      let p; try{ p = RPG_ACH_PROG[a.id](rpg); }catch(e){}
+      if(p && p[1]>0){
+        const cur = Math.max(0, Math.min(p[0]|0, p[1]));
+        const pc = Math.round(cur / p[1] * 100);
+        progHtml = `<div class="sys-ach-prog"><i style="width:${pc}%"></i></div><div class="sys-ach-progn">${cur} / ${p[1]}</div>`;
+      }
+    }
     return `<div class="sys-ach ${locked?'locked':'unlocked'}">
-      <div class="sys-ach-badge">${locked?'🔒':'✦'}</div>
+      <div class="sys-ach-badge">${locked?'◇':'✦'}</div>
       <div class="sys-ach-name">${masked?'? ? ?':escH(a.name)}</div>
       <div class="sys-ach-desc">${masked?'隐藏成就':escH(a.desc)}</div>
+      ${progHtml}
     </div>`;
   }).join('');
   const logLines = Object.entries(S.rpg.achievements || {})

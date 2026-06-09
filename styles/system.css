@@ -295,10 +295,27 @@ body.sys-locked{ overflow:hidden; }
 .sys-attr-bar{ height:5px; border-radius:3px; background:var(--color-background-tertiary); border:.5px solid var(--hair); overflow:hidden; }
 .sys-attr-bar > i{ display:block; height:100%; background:var(--brass); box-shadow:0 0 6px var(--brass-glow); transition:width var(--dur-slow) var(--ease-press); }
 .sys-attr-val{ font-family:var(--mono); font-size:13px; color:var(--brass); text-align:right; }
+/* B · per-pillar colour coding — distinct hues, all kept in the metallic family.
+   --ac is set on the row and inherited by the icon / bar / value below. */
+.sys-attr.sa-STR{ --ac:#c66a45; }  /* 力量 · 红铜 */
+.sys-attr.sa-AGI{ --ac:#94a05c; }  /* 敏捷 · 青铜 */
+.sys-attr.sa-INT{ --ac:#cda63f; }  /* 智力 · 赤金 */
+.sys-attr.sa-WIS{ --ac:#d6c391; }  /* 智慧 · 暖白金 */
+.sys-attr.sa-VIT{ --ac:#9c6b3e; }  /* 体力 · 深铜 */
+.sys-attr-icon{ color:var(--ac, var(--brass)); }
+.sys-attr-bar > i{ background:var(--ac, var(--brass)); }
+.sys-attr-val{ color:var(--ac, var(--brass)); }
 
 /* ── achievements grid ── */
-.sys-achs{ display:grid; grid-template-columns:repeat(auto-fill, minmax(140px,1fr)); gap:10px; }
+/* D · one horizontal-scroll row instead of a tall grid → keeps the first screen
+   focused on the status card + attributes. The right edge fades to hint overflow. */
+.sys-achs{
+  display:flex; gap:10px; overflow-x:auto; padding-bottom:4px;
+  scroll-snap-type:x proximity;
+  -webkit-mask:linear-gradient(90deg,#000 92%,transparent); mask:linear-gradient(90deg,#000 92%,transparent);
+}
 .sys-ach{
+  flex:0 0 146px; scroll-snap-align:start;
   padding:12px 12px 13px; border-radius:var(--border-radius-md);
   border:.5px solid var(--hair); background:var(--color-background-secondary);
   text-align:center; transition:border-color var(--dur-base) var(--ease-silk),transform var(--dur-fast) var(--ease-press);
@@ -310,6 +327,11 @@ body.sys-locked{ overflow:hidden; }
 .sys-ach.unlocked .sys-ach-badge{ color:var(--brass); text-shadow:0 0 10px var(--brass-glow); }
 .sys-ach-name{ font-size:12px; color:var(--ink); font-family:var(--serif); margin-bottom:3px; }
 .sys-ach-desc{ font-size:10px; color:var(--ghost); line-height:1.4; }
+/* C · progress hint on locked achievements — turns "locked" into "almost there" */
+.sys-ach-prog{ height:3px; border-radius:2px; margin:9px 4px 0; overflow:hidden;
+  background:var(--color-background-tertiary); border:.5px solid var(--hair); }
+.sys-ach-prog > i{ display:block; height:100%; background:var(--brass-soft); box-shadow:0 0 5px var(--brass-glow); }
+.sys-ach-progn{ font-family:var(--mono); font-size:9px; color:var(--mute); margin-top:4px; letter-spacing:.06em; }
 
 /* ── system log ── */
 .sys-log{ display:flex; flex-direction:column; gap:5px; }
