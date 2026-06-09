@@ -72,11 +72,11 @@ function rpgRank(L){
   if(L>=10) return 'D';
   return 'E';
 }
-function rpgAttrValue(targetId){
-  // recent form: 10 + days-met in the last 30 (→ 10..40)
+function rpgAttrValueAt(targetId, anchor){
+  // recent form anchored at `anchor`: 10 + days-met in the 30 days ending there (→ 10..40)
   let count = 0;
   for(let i=0;i<30;i++){
-    const d = new Date(TODAY + 'T00:00:00+08:00'); d.setDate(d.getDate() - i);
+    const d = new Date(anchor + 'T00:00:00+08:00'); d.setDate(d.getDate() - i);
     const ds = d.toLocaleDateString('sv-SE');
     if(ds > TODAY) continue;
     const day = S.the90 && S.the90.daily && S.the90.daily[ds];
@@ -88,6 +88,7 @@ function rpgAttrValue(targetId){
   }
   return 10 + count;
 }
+function rpgAttrValue(targetId){ return rpgAttrValueAt(targetId, TODAY); }
 function rpgPerfectToday(){
   const n = rpgTargets().length;
   return n>0 && rpgMetOn(TODAY) === n;
@@ -435,53 +436,87 @@ function rpgPenaltyActive(){
   return !!(d && d.date===TODAY && d.penalty && !d.claimed);
 }
 
+/* Catmull-Rom → cubic-Bézier path through all points (smooth curve). */
+function rpgSmoothPath(pts){
+  if(!pts.length) return '';
+  if(pts.length<2) return `M ${pts[0][0]} ${pts[0][1]}`;
+  let d = `M ${pts[0][0].toFixed(2)} ${pts[0][1].toFixed(2)}`;
+  for(let i=0;i<pts.length-1;i++){
+    const p0=pts[i-1]||pts[i], p1=pts[i], p2=pts[i+1], p3=pts[i+2]||p2;
+    const c1x=p1[0]+(p2[0]-p0[0])/6, c1y=p1[1]+(p2[1]-p0[1])/6;
+    const c2x=p2[0]-(p3[0]-p1[0])/6, c2y=p2[1]-(p3[1]-p1[1])/6;
+    d += ` C ${c1x.toFixed(2)} ${c1y.toFixed(2)}, ${c2x.toFixed(2)} ${c2y.toFixed(2)}, ${p2[0].toFixed(2)} ${p2[1].toFixed(2)}`;
+  }
+  return d;
+}
+
 /* ── attribute radar (SVG, hand-rolled to match the brass HUD) ──
-   Plots the 5 current attribute values as a pentagon. Value 10→centre, 40→edge. */
+   Plots the 5 current attribute values as a pentagon (10→centre, 40→edge), with
+   a "30 days ago" ghost overlay (A), a 40-cap potential ring + sonar sweep +
+   weakest-pillar pulse (B). */
 function rpgRadarSVG(rpg){
   const ids = RPG_ATTR_ORDER, n = ids.length;
   const cx=110, cy=94, R=64;
   const ang = i => (-Math.PI/2) + i*(2*Math.PI/n);
   const P = (i,r)=>[cx+Math.cos(ang(i))*r, cy+Math.sin(ang(i))*r];
   const fmt = p => p[0].toFixed(1)+','+p[1].toFixed(1);
+  const rad = v => Math.max(0, Math.min(1,(v-10)/30)) * R;
   const polyAt = r => ids.map((_,i)=>fmt(P(i,r))).join(' ');
 
-  let rings=''; [0.25,0.5,0.75,1].forEach(f=>{ rings += `<polygon class="rdr-ring" points="${polyAt(f*R)}"/>`; });
+  let rings=''; [0.25,0.5,0.75].forEach(f=>{ rings += `<polygon class="rdr-ring" points="${polyAt(f*R)}"/>`; });
+  rings += `<polygon class="rdr-cap" points="${polyAt(R)}"/>`;           // B · 40-cap potential ring
   let spokes=''; ids.forEach((_,i)=>{ const p=P(i,R); spokes += `<line class="rdr-spoke" x1="${cx}" y1="${cy}" x2="${p[0].toFixed(1)}" y2="${p[1].toFixed(1)}"/>`; });
 
+  // A · ghost polygon — attributes as of 30 days ago
+  const ga = new Date(TODAY+'T00:00:00+08:00'); ga.setDate(ga.getDate()-30);
+  const gas = ga.toLocaleDateString('sv-SE');
+  const ghostPts = ids.map((id,i)=>fmt(P(i, rad(rpgAttrValueAt(id, gas))))).join(' ');
+
+  const weak = (typeof rpgWeakestAttr==='function') ? rpgWeakestAttr(rpg.attrs) : null;
   const data = ids.map((id,i)=>{
-    const k = RPG_ATTR_MAP[id].key;
-    const v = rpg.attrs[k];
-    const r = Math.max(0, Math.min(1,(v-10)/30)) * R;
-    return { i, v, name:RPG_ATTR_MAP[id].name, pt:P(i,r), color:RPG_ATTR_COLOR[k]||'#a88455' };
+    const k = RPG_ATTR_MAP[id].key, v = rpg.attrs[k];
+    return { i, k, v, name:RPG_ATTR_MAP[id].name, pt:P(i, rad(v)), color:RPG_ATTR_COLOR[k]||'#a88455' };
   });
   let dots='', labels='';
   data.forEach(d=>{
-    dots += `<circle class="rdr-dot" cx="${d.pt[0].toFixed(1)}" cy="${d.pt[1].toFixed(1)}" r="2.6" fill="${d.color}"/>`;
+    const wk = d.k===weak ? ' rdr-dot-weak' : '';
+    dots += `<circle class="rdr-dot${wk}" cx="${d.pt[0].toFixed(1)}" cy="${d.pt[1].toFixed(1)}" r="${d.k===weak?3.2:2.6}" fill="${d.color}"/>`;
     const lp = P(d.i, R+15);
     const anchor = lp[0] < cx-6 ? 'end' : (lp[0] > cx+6 ? 'start' : 'middle');
     labels += `<text class="rdr-label" x="${lp[0].toFixed(1)}" y="${lp[1].toFixed(1)}" text-anchor="${anchor}" fill="${d.color}">${d.name}<tspan class="rdr-lv" dx="4">${d.v}</tspan></text>`;
   });
+
+  // B · sonar sweep: rotating beam + trailing wedge (hidden under reduced-motion via CSS)
+  const tw = [cx + R*Math.cos(-Math.PI/2 - 0.73), cy + R*Math.sin(-Math.PI/2 - 0.73)];
+  const sweep = `<g class="rdr-sweep">
+    <path class="rdr-wedge" d="M ${cx} ${cy} L ${cx} ${cy-R} A ${R} ${R} 0 0 0 ${tw[0].toFixed(1)} ${tw[1].toFixed(1)} Z"/>
+    <line class="rdr-beam" x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy-R}"/>
+    <animateTransform attributeName="transform" type="rotate" from="0 ${cx} ${cy}" to="360 ${cx} ${cy}" dur="4.2s" repeatCount="indefinite"/>
+  </g>`;
+
   return `<svg class="sys-radar" viewBox="0 0 220 190" role="img" aria-label="属性雷达图">
     <defs><radialGradient id="rdrFill" cx="50%" cy="50%" r="50%">
       <stop class="rdr-s0" offset="0%"/><stop class="rdr-s1" offset="100%"/>
     </radialGradient></defs>
-    ${rings}${spokes}
+    ${rings}${spokes}${sweep}
+    <polygon class="rdr-ghost" points="${ghostPts}"/>
     <polygon class="rdr-data" points="${data.map(d=>fmt(d.pt)).join(' ')}" fill="url(#rdrFill)"/>
     ${dots}${labels}
   </svg>`;
 }
 
-/* ── growth curve (SVG sparkline) ──
+/* ── growth curve (SVG) ──
    战力 (combat power) = Σ of the 5 attributes = 50 + Σ(daily met-count over the
    trailing 30 days). Derived for each past anchor by sliding the window over the
-   frozen The 90 data — no stored history needed. Returns {cur, delta, svg}. */
+   frozen The 90 data — no stored history. Smoothed curve + vertical-gradient area
+   + The 90 phase milestones (C). Returns {cur, delta, svg}. */
 function rpgGrowthSVG(days){
   days = days || 30; const W = 30;
   const total = days + W - 1;
-  const mets = [];                                  // oldest → newest daily met-count
+  const mets = [], dates = [];                       // oldest → newest
   for(let i=total-1;i>=0;i--){
     const dt = new Date(TODAY+'T00:00:00+08:00'); dt.setDate(dt.getDate()-i);
-    const ds = dt.toLocaleDateString('sv-SE');
+    const ds = dt.toLocaleDateString('sv-SE'); dates.push(ds);
     mets.push(ds<=TODAY ? rpgMetOn(ds) : 0);
   }
   const series = []; let sum = 0;
@@ -494,13 +529,32 @@ function rpgGrowthSVG(days){
   const pad = (max-min)*0.18 || 6, lo = min-pad, hi = max+pad;
   const X = i => (i/(N-1))*100;
   const Y = v => 30 - ((v-lo)/(hi-lo))*27 - 1.5;
-  const line = series.map((v,i)=>X(i).toFixed(2)+','+Y(v).toFixed(2)).join(' ');
-  const area = '0,30 '+line+' 100,30';
+  const pts = series.map((v,i)=>[X(i),Y(v)]);
+  const line = rpgSmoothPath(pts);
+  const area = line + ' L 100 30 L 0 30 Z';
+
+  let marks = '';                                    // C · The 90 phase milestones in window
+  if(typeof the90Day==='function'){
+    [30,60,90].forEach(M=>{
+      for(let j=0;j<days;j++){
+        const ds = dates[W-1+j];
+        if(ds<=TODAY && the90Day(ds)===M){
+          const x = X(j).toFixed(2);
+          marks += `<line class="grw-mile" x1="${x}" y1="2" x2="${x}" y2="30"/><circle class="grw-mile-dot" cx="${x}" cy="${Y(series[j]).toFixed(2)}" r="1.7"/>`;
+          break;
+        }
+      }
+    });
+  }
   return {
     cur: series[N-1], delta: series[N-1]-series[0],
     svg: `<svg class="sys-growth" viewBox="0 0 100 30" preserveAspectRatio="none" role="img" aria-label="战力成长曲线">
-      <polygon class="grw-area" points="${area}"/>
-      <polyline class="grw-line" points="${line}"/>
+      <defs><linearGradient id="grwFill" x1="0" y1="0" x2="0" y2="1">
+        <stop class="grw-f0" offset="0%"/><stop class="grw-f1" offset="100%"/>
+      </linearGradient></defs>
+      <path class="grw-area" d="${area}" fill="url(#grwFill)"/>
+      ${marks}
+      <path class="grw-line" d="${line}"/>
       <circle class="grw-end" cx="${X(N-1).toFixed(2)}" cy="${Y(series[N-1]).toFixed(2)}" r="1.7"/>
     </svg>`
   };

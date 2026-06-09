@@ -323,6 +323,14 @@ body.sys-locked{ overflow:hidden; }
 .rdr-dot{ filter:drop-shadow(0 0 3px var(--brass-glow)); }
 .rdr-label{ font-family:var(--sans); font-size:9px; }
 .rdr-lv{ font-family:var(--mono); font-size:9px; font-weight:600; }
+/* B · 40-cap potential ring, sonar sweep, weakest-pillar pulse */
+.rdr-cap{ fill:none; stroke:var(--brass-ghost); stroke-width:.8; }
+.rdr-wedge{ fill:var(--brass); opacity:.07; }
+.rdr-beam{ stroke:var(--brass); stroke-width:1; opacity:.45; filter:drop-shadow(0 0 4px var(--brass-glow)); }
+.rdr-dot-weak{ animation:rdrPulse 1.6s var(--ease-silk) infinite; }
+@keyframes rdrPulse{ 0%,100%{ filter:drop-shadow(0 0 2px var(--brass-glow)); } 50%{ filter:drop-shadow(0 0 7px var(--brass-glow)); } }
+/* A · "30 days ago" ghost polygon */
+.rdr-ghost{ fill:none; stroke:var(--mute); stroke-width:1; stroke-dasharray:3 3; opacity:.5; }
 
 /* ── growth curve (战力 / combat power, last 30 days) ── */
 .sys-growth-head{ display:flex; align-items:baseline; justify-content:space-between; margin:0 2px 6px; }
@@ -332,10 +340,19 @@ body.sys-locked{ overflow:hidden; }
 .sys-growth-delta.up{ color:var(--brass); }
 .sys-growth-delta.down{ color:var(--mute); }
 .sys-growth{ width:100%; height:46px; display:block; }
-.grw-area{ fill:var(--brass); opacity:.10; }
+/* C · vertical-gradient area (bright near the line, fading down) + phase milestones.
+   .grw-area carries no CSS fill so the inline url(#grwFill) gradient wins. */
+.grw-f0{ stop-color:var(--brass); stop-opacity:.30; }
+.grw-f1{ stop-color:var(--brass); stop-opacity:0; }
 .grw-line{ fill:none; stroke:var(--brass); stroke-width:1.5; vector-effect:non-scaling-stroke; }
 .grw-end{ fill:var(--brass-soft); filter:drop-shadow(0 0 3px var(--brass-glow)); }
-@media (prefers-reduced-motion:reduce){ .rdr-data{ animation:none !important; } }
+.grw-mile{ stroke:var(--brass-ghost); stroke-width:1; vector-effect:non-scaling-stroke; stroke-dasharray:2 3; opacity:.7; }
+.grw-mile-dot{ fill:var(--brass); filter:drop-shadow(0 0 3px var(--brass-glow)); }
+@media (prefers-reduced-motion:reduce){
+  .rdr-data{ animation:none !important; }
+  .rdr-sweep{ display:none; }
+  .rdr-dot-weak{ animation:none; }
+}
 
 /* ── achievements grid ── */
 /* D · one horizontal-scroll row instead of a tall grid → keeps the first screen
