@@ -336,7 +336,9 @@ button.check-btn.done{border-color:var(--brass);color:var(--brass);}
 .the90-cells{
   display:grid;grid-template-columns:repeat(5,1fr);gap:8px;
   margin-bottom:6px;
-  position:relative;overflow:hidden;
+  /* top/bottom padding so a cell's hover-lift + brass border aren't clipped by
+     overflow:hidden (kept, sides stay 0, for the all-done celebrate sweep) */
+  position:relative;overflow:hidden;padding:4px 0;
 }
 .the90-cell{
   aspect-ratio:1;
