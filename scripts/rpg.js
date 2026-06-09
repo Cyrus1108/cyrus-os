@@ -336,10 +336,17 @@ function openSystem(fromHash){
   document.body.classList.add('sys-locked');
   if(!fromHash && location.hash!=='#system') location.hash='system';
   rSystem();
+  // Entrance ceremony: the boot cover masks the HUD while the window unfurls.
+  // Re-render once as the cover lifts (~1300ms) so the attribute numbers count
+  // up in front of the user instead of settling behind the cover.
+  const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches;
+  clearTimeout(sysUI._enterT);
+  if(!reduce) sysUI._enterT = setTimeout(()=>{ if(sysUI.open) rSystem(); }, 1300);
 }
 function closeSystem(fromHash){
   const v = document.getElementById('system-view'); if(!v) return;
   sysUI.open = false;
+  clearTimeout(sysUI._enterT);
   v.classList.remove('open'); v.setAttribute('aria-hidden','true');
   document.body.classList.remove('sys-locked');
   if(!fromHash && location.hash==='#system') history.replaceState(null,'',location.pathname+location.search);

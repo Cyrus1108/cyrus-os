@@ -61,6 +61,53 @@ body.sys-locked{ overflow:hidden; }
 @media (prefers-reduced-motion:reduce){
   .sys-view.open .sys-window,.sys-view.open .sys-window::after{ animation:none !important; clip-path:none !important; opacity:1 !important; }
 }
+
+/* ── entrance cover: a brass "system boot" screen that masks the live HUD while
+   the window unfurls, then dissolves with a brass sweep once the panel settles.
+   z-index:2 keeps it above the interior (z-auto) but below the frame corners
+   (z:3) and fold seam (::after, z:6). pointer-events:auto eats stray clicks
+   during the ~1.85s ceremony; visibility:hidden at the end stops capturing. ── */
+.sys-cover{
+  position:absolute; inset:0; z-index:2; pointer-events:auto; overflow:hidden;
+  display:flex; align-items:center; justify-content:center;
+  background:radial-gradient(circle at 50% 42%, var(--brass-ghost), transparent 62%), var(--color-background-secondary);
+}
+.sys-view.open .sys-cover{ animation:sysCoverHold 1850ms linear both; }
+@keyframes sysCoverHold{ 0%{ opacity:1; } 70%{ opacity:1; } 100%{ opacity:0; visibility:hidden; } }
+
+.sys-cover-inner{ position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center; }
+.sys-cover-crest{
+  width:72px; height:72px; border-radius:50%; margin-bottom:4px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:28px; color:var(--brass);
+  border:1.5px solid var(--brass);
+  background:radial-gradient(circle at 50% 40%, var(--brass-ghost), transparent 70%);
+  box-shadow:0 0 22px -4px var(--brass-glow), inset 0 0 14px -6px var(--brass-glow);
+  animation:sysBadgePulse 2.6s var(--ease-silk) infinite;
+}
+.sys-view.open .sys-cover-crest{ animation:sysBadgePulse 2.6s var(--ease-silk) infinite, sysCrestExit 560ms var(--ease-silk) 1290ms both; }
+@keyframes sysCrestExit{ 0%{ transform:scale(1); opacity:1; } 100%{ transform:scale(1.18); opacity:0; } }
+.sys-cover-title{ font-family:var(--serif); font-size:30px; letter-spacing:.2em; color:var(--ink); text-indent:.2em; }
+.sys-cover-kicker{ font-family:var(--mono); font-size:11px; letter-spacing:.5em; color:var(--brass); text-indent:.5em; }
+.sys-cover-status{ font-family:var(--mono); font-size:10px; letter-spacing:.2em; color:var(--mute); margin-top:2px; }
+
+.sys-cover-sweep{
+  position:absolute; left:0; right:0; top:0; height:64px; z-index:2; pointer-events:none; opacity:0;
+  background:linear-gradient(180deg, transparent, var(--brass-glow), transparent);
+}
+.sys-view.open .sys-cover-sweep{ animation:sysCoverSweep 560ms var(--ease-silk) 1290ms both; }
+@keyframes sysCoverSweep{ 0%{ transform:translateY(-64px); opacity:0; } 25%{ opacity:1; } 100%{ transform:translateY(86vh); opacity:0; } }
+
+/* interior stays hidden beneath the cover, then fades in as the cover lifts */
+.sys-view.open .sys-top,
+.sys-view.open .sys-tabs,
+.sys-view.open #sys-body{ animation:sysContentIn 600ms var(--ease-silk) 1300ms both; }
+@keyframes sysContentIn{ from{ opacity:0; } to{ opacity:1; } }
+
+@media (prefers-reduced-motion:reduce){
+  .sys-cover{ display:none !important; }
+  .sys-view.open .sys-top,.sys-view.open .sys-tabs,.sys-view.open #sys-body{ animation:none !important; opacity:1 !important; }
+}
 .sys-top{ display:flex; align-items:center; gap:12px; padding:14px 16px 10px; }
 .sys-title{ flex:1; font-family:var(--mono); font-size:12px; letter-spacing:.24em; text-transform:uppercase; color:var(--brass); }
 .sys-back{
