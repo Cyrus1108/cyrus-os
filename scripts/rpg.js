@@ -148,7 +148,7 @@ function rpgTodayExp(){
   return e;
 }
 function computeRPG(){
-  const totalExp = rpgTotalExp() + ((S.rpg && S.rpg.bonusExp) || 0);
+  const totalExp = rpgTotalExp() + ((S.rpg && S.rpg.bonusExp) || 0) + rpgAchExp();
   const level = rpgLevelFromExp(totalExp);
   const curBase = rpgExpForLevel(level);
   const nextBase = rpgExpForLevel(level+1);
@@ -230,24 +230,94 @@ const RPG_SKILLS = [
   { id:'sk_monarch', branch:'CORE', name:'君主之威', desc:'晋升至 S 级',    test:(a,r)=>r.rank==='S' },
 ];
 
-/* ── achievements (tested against real data) ── */
+// net worth converted to MYR — base may be TWD; fxRates.MYR = base units per 1 MYR,
+// so dividing the base-currency net worth by that rate yields MYR (1 if base IS MYR).
+function finNetWorthMYR(){
+  if(typeof finNetWorth!=='function' || typeof finRate!=='function') return 0;
+  const net = finNetWorth().net, rate = finRate('MYR') || 1;
+  return rate ? net/rate : net;
+}
+
+/* ── achievements (tested against real data) ──
+   id = persisted jsonb key (NEVER rename); cat = gallery category; tier drives
+   EXP (RPG_TIER_EXP) + badge hue; hidden masks the card until unlocked.
+   38 total across 10 categories (see RPG_ACH_CATS for order + labels). */
 const RPG_ACHIEVEMENTS = [
-  { id:'streak3',  name:'三日不辍', desc:'The 90 连续达标 3 天', hidden:false, test:()=> (typeof computeThe90Streak==='function' && computeThe90Streak()>=3) },
-  { id:'streak7',  name:'一周如一', desc:'连续达标 7 天',        hidden:false, test:()=> (typeof computeThe90Streak==='function' && computeThe90Streak()>=7) },
-  { id:'streak30', name:'而立之恒', desc:'连续达标 30 天',       hidden:false, test:()=> (typeof computeThe90Streak==='function' && computeThe90Streak()>=30) },
-  { id:'day30',    name:'第一阶段', desc:'抵达 The 90 第 30 天', hidden:false, test:()=> (typeof the90Day==='function' && the90Day()>=30) },
-  { id:'day60',    name:'第二阶段', desc:'抵达第 60 天',         hidden:false, test:()=> (typeof the90Day==='function' && the90Day()>=60) },
-  { id:'day90',    name:'登顶',     desc:'完成 90 天的旅程',     hidden:false, test:()=> (typeof the90Day==='function' && the90Day()>=90) },
-  { id:'perfect',  name:'圆满一日', desc:'单日五项目标全部达成', hidden:false, test:()=> rpgPerfectToday() },
-  { id:'n2_10',    name:'语之初径', desc:'N2 连续打卡 10 天',    hidden:false, test:()=> (S.jp && S.jp.streak>=10) },
-  { id:'n2_30',    name:'言之恒心', desc:'N2 连续打卡 30 天',    hidden:false, test:()=> (S.jp && S.jp.streak>=30) },
-  { id:'lv10',     name:'D 级觉醒', desc:'等级达到 10',          hidden:false, test:(r)=> r.level>=10 },
-  { id:'lv20',     name:'C 级猎人', desc:'等级达到 20',          hidden:true,  test:(r)=> r.level>=20 },
-  { id:'cleardesk',name:'万事清零', desc:'把待办全部清空',        hidden:true,  test:()=> (S.todos && S.todos.length>0 && S.todos.every(t=>t.done)) },
-  // hidden / adaptive —門檻明显高于常规曲线，由行为触发
-  { id:'streak14', name:'意志试炼', desc:'连续达标 14 天',        hidden:true,  test:()=> (typeof computeThe90Streak==='function' && computeThe90Streak()>=14) },
-  { id:'perfectwk',name:'影之支配', desc:'连续 7 天五项全清',      hidden:true,  test:()=> rpgPerfectStreak()>=7 },
+  // 坚持 · STREAK
+  { id:'streak3',  cat:'streak', tier:'bronze',   name:'三日不辍', desc:'The 90 连续达标 3 天', hidden:false, test:()=> (typeof computeThe90Streak==='function' && computeThe90Streak()>=3) },
+  { id:'streak7',  cat:'streak', tier:'bronze',   name:'一周如一', desc:'连续达标 7 天',        hidden:false, test:()=> (typeof computeThe90Streak==='function' && computeThe90Streak()>=7) },
+  { id:'streak14', cat:'streak', tier:'silver',   name:'意志试炼', desc:'连续达标 14 天',       hidden:true,  test:()=> (typeof computeThe90Streak==='function' && computeThe90Streak()>=14) },
+  { id:'streak30', cat:'streak', tier:'gold',     name:'而立之恒', desc:'连续达标 30 天',       hidden:false, test:()=> (typeof computeThe90Streak==='function' && computeThe90Streak()>=30) },
+  { id:'streak60', cat:'streak', tier:'platinum', name:'炼狱不熄', desc:'连续达标 60 天',       hidden:false, test:()=> (typeof computeThe90Streak==='function' && computeThe90Streak()>=60) },
+  { id:'comeback', cat:'streak', tier:'silver',   name:'浴火重生', desc:'断档之后，重建 7 天连续达标', hidden:true, test:()=>{ if(typeof computeThe90Streak!=='function'||typeof the90Day!=='function'||typeof the90DateForDay!=='function'||typeof rpgMetOn!=='function') return false; const cur=computeThe90Streak(); if(cur<7) return false; const breakDay=the90Day()-cur; if(breakDay<1) return false; const bd=the90DateForDay(breakDay); if(bd>TODAY) return false; return rpgMetOn(bd)<3; } },
+  // 圆满 · MASTERY
+  { id:'perfect',     cat:'perfect', tier:'bronze',   name:'圆满一日', desc:'单日五项目标全部达成', hidden:false, test:()=> rpgPerfectToday() },
+  { id:'perfectwk',   cat:'perfect', tier:'gold',     name:'影之支配', desc:'连续 7 天五项全清',     hidden:true,  test:()=> rpgPerfectStreak()>=7 },
+  { id:'perfectmonth',cat:'perfect', tier:'platinum', name:'无瑕之月', desc:'连续 30 天五项全清',    hidden:true,  test:()=> rpgPerfectStreak()>=30 },
+  // 历程 · JOURNEY
+  { id:'day30', cat:'journey', tier:'bronze', name:'第一阶段', desc:'抵达 The 90 第 30 天', hidden:false, test:()=> (typeof the90Day==='function' && the90Day()>=30) },
+  { id:'day60', cat:'journey', tier:'silver', name:'第二阶段', desc:'抵达第 60 天',         hidden:false, test:()=> (typeof the90Day==='function' && the90Day()>=60) },
+  { id:'day90', cat:'journey', tier:'gold',   name:'登顶',     desc:'完成 90 天的旅程',     hidden:false, test:()=> (typeof the90Day==='function' && the90Day()>=90) },
+  // 属性 · ATTRIBUTE
+  { id:'attr_int35',    cat:'attribute', tier:'gold',     name:'通明之巅', desc:'智力 INT 达到 35',          hidden:false, test:(r)=> r.attrs.INT>=35 },
+  { id:'attr_balanced', cat:'attribute', tier:'platinum', name:'五维调和', desc:'五项属性全部 ≥ 30 · 无短板', hidden:false, test:(r)=> RPG_ATTR_ORDER.every(k=> r.attrs[k]>=30) },
+  // 战力 · POWER
+  { id:'power150', cat:'power', tier:'gold',     name:'破百五十', desc:'战力达到 150', hidden:false, test:(r)=> RPG_ATTR_ORDER.reduce((s,k)=> s+r.attrs[k], 0)>=150 },
+  { id:'power180', cat:'power', tier:'platinum', name:'君临战力', desc:'战力达到 180', hidden:true,  test:(r)=> RPG_ATTR_ORDER.reduce((s,k)=> s+r.attrs[k], 0)>=180 },
+  // 阶位 · RANK
+  { id:'lv10',   cat:'rank', tier:'bronze',   name:'D 级觉醒', desc:'等级达到 10 · 晋升 D 级', hidden:false, test:(r)=> r.level>=10 },
+  { id:'lv20',   cat:'rank', tier:'silver',   name:'C 级猎人', desc:'等级达到 20 · 晋升 C 级', hidden:true,  test:(r)=> r.level>=20 },
+  { id:'rank_b', cat:'rank', tier:'gold',     name:'破限者',   desc:'晋升至 B 级（等级 35）',  hidden:false, test:(r)=> r.level>=35 },
+  { id:'rank_a', cat:'rank', tier:'platinum', name:'支配者',   desc:'晋升至 A 级（等级 55）',  hidden:false, test:(r)=> r.level>=55 },
+  { id:'rank_s', cat:'rank', tier:'platinum', name:'君主',     desc:'晋升至 S 级 · 君主加冕',  hidden:true,  test:(r)=> r.level>=80 },
+  // 经验 · EXP
+  { id:'exp2000', cat:'exp', tier:'silver',   name:'积跬步', desc:'累计经验突破 2000', hidden:false, test:(r)=> r.totalExp>=2000 },
+  { id:'exp5000', cat:'exp', tier:'platinum', name:'至千里', desc:'累计经验突破 5000', hidden:true,  test:(r)=> r.totalExp>=5000 },
+  // 语学 · JAPANESE
+  { id:'n2_10',    cat:'japanese', tier:'bronze', name:'语之初径', desc:'N2 连续打卡 10 天', hidden:false, test:()=> (S.jp && S.jp.streak>=10) },
+  { id:'n2_30',    cat:'japanese', tier:'silver', name:'言之恒心', desc:'N2 连续打卡 30 天', hidden:false, test:()=> (S.jp && S.jp.streak>=30) },
+  { id:'n2_60',    cat:'japanese', tier:'gold',   name:'言出于恒', desc:'N2 连续打卡 60 天', hidden:false, test:()=> (S.jp && S.jp.streak>=60) },
+  { id:'n2_vol50', cat:'japanese', tier:'silver', name:'百炼之卷', desc:'N2 累计打卡 50 天', hidden:false, test:()=> (S.jp && S.jp.log && Object.keys(S.jp.log).length>=50) },
+  // 修行 · DISCIPLINE
+  { id:'ac_alldone',  cat:'crossdomain', tier:'bronze', name:'学海无波', desc:'学业待办全部完成',   hidden:false, test:()=> (S.ac && S.ac.length>0 && S.ac.every(t=>t.done)) },
+  { id:'ac_volume10', cat:'crossdomain', tier:'silver', name:'课业不辍', desc:'累计完成 10 项学业', hidden:false, test:()=> (S.ac && S.ac.filter(t=>t.done).length>=10) },
+  { id:'cleardesk',   cat:'crossdomain', tier:'bronze', name:'万事清零', desc:'把待办全部清空',     hidden:true,  test:()=> (S.todos && S.todos.length>0 && S.todos.every(t=>t.done)) },
+  { id:'td_burst5',   cat:'crossdomain', tier:'silver', name:'雷厉风行', desc:'单日完成 5 项待办',   hidden:false, test:()=> { const todos=S.todos||[]; return todos.filter(t=> t.done && t.doneAt && new Date(t.doneAt).toLocaleDateString('sv-SE')===TODAY).length>=5; } },
+  { id:'td_volume50', cat:'crossdomain', tier:'gold',   name:'积少成多', desc:'累计完成 50 项待办',   hidden:false, test:()=> (S.todos && S.todos.filter(t=>t.done).length>=50) },
+  // 财富 · FINANCE
+  { id:'fin_log_streak7', cat:'finance', tier:'silver',   name:'锱铢必录', desc:'连续 7 天记账', hidden:false, test:()=> { const tx=(S.fin&&S.fin.transactions)||[]; if(!tx.length) return false; const days=new Set(tx.map(t=>String(t.date).slice(0,10))); let streak=0; const base=new Date(TODAY+'T00:00:00+08:00'); for(let i=0;i<7;i++){ const d=new Date(base); d.setDate(base.getDate()-i); const ds=d.toLocaleDateString('sv-SE'); if(days.has(ds)) streak++; else break; } return streak>=7; } },
+  { id:'fin_goal_reached', cat:'finance', tier:'gold',    name:'积羽沉舟', desc:'达成一个存钱目标', hidden:false, test:()=> { const goals=(S.fin&&S.fin.goals)||[]; return (typeof finGoalSaved==='function') && goals.some(g=> g.target>0 && finGoalSaved(g)>=g.target); } },
+  { id:'fin_nw_10k',  cat:'finance', tier:'bronze',   name:'积铢成两', desc:'净资产突破 RM 10,000',  hidden:false, test:()=> finNetWorthMYR()>=10000 },
+  { id:'fin_nw_50k',  cat:'finance', tier:'silver',   name:'渐入佳境', desc:'净资产突破 RM 50,000',  hidden:false, test:()=> finNetWorthMYR()>=50000 },
+  { id:'fin_nw_100k', cat:'finance', tier:'gold',     name:'富甲一方', desc:'净资产突破 RM 100,000', hidden:false, test:()=> finNetWorthMYR()>=100000 },
+  { id:'fin_nw_250k', cat:'finance', tier:'platinum', name:'富可敌国', desc:'净资产突破 RM 250,000', hidden:true,  test:()=> finNetWorthMYR()>=250000 },
 ];
+// gallery categories — fixed render order + labels (X/N count shown per section)
+const RPG_ACH_CATS = [
+  { key:'streak',      label:'坚持 · STREAK' },
+  { key:'perfect',     label:'圆满 · MASTERY' },
+  { key:'journey',     label:'历程 · JOURNEY' },
+  { key:'attribute',   label:'属性 · ATTRIBUTE' },
+  { key:'power',       label:'战力 · POWER' },
+  { key:'rank',        label:'阶位 · RANK' },
+  { key:'exp',         label:'经验 · EXP' },
+  { key:'japanese',    label:'语学 · JAPANESE' },
+  { key:'crossdomain', label:'修行 · DISCIPLINE' },
+  { key:'finance',     label:'财富 · FINANCE' },
+];
+/* tier → EXP (flat: achievements are a recognition layer, not a shortcut — the
+   daily The 90 grind stays the dominant level driver). RPG_ACH_TIER is built FROM
+   the catalog so the id→tier map can never drift from the achievements themselves. */
+const RPG_TIER_EXP = { bronze:15, silver:30, gold:50, platinum:100 };
+const RPG_ACH_TIER = {};
+RPG_ACHIEVEMENTS.forEach(a=>{ RPG_ACH_TIER[a.id] = a.tier; });
+// EXP from unlocked achievements = Σ frozen tier-EXP over the STORED key set (NOT
+// live re-tests). rpgAfterChange only ever ADDS keys → append-only → monotonic.
+function rpgAchExp(){
+  let e = 0; const ach = (S.rpg && S.rpg.achievements) || {};
+  for(const id in ach){ e += RPG_TIER_EXP[RPG_ACH_TIER[id]] || 0; }
+  return e;
+}
 
 /* progress hints for LOCKED, non-hidden achievements → [current, target].
    Turns a dead "locked" badge into an aspirational "5 / 7". Hidden ones stay
@@ -265,6 +335,20 @@ const RPG_ACH_PROG = {
   n2_10:    ()=>[((S.jp && S.jp.streak) || 0), 10],
   n2_30:    ()=>[((S.jp && S.jp.streak) || 0), 30],
   lv10:     (r)=>[r.level, 10],
+  streak60:     ()=>[_the90StreakSafe(), 60],
+  n2_60:        ()=>[((S.jp && S.jp.streak) || 0), 60],
+  n2_vol50:     ()=>[((S.jp && S.jp.log) ? Object.keys(S.jp.log).length : 0), 50],
+  attr_int35:   (r)=>[r.attrs.INT, 35],
+  attr_balanced:(r)=>[Math.min.apply(null, RPG_ATTR_ORDER.map(k=>r.attrs[k])), 30],
+  power150:     (r)=>[RPG_ATTR_ORDER.reduce((s,k)=>s+r.attrs[k],0), 150],
+  rank_b:       (r)=>[r.level, 35],
+  rank_a:       (r)=>[r.level, 55],
+  exp2000:      (r)=>[r.totalExp, 2000],
+  ac_volume10:  ()=>[(S.ac ? S.ac.filter(t=>t.done).length : 0), 10],
+  td_volume50:  ()=>[(S.todos ? S.todos.filter(t=>t.done).length : 0), 50],
+  fin_nw_10k:   ()=>[Math.round(finNetWorthMYR()), 10000],
+  fin_nw_50k:   ()=>[Math.round(finNetWorthMYR()), 50000],
+  fin_nw_100k:  ()=>[Math.round(finNetWorthMYR()), 100000],
 };
 
 /* ── orchestration: recompute, fire level-ups + achievements, persist ── */
@@ -295,9 +379,13 @@ function rpgAfterChange(){
   }
 
   if(firstRun){
-    // silent backfill so an existing user doesn't get a flood of pop-ups on first load
-    S.rpg.seenLevel = rpg.level;
+    // silent backfill: write all currently-true achievements FIRST, then set seenLevel
+    // (and _rpgLastExp) to the POST-backfill total so the one-time ach-EXP jump is
+    // pre-absorbed — no level-up modal, no phantom "+N 经验" toast on the next tick.
     for(const a of RPG_ACHIEVEMENTS){ try{ if(a.test(rpg)) S.rpg.achievements[a.id] = new Date().toISOString(); }catch(e){} }
+    const backfillExp = rpgTotalExp() + ((S.rpg.bonusExp) || 0) + rpgAchExp();
+    S.rpg.seenLevel = rpgLevelFromExp(backfillExp);
+    _rpgLastExp = backfillExp;
     changed = true;
   } else {
     if(_rpgChallengeGranted && window.Sfx) Sfx.quest();
@@ -320,7 +408,7 @@ function rpgAfterChange(){
       }
     }
   }
-  _rpgLastExp = rpg.totalExp;
+  if(!firstRun) _rpgLastExp = rpg.totalExp;
   if(changed) saveRPG();
   if(sysUI.open && typeof rSystem==='function') rSystem();
 }
@@ -456,7 +544,7 @@ function sysHashRoute(){
 }
 window.addEventListener('hashchange', sysHashRoute);
 
-const SYS_TABS = ['status','quests','skills'];
+const SYS_TABS = ['status','quests','achievements'];
 function sysCycleTab(dir){
   let i = SYS_TABS.indexOf(sysUI.tab); if(i<0) i=0;
   sysSwitchTab(SYS_TABS[(i + dir + SYS_TABS.length) % SYS_TABS.length]);
@@ -493,7 +581,7 @@ function rSystem(){
   document.querySelectorAll('#system-view .sys-tab').forEach(b=> b.classList.toggle('active', b.dataset.tab===sysUI.tab));
   const body = document.getElementById('sys-body'); if(!body) return;
   if(sysUI.tab==='quests') rSysQuests(body);
-  else if(sysUI.tab==='skills') rSysSkills(body);
+  else if(sysUI.tab==='achievements') rSysAchievements(body);
   else rSysStatus(body);
   if(typeof attachRipples==='function') attachRipples();
 }
@@ -652,25 +740,16 @@ function rSysStatus(body){
       <span class="sys-attr-val" data-attr="${m.key}">10</span>
     </div>`;
   }).join('');
-  const achCards = RPG_ACHIEVEMENTS.map(a=>{
-    const locked = !S.rpg.achievements[a.id];
-    const masked = a.hidden && locked;
-    let progHtml = '';
-    if(locked && !masked && typeof RPG_ACH_PROG[a.id]==='function'){
-      let p; try{ p = RPG_ACH_PROG[a.id](rpg); }catch(e){}
-      if(p && p[1]>0){
-        const cur = Math.max(0, Math.min(p[0]|0, p[1]));
-        const pc = Math.round(cur / p[1] * 100);
-        progHtml = `<div class="sys-ach-prog"><i style="width:${pc}%"></i></div><div class="sys-ach-progn">${cur} / ${p[1]}</div>`;
-      }
-    }
-    return `<div class="sys-ach ${locked?'locked':'unlocked'}">
-      <div class="sys-ach-badge">${locked?'◇':'✦'}</div>
-      <div class="sys-ach-name">${masked?'? ? ?':escH(a.name)}</div>
-      <div class="sys-ach-desc">${masked?'隐藏成就':escH(a.desc)}</div>
-      ${progHtml}
-    </div>`;
-  }).join('');
+  // skills moved here from the old 技能 tab → one passive strip. Each active skill
+  // grants +10 to the DISPLAYED 战力 (a separable "+N 技能" addend); it never feeds
+  // totalExp/level, so it's monotonic-safe even as skills flip on/off with recent form.
+  const skillOn = s => { try{ return s.test(rpg.attrs, rpg); }catch(e){ return false; } };
+  const skillBonus = RPG_SKILLS.filter(skillOn).length * 10;
+  const skillStrip = RPG_SKILLS.map(s=>{ const un=skillOn(s); return `<div class="sys-skill ${un?'on':'off'}">
+      <div class="sys-skill-node">${un?'✦':'◇'}</div>
+      <div class="sys-skill-name">${un?escH(s.name):'? ? ?'}</div>
+      <div class="sys-skill-cond">${escH(s.desc)}</div>
+    </div>`; }).join('');
   const logLines = Object.entries(S.rpg.achievements || {})
     .map(([id,ts])=>({ a:RPG_ACHIEVEMENTS.find(x=>x.id===id), ts }))
     .filter(x=>x.a)
@@ -697,12 +776,12 @@ function rSysStatus(body){
     <div class="sys-attrs">${attrRows}</div>
     <div class="sys-sec-label">成长轨迹 · GROWTH</div>
     <div class="sys-growth-head">
-      <span class="sys-growth-now">战力 <b>${g.cur}</b></span>
+      <span class="sys-growth-now">战力 <b>${g.cur}</b>${skillBonus>0?`<span class="sys-skill-bonus">+${skillBonus} 技能</span>`:''}</span>
       <span class="sys-growth-delta ${g.delta>=0?'up':'down'}">近 30 天 ${_gd}</span>
     </div>
     ${g.svg}
-    <div class="sys-sec-label">成就 · ACHIEVEMENTS</div>
-    <div class="sys-achs">${achCards}</div>
+    <div class="sys-sec-label">技能 · SKILLS</div>
+    <div class="sys-skill-row">${skillStrip}</div>
     ${logLines ? `<div class="sys-sec-label">系统日志 · LOG</div><div class="sys-log">${logLines}</div>` : ''}
   `;
   // set attribute values directly — the entrance count-up is driven once from
@@ -774,32 +853,51 @@ function rSysQuests(body){
   `;
 }
 
-/* ── tab: SKILLS (passive, auto-unlocked tree) ── */
-function rSysSkills(body){
+/* ── tab: ACHIEVEMENTS (full gallery — categories · tiers · hidden masking · X/N) ── */
+function rSysAchievements(body){
   const rpg = computeRPG();
-  const groups = [
-    { key:'CORE', label:'核心 · CORE' },
-    { key:'STR',  label:'力量 · STR' },
-    { key:'AGI',  label:'敏捷 · AGI' },
-    { key:'INT',  label:'智力 · INT' },
-    { key:'WIS',  label:'智慧 · WIS' },
-    { key:'VIT',  label:'体力 · VIT' },
-  ];
-  let html = '';
-  for(const g of groups){
-    const skills = RPG_SKILLS.filter(s=>s.branch===g.key);
-    if(!skills.length) continue;
-    const nodes = skills.map(s=>{
-      let un=false; try{ un = s.test(rpg.attrs, rpg); }catch(e){}
-      return `<div class="sys-skill ${un?'on':'off'}">
-        <div class="sys-skill-node">${un?'✦':'◇'}</div>
-        <div class="sys-skill-name">${un?escH(s.name):'? ? ?'}</div>
-        <div class="sys-skill-cond">${escH(s.desc)}</div>
+  const ach = S.rpg.achievements || {};
+  const total = RPG_ACHIEVEMENTS.length;
+  const unlocked = RPG_ACHIEVEMENTS.filter(a=>ach[a.id]).length;
+  const overallPct = total>0 ? Math.round(unlocked/total*100) : 0;
+
+  let sections = '';
+  for(const cat of RPG_ACH_CATS){
+    const list = RPG_ACHIEVEMENTS.filter(a=>a.cat===cat.key);
+    if(!list.length) continue;
+    const catUnlocked = list.filter(a=>ach[a.id]).length;
+    const cards = list.map(a=>{
+      const locked = !ach[a.id];
+      const masked = a.hidden && locked;
+      // masked cards get a neutral hue so the badge colour never leaks the tier (weight)
+      const tierCls = masked ? 'tier-hidden' : ('tier-'+a.tier);
+      let progHtml = '';
+      if(locked && !masked && typeof RPG_ACH_PROG[a.id]==='function'){
+        let p; try{ p = RPG_ACH_PROG[a.id](rpg); }catch(e){}
+        if(p && p[1]>0){
+          const cur = Math.max(0, Math.min(p[0]|0, p[1]));
+          const pc = Math.round(cur / p[1] * 100);
+          progHtml = `<div class="sys-ach-prog"><i style="width:${pc}%"></i></div><div class="sys-ach-progn">${cur} / ${p[1]}</div>`;
+        }
+      }
+      return `<div class="sys-ach ${tierCls} ${locked?'locked':'unlocked'}">
+        <div class="sys-ach-badge">${locked?'◇':'✦'}</div>
+        <div class="sys-ach-name">${masked?'? ? ?':escH(a.name)}</div>
+        <div class="sys-ach-desc">${masked?'隐藏成就':escH(a.desc)}</div>
+        ${progHtml}
       </div>`;
     }).join('');
-    html += `<div class="sys-sec-label">${g.label}</div><div class="sys-skill-row">${nodes}</div>`;
+    sections += `<div class="sys-ach-cat-head"><span class="sys-sec-label">${cat.label}</span><span class="sys-ach-count">${catUnlocked} / ${list.length}</span></div>
+      <div class="sys-achs">${cards}</div>`;
   }
-  body.innerHTML = html;
+
+  body.innerHTML = `
+    <div class="sys-ach-overall">
+      <div class="sys-ach-overall-head"><span>成就 · ACHIEVEMENTS</span><b>${unlocked} / ${total}</b></div>
+      <div class="sys-exp"><i style="width:${overallPct}%"></i></div>
+    </div>
+    ${sections}
+  `;
 }
 
 // Honour a deep-link to #system on first load.

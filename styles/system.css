@@ -389,18 +389,14 @@ body.sys-locked{ overflow:hidden; }
 }
 
 /* ── achievements grid ── */
-/* D · one horizontal-scroll row instead of a tall grid → keeps the first screen
-   focused on the status card + attributes. The right edge fades to hint overflow. */
+/* full achievements gallery → a wrapping trophy grid (see the whole collection at
+   once; locked dimmed, hidden masked). Lives in its own 成就 tab, one grid per
+   category. Top/bottom padding leaves room for the cards' hover-lift. */
 .sys-achs{
-  /* top/bottom padding gives the cards' hover-lift + brass frame room inside the
-     horizontal scroller — overflow-x:auto forces vertical clipping, which was
-     cutting off the lifted card's top edge */
-  display:flex; gap:10px; overflow-x:auto; padding:8px 0;
-  scroll-snap-type:x proximity;
-  -webkit-mask:linear-gradient(90deg,#000 92%,transparent); mask:linear-gradient(90deg,#000 92%,transparent);
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+  gap:10px; padding:8px 2px 4px;
 }
 .sys-ach{
-  flex:0 0 146px; scroll-snap-align:start;
   padding:12px 12px 13px; border-radius:var(--border-radius-md);
   border:.5px solid var(--hair); background:var(--color-background-secondary);
   text-align:center; transition:border-color var(--dur-base) var(--ease-silk),transform var(--dur-fast) var(--ease-press);
@@ -417,6 +413,29 @@ body.sys-locked{ overflow:hidden; }
   background:var(--color-background-tertiary); border:.5px solid var(--hair); }
 .sys-ach-prog > i{ display:block; height:100%; background:var(--brass-soft); box-shadow:0 0 5px var(--brass-glow); }
 .sys-ach-progn{ font-family:var(--mono); font-size:9px; color:var(--mute); margin-top:4px; letter-spacing:.06em; }
+
+/* tier badge hue ramp — conveys an achievement's weight by colour + glow.
+   Reuses the attribute palette (red-bronze → warm white → 赤金 → pale platinum). */
+.sys-ach.tier-bronze.unlocked   .sys-ach-badge{ color:#c66a45; }
+.sys-ach.tier-silver.unlocked   .sys-ach-badge{ color:#d6c391; }
+.sys-ach.tier-gold.unlocked     .sys-ach-badge{ color:#cda63f; text-shadow:0 0 12px var(--brass-glow); }
+.sys-ach.tier-platinum.unlocked .sys-ach-badge{ color:#e8dcc0; text-shadow:0 0 14px var(--brass-glow); }
+/* masked (hidden + locked): neutral so the badge colour never leaks the tier */
+.sys-ach.tier-hidden .sys-ach-badge{ color:var(--brass-soft); opacity:.5; }
+
+/* category section header + per-category X/N count */
+.sys-ach-cat-head{ display:flex; justify-content:space-between; align-items:baseline; margin:14px 0 2px; }
+.sys-ach-cat-head .sys-sec-label{ margin:0; }
+.sys-ach-count{ font-family:var(--mono); font-size:10px; color:var(--brass-soft); letter-spacing:.06em; }
+
+/* overall completion meter at the top of the 成就 tab (reuses the .sys-exp bar) */
+.sys-ach-overall{ margin-bottom:8px; }
+.sys-ach-overall-head{ display:flex; justify-content:space-between; align-items:baseline;
+  font-family:var(--mono); font-size:11px; color:var(--brass-soft); letter-spacing:.06em; margin-bottom:5px; }
+.sys-ach-overall-head b{ color:var(--brass); }
+
+/* 技能加成 readout beside 战力 in the status tab */
+.sys-skill-bonus{ font-family:var(--mono); font-size:10px; color:var(--brass-soft); margin-left:6px; }
 
 /* ── system log ── */
 .sys-log{ display:flex; flex-direction:column; gap:5px; }
