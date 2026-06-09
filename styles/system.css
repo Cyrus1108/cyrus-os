@@ -83,18 +83,16 @@ body.sys-locked{ overflow:hidden; }
 .sys-cover{
   position:absolute; inset:0; z-index:2; pointer-events:auto; overflow:hidden;
   display:flex; align-items:center; justify-content:center;
-  background:radial-gradient(circle at 50% 42%, var(--brass-ghost), transparent 62%), var(--color-background-secondary);
+  background:var(--color-background-tertiary);   /* dark matte gate — occludes any boot content through the strip */
 }
 .sys-view.open .sys-cover{ animation:sysCoverHold 1850ms linear both; }
 @keyframes sysCoverHold{ 0%{ opacity:1; } 70%{ opacity:1; } 100%{ opacity:0; visibility:hidden; } }
-/* scroll rods: two brass frosted-glass handles (the scroll's holding bars). Only
-   these two bars are glass — the boot screen between them stays sharp/readable.
-   They start bundled on the centre line (rolled scroll) and ride the unfurling
-   parchment edges apart — top rod to the top, bottom rod to the bottom — using
-   the SAME per-keyframe positions + easings as sysScrollOpen so they stay glued
-   to the clip edge. As children of .sys-cover they fade out with sysCoverHold. */
+/* scroll rods: two brass frosted-glass handles (the scroll's holding bars). Now
+   direct children of .sys-window so they animate on BOTH open (split to the edges,
+   riding the unfurl) and close (converge back to the centre). Hidden when idle —
+   the keyframes fade them in/out. */
 .sys-rod{
-  position:absolute; left:0; right:0; height:14px; z-index:4; pointer-events:none;
+  position:absolute; left:0; right:0; height:14px; z-index:5; pointer-events:none; opacity:0;
   -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px);
   background:linear-gradient(180deg,
     rgba(120,92,55,.22) 0%, rgba(255,240,214,.30) 42%,
@@ -105,43 +103,56 @@ body.sys-locked{ overflow:hidden; }
 }
 .sys-rod.top{ top:0; }
 .sys-rod.bottom{ bottom:0; }
+/* open — split from the centre line to the edges (riding the unfurl), then fade */
 .sys-view.open .sys-rod.top{ animation:sysRodTop 1300ms linear both; }
 .sys-view.open .sys-rod.bottom{ animation:sysRodBottom 1300ms linear both; }
 @keyframes sysRodTop{
-  0%  { top:50%; animation-timing-function:cubic-bezier(0.34,1.28,0.64,1); }
+  0%  { top:50%; opacity:1; animation-timing-function:cubic-bezier(0.34,1.28,0.64,1); }
   22% { top:45%; animation-timing-function:linear; }
-  35% { top:45%; animation-timing-function:cubic-bezier(0.16,1,0.3,1); }
-  100%{ top:0; }
+  35% { top:45%; opacity:1; animation-timing-function:cubic-bezier(0.16,1,0.3,1); }
+  100%{ top:0; opacity:0; }
 }
 @keyframes sysRodBottom{
-  0%  { bottom:50%; animation-timing-function:cubic-bezier(0.34,1.28,0.64,1); }
+  0%  { bottom:50%; opacity:1; animation-timing-function:cubic-bezier(0.34,1.28,0.64,1); }
   22% { bottom:45%; animation-timing-function:linear; }
-  35% { bottom:45%; animation-timing-function:cubic-bezier(0.16,1,0.3,1); }
-  100%{ bottom:0; }
+  35% { bottom:45%; opacity:1; animation-timing-function:cubic-bezier(0.16,1,0.3,1); }
+  100%{ bottom:0; opacity:0; }
 }
+/* close — the two handles converge from the edges back to the centre as it furls */
+.sys-view.sys-closing .sys-rod.top{ animation:sysRodTopClose 500ms cubic-bezier(0.5,0,0.78,0.2) both; }
+.sys-view.sys-closing .sys-rod.bottom{ animation:sysRodBottomClose 500ms cubic-bezier(0.5,0,0.78,0.2) both; }
+@keyframes sysRodTopClose{ 0%{ top:0; opacity:0; } 15%{ opacity:1; } 80%{ top:45%; opacity:1; } 100%{ top:50%; opacity:0; } }
+@keyframes sysRodBottomClose{ 0%{ bottom:0; opacity:0; } 15%{ opacity:1; } 80%{ bottom:45%; opacity:1; } 100%{ bottom:50%; opacity:0; } }
 
-.sys-cover-inner{ position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center; }
-.sys-cover-crest{
-  width:72px; height:72px; border-radius:50%; margin-bottom:4px;
-  display:flex; align-items:center; justify-content:center;
-  font-size:28px; color:var(--brass);
+/* ── brass lock: a circle + a square set as a diamond. The core cranks ~1.5 turns
+   clockwise as the scroll unfurls (the "unlocking"). Lives in the dark gate. ── */
+.sys-lock{ position:relative; width:58px; height:58px; z-index:1; }
+.sys-lock-ring{
+  position:absolute; inset:0; border-radius:50%;
   border:1.5px solid var(--brass);
-  background:radial-gradient(circle at 50% 40%, var(--brass-ghost), transparent 70%);
-  box-shadow:0 0 22px -4px var(--brass-glow), inset 0 0 14px -6px var(--brass-glow);
-  animation:sysBadgePulse 2.6s var(--ease-silk) infinite;
+  box-shadow:0 0 16px -4px var(--brass-glow), inset 0 0 10px -6px var(--brass-glow);
 }
-.sys-view.open .sys-cover-crest{ animation:sysBadgePulse 2.6s var(--ease-silk) infinite, sysCrestExit 560ms var(--ease-silk) 1290ms both; }
-@keyframes sysCrestExit{ 0%{ transform:scale(1); opacity:1; } 100%{ transform:scale(1.18); opacity:0; } }
-.sys-cover-title{ font-family:var(--serif); font-size:30px; letter-spacing:.2em; color:var(--ink); text-indent:.2em; }
-.sys-cover-kicker{ font-family:var(--mono); font-size:11px; letter-spacing:.5em; color:var(--brass); text-indent:.5em; }
-.sys-cover-status{ font-family:var(--mono); font-size:10px; letter-spacing:.2em; color:var(--mute); margin-top:2px; }
+.sys-lock-core{
+  position:absolute; left:50%; top:50%; width:22px; height:22px;
+  border:1.5px solid var(--brass); background:var(--brass-ghost);
+  transform:translate(-50%,-50%) rotate(45deg);     /* square shown as a diamond */
+}
+.sys-view.open .sys-lock-core{ animation:sysLockSpin 1300ms cubic-bezier(0.2,0.7,0.3,1) both; }
+@keyframes sysLockSpin{
+  from{ transform:translate(-50%,-50%) rotate(45deg); }
+  to  { transform:translate(-50%,-50%) rotate(585deg); }   /* +540° = 1.5 clockwise turns */
+}
 
-.sys-cover-sweep{
-  position:absolute; left:0; right:0; top:0; height:64px; z-index:2; pointer-events:none; opacity:0;
-  background:linear-gradient(180deg, transparent, var(--brass-glow), transparent);
+/* ── expanding ring wave: sits over the window (OUTSIDE the cover) so it plays over
+   the revealed System as the cover dissolves. Two rings stagger into a wave. ── */
+.sys-ripple{ position:absolute; inset:0; z-index:5; pointer-events:none; }
+.sys-ripple i{
+  position:absolute; left:50%; top:50%; width:18px; height:18px; margin:-9px 0 0 -9px;
+  border-radius:50%; border:1.5px solid var(--brass); opacity:0;
 }
-.sys-view.open .sys-cover-sweep{ animation:sysCoverSweep 560ms var(--ease-silk) 1290ms both; }
-@keyframes sysCoverSweep{ 0%{ transform:translateY(-64px); opacity:0; } 25%{ opacity:1; } 100%{ transform:translateY(86vh); opacity:0; } }
+.sys-view.open .sys-ripple i{ animation:sysRippleWave 760ms var(--ease-silk) 1250ms both; }
+.sys-view.open .sys-ripple i:nth-child(2){ animation-delay:1430ms; }
+@keyframes sysRippleWave{ 0%{ transform:scale(.4); opacity:0; } 18%{ opacity:.85; } 100%{ transform:scale(7); opacity:0; } }
 
 /* interior stays hidden beneath the cover, then fades in as the cover lifts */
 .sys-view.open .sys-top,
@@ -150,7 +161,7 @@ body.sys-locked{ overflow:hidden; }
 @keyframes sysContentIn{ from{ opacity:0; } to{ opacity:1; } }
 
 @media (prefers-reduced-motion:reduce){
-  .sys-cover{ display:none !important; }
+  .sys-cover, .sys-rod, .sys-ripple{ display:none !important; }
   .sys-view.open .sys-top,.sys-view.open .sys-tabs,.sys-view.open #sys-body{ animation:none !important; opacity:1 !important; }
 }
 .sys-top{ display:flex; align-items:center; gap:12px; padding:14px 16px 10px; }
@@ -367,7 +378,7 @@ body.sys-locked{ overflow:hidden; }
   .rdr-dot-weak{ animation:none; }
   /* still the always-on HUD loops (conic border spin, scanline, badge pulse) so the
      panel settles to a calm idle instead of repainting forever */
-  .sys-card::before, .sys-scan, .sys-rank-badge, .sys-cover-crest{ animation:none !important; }
+  .sys-card::before, .sys-scan, .sys-rank-badge{ animation:none !important; }
 }
 
 /* ── achievements grid ── */
