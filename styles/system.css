@@ -74,6 +74,20 @@ body.sys-locked{ overflow:hidden; }
 }
 .sys-view.open .sys-cover{ animation:sysCoverHold 1850ms linear both; }
 @keyframes sysCoverHold{ 0%{ opacity:1; } 70%{ opacity:1; } 100%{ opacity:0; visibility:hidden; } }
+/* topmost layer: a brass frosted-glass pane — the boot screen reads as if seen
+   through tinted glass. position:absolute keeps the pseudo out of the flex flow;
+   z-index:3 sits above the crest (z:1) and lift-sweep (z:2). Fades out with the
+   cover (parent opacity) — no separate animation. */
+.sys-cover::after{
+  content:''; position:absolute; inset:0; z-index:3; pointer-events:none;
+  -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px);
+  background:
+    linear-gradient(125deg,
+      rgba(255,240,214,.12) 0%, rgba(255,240,214,.03) 22%,
+      transparent 46%,
+      rgba(168,132,85,.05) 70%, rgba(168,132,85,.14) 100%),
+    rgba(168,132,85,.10);
+}
 
 .sys-cover-inner{ position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center; }
 .sys-cover-crest{
