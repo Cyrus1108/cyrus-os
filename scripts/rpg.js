@@ -486,19 +486,11 @@ function rpgRadarSVG(rpg){
     labels += `<text class="rdr-label" x="${lp[0].toFixed(1)}" y="${lp[1].toFixed(1)}" text-anchor="${anchor}" fill="${d.color}">${d.name}<tspan class="rdr-lv" dx="4">${d.v}</tspan></text>`;
   });
 
-  // B · sonar sweep: rotating beam + trailing wedge (hidden under reduced-motion via CSS)
-  const tw = [cx + R*Math.cos(-Math.PI/2 - 0.73), cy + R*Math.sin(-Math.PI/2 - 0.73)];
-  const sweep = `<g class="rdr-sweep">
-    <path class="rdr-wedge" d="M ${cx} ${cy} L ${cx} ${cy-R} A ${R} ${R} 0 0 0 ${tw[0].toFixed(1)} ${tw[1].toFixed(1)} Z"/>
-    <line class="rdr-beam" x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy-R}"/>
-    <animateTransform attributeName="transform" type="rotate" from="0 ${cx} ${cy}" to="360 ${cx} ${cy}" dur="4.2s" repeatCount="indefinite"/>
-  </g>`;
-
   return `<svg class="sys-radar" viewBox="0 0 220 190" role="img" aria-label="属性雷达图">
     <defs><radialGradient id="rdrFill" cx="50%" cy="50%" r="50%">
       <stop class="rdr-s0" offset="0%"/><stop class="rdr-s1" offset="100%"/>
     </radialGradient></defs>
-    ${rings}${spokes}${sweep}
+    ${rings}${spokes}
     <polygon class="rdr-ghost" points="${ghostPts}"/>
     <polygon class="rdr-data" points="${data.map(d=>fmt(d.pt)).join(' ')}" fill="url(#rdrFill)"/>
     ${dots}${labels}

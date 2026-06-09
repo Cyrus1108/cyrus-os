@@ -323,10 +323,8 @@ body.sys-locked{ overflow:hidden; }
 .rdr-dot{ filter:drop-shadow(0 0 3px var(--brass-glow)); }
 .rdr-label{ font-family:var(--sans); font-size:9px; }
 .rdr-lv{ font-family:var(--mono); font-size:9px; font-weight:600; }
-/* B · 40-cap potential ring, sonar sweep, weakest-pillar pulse */
+/* B · 40-cap potential ring + weakest-pillar pulse */
 .rdr-cap{ fill:none; stroke:var(--brass-ghost); stroke-width:.8; }
-.rdr-wedge{ fill:var(--brass); opacity:.07; }
-.rdr-beam{ stroke:var(--brass); stroke-width:1; opacity:.45; filter:drop-shadow(0 0 4px var(--brass-glow)); }
 .rdr-dot-weak{ animation:rdrPulse 1.6s var(--ease-silk) infinite; }
 @keyframes rdrPulse{ 0%,100%{ filter:drop-shadow(0 0 2px var(--brass-glow)); } 50%{ filter:drop-shadow(0 0 7px var(--brass-glow)); } }
 /* A · "30 days ago" ghost polygon */
@@ -350,7 +348,6 @@ body.sys-locked{ overflow:hidden; }
 .grw-mile-dot{ fill:var(--brass); filter:drop-shadow(0 0 3px var(--brass-glow)); }
 @media (prefers-reduced-motion:reduce){
   .rdr-data{ animation:none !important; }
-  .rdr-sweep{ display:none; }
   .rdr-dot-weak{ animation:none; }
 }
 
