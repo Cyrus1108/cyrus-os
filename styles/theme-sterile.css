@@ -260,3 +260,12 @@ html[data-theme="sterile"] input:focus, html[data-theme="sterile"] select:focus,
     repeating-linear-gradient(96deg, transparent 0 58px, rgba(180,255,214,.028) 58px 62px, transparent 62px 128px);
   animation:amb-grow 14s ease-in-out infinite alternate; }
 @keyframes amb-grow{ 0%{opacity:.55} 100%{opacity:.95} }
+
+/* ── finance: keep the sterile palette monochrome — neutralise the per-category
+   colour tints to the accent ghost so the chips don't read as a rainbow (the donut
+   + legend are already routed through a brass-yellow ramp in finance-charts.js).
+   cappa keeps the user's colours. ── */
+html[data-theme="sterile"] .fin-tx-ico,
+html[data-theme="sterile"] .fin-cat-ico,
+html[data-theme="sterile"] .fin-catpick-ico,
+html[data-theme="sterile"] .fin-wiz-catico{ background:var(--brass-ghost) !important; }

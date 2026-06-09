@@ -317,13 +317,12 @@ body.sys-locked{ overflow:hidden; }
   stroke:var(--brass); stroke-width:1.5; vector-effect:non-scaling-stroke;
   filter:drop-shadow(0 0 4px var(--brass-glow));
   transform-box:fill-box; transform-origin:center;
-  animation:rdrIn .6s var(--ease-press) both;
 }
 @keyframes rdrIn{ from{ transform:scale(.15); opacity:0; } to{ transform:scale(1); opacity:1; } }
-/* during the entrance ceremony only, hold the radar scale-in until the cover lifts
-   (single render → rdrIn would otherwise finish hidden behind the cover); plain
-   tab-switches have no .sys-entering, so they stay instant */
-.sys-view.sys-entering .rdr-data{ animation-delay:1.25s; }
+/* radar scale-in plays ONLY during the entrance ceremony (delayed to the cover
+   lift). Plain re-renders — tab switch, remote sync — show the radar statically,
+   so the panel updates in place instead of re-popping on every render. */
+.sys-view.sys-entering .rdr-data{ animation:rdrIn .6s var(--ease-press) 1.25s both; }
 .rdr-dot{ filter:drop-shadow(0 0 3px var(--brass-glow)); }
 .rdr-label{ font-family:var(--sans); font-size:9px; }
 .rdr-lv{ font-family:var(--mono); font-size:9px; font-weight:600; }

@@ -650,19 +650,15 @@ function rSysStatus(body){
     <div class="sys-achs">${achCards}</div>
     ${logLines ? `<div class="sys-sec-label">系统日志 · LOG</div><div class="sys-log">${logLines}</div>` : ''}
   `;
-  if(typeof animateNumber==='function'){
-    RPG_ATTR_ORDER.forEach(tid=>{
-      const m = RPG_ATTR_MAP[tid];
-      const el = body.querySelector(`.sys-attr-val[data-attr="${m.key}"]`);
-      if(el) animateNumber(el, 10, rpg.attrs[m.key], 500);
-    });
-  } else {
-    RPG_ATTR_ORDER.forEach(tid=>{
-      const m = RPG_ATTR_MAP[tid];
-      const el = body.querySelector(`.sys-attr-val[data-attr="${m.key}"]`);
-      if(el) el.textContent = rpg.attrs[m.key];
-    });
-  }
+  // set attribute values directly — the entrance count-up is driven once from
+  // openSystem (the cover-lift reveal). Re-renders (tab switch / remote sync) must
+  // NOT replay the count-up, which made the panel "reboot" (reset to 10 + re-count)
+  // on every render.
+  RPG_ATTR_ORDER.forEach(tid=>{
+    const m = RPG_ATTR_MAP[tid];
+    const el = body.querySelector(`.sys-attr-val[data-attr="${m.key}"]`);
+    if(el) el.textContent = rpg.attrs[m.key];
+  });
 }
 
 /* ── tab: QUESTS (main / daily + challenge / side) ── */

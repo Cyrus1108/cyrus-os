@@ -20,6 +20,22 @@ function ensureChartJs(){
 }
 
 const FIN_PALETTE = ['#E5704B','#4B89E5','#E54B9A','#8A6E4B','#9A4BE5','#3FB7A0','#C9A227','#6BAE3F','#3FAE6B','#888888','#D98A3F','#4BC0C0','#B57BDC','#7BAE4B'];
+// monochrome ramp from a base hex — used in the sterile/终末 theme so the donut +
+// legend read as one accent instead of a rainbow. n shades vary by lightness.
+function finMonoRamp(hex, n){
+  let r=168,g=132,b=85;                                  // brass fallback
+  const s=(hex||'').trim();
+  let m=/^#?([0-9a-f]{6})$/i.exec(s);
+  if(m){ const v=parseInt(m[1],16); r=(v>>16)&255; g=(v>>8)&255; b=v&255; }
+  else if((m=/rgba?\(\s*(\d+)\D+(\d+)\D+(\d+)/i.exec(s))){ r=+m[1]; g=+m[2]; b=+m[3]; }
+  const out=[];
+  for(let i=0;i<Math.max(1,n);i++){
+    const f = 0.18 - (n>1 ? (i/(n-1)) : 0)*0.63;         // +lighter … −darker (tuned for a light bg)
+    const t = f>=0 ? 255 : 0, a = Math.abs(f), mix = c => Math.round(c + (t-c)*a);
+    out.push(`rgb(${mix(r)},${mix(g)},${mix(b)})`);
+  }
+  return out;
+}
 function finCss(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
 function finChartColors(){
   return { ink:finCss('--ink'), mute:finCss('--mute'), ghost:finCss('--ghost'),
@@ -160,7 +176,9 @@ function finAnaDrawDonut(){
     g.total += finToBase(t.amount, t.currency);
   }
   const arr = Object.values(groups).sort((a,b)=>b.total-a.total);
-  const colors = arr.map((g,i)=>g.color||FIN_PALETTE[i%FIN_PALETTE.length]);
+  const sterile = document.documentElement.getAttribute('data-theme')==='sterile';
+  const ramp = sterile ? finMonoRamp(finCss('--brass'), arr.length) : null;
+  const colors = arr.map((g,i)=> ramp ? ramp[i] : (g.color||FIN_PALETTE[i%FIN_PALETTE.length]));
   const total = arr.reduce((s,g)=>s+g.total,0);
   const cv = document.getElementById('fin-ana-donut');
   if(cv && arr.length){
