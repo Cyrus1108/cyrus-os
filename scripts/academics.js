@@ -50,7 +50,7 @@ function addAcTask(){
   document.getElementById('f-rc').style.display='none';
   closeFormNav();toggleAcForm();saveAC();rAC();rMetrics();
 }
-function toggleAC(id){const t=S.ac.find(t=>t.id===id);if(t)t.done=!t.done;saveAC();rAC();rMetrics();}
+function toggleAC(id){const t=S.ac.find(t=>t.id===id);if(t)t.done=!t.done;saveAC();rAC();rMetrics();if(typeof rpgAfterChange==='function')rpgAfterChange();}
 function delAC(id){if(editingAC===id)editingAC=null;S.ac=S.ac.filter(t=>t.id!==id);saveAC();rAC();rMetrics();}
 function startAcEdit(id){editingAC=id;rAC();}
 function cancelAcEdit(){closeFormNav();editingAC=null;rAC();}

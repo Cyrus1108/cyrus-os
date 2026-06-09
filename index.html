@@ -26,6 +26,7 @@
 <link rel="stylesheet" href="./styles/theme-sterile.css">
 <link rel="stylesheet" href="./styles/finance.css">
 <link rel="stylesheet" href="./styles/motivation.css">
+<link rel="stylesheet" href="./styles/system.css">
 
 <!-- Web fonts for the Sterile / Endfield theme -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -147,6 +148,7 @@
         <div class="eyebrow-mute" style="margin-bottom:10px;">Personal operating system</div>
       </div>
       <div style="text-align:right;">
+        <button id="sys-btn" class="theme-btn" onclick="openSystem()" title="系统 · 角色" style="margin-bottom:8px;margin-right:6px;">◆ 系统</button>
         <button id="motiv-btn" class="theme-btn" onclick="openMotivation()" title="动力中心" style="margin-bottom:8px;margin-right:6px;">◆ 动力</button>
         <button id="fin-btn" class="theme-btn" onclick="openFinance()" title="财务" style="margin-bottom:8px;margin-right:6px;">◆ 财务</button>
         <button id="theme-btn" class="theme-btn" onclick="toggleTheme()" title="切换主题" style="margin-bottom:8px;">◆ 终末</button>
@@ -553,6 +555,16 @@
   </div>
 </div>
 
+<!-- ════ System / Character — RPG status panel (brass holographic) ════ -->
+<div id="system-view" class="sys-view" aria-hidden="true">
+  <div class="sys-top">
+    <button class="sys-back" onclick="closeSystem()">← 返回</button>
+    <div class="sys-title">系统 · Status</div>
+  </div>
+  <div id="sys-body" class="sys-body"></div>
+</div>
+<div id="sys-modal" class="sys-modal" aria-hidden="true"></div>
+
 <!-- Module scripts — order matters:
      1. supabase.js     creates the sb client (needs window.supabase from CDN)
      2. state.js        defines globals (S, TODAY, constants)
@@ -576,6 +588,7 @@
 <script src="./scripts/finance.js"></script>
 <script src="./scripts/finance-charts.js"></script>
 <script src="./scripts/motivation.js"></script>
+<script src="./scripts/rpg.js"></script>
 <script src="./scripts/applock.js"></script>
 <script src="./scripts/theme.js"></script>
 <script src="./scripts/ambient.js"></script>

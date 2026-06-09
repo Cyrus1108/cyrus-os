@@ -179,6 +179,15 @@ async function pullMotiv(){
   }));
 }
 
+async function pullRPG(){
+  const { data } = await sb.from('rpg_state').select('*')
+    .eq('user_id', currentUser.id).maybeSingle();
+  if(data){
+    S.rpg.seenLevel = data.seen_level || 1;
+    S.rpg.achievements = data.achievements || {};
+  }
+}
+
 /* ════════════ Finance (Phase 1) ════════════
    accounts + categories are small (replace-all on edit, like categories/todos).
    transactions can grow, so they use targeted single-row insert/update/delete
@@ -297,7 +306,7 @@ async function pullAll(force){
       await Promise.all([
         pullSettings(), pullMorning(), pullAcademics(),
         pullJapanese(), pullTrading(), pullCategories(), pullTodos(),
-        pullThe90Meta(), pullThe90Daily(), pullHermes(), pullMotiv(),
+        pullThe90Meta(), pullThe90Daily(), pullHermes(), pullMotiv(), pullRPG(),
         pullFinAccounts(), pullFinCategories(), pullFinTransactions(), pullFinBudgets(),
         pullFinGoals(), pullFinRecurring(), pullFinSnapshots(),
       ]);
@@ -480,6 +489,19 @@ async function syncPushMotiv(){
   if(ok) dirty.motiv = false;
 }
 
+async function syncPushRPG(){
+  if(!currentUser) return;
+  await waitForPull();
+  const res = await sb.from('rpg_state').upsert({
+    user_id: currentUser.id,
+    seen_level: S.rpg.seenLevel || 1,
+    achievements: S.rpg.achievements || {},
+    updated_at: new Date().toISOString(),
+  });
+  logIfError('push rpg_state', res);
+  if(!res.error) dirty.rpg = false;
+}
+
 /* Hermes notices are read+dismiss only on the client — no full push.
    Dismiss stamps dismissed_at; the row stays for history but drops off the panel. */
 async function syncDismissHermes(id){
@@ -569,6 +591,8 @@ function subscribeRealtime(){
       async () => { await pullHermes(); rHermes(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'motivation_videos', filter: `user_id=eq.${uid}` },
       async () => { await pullMotiv(); if(typeof rMotivation==='function') rMotivation(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'rpg_state', filter: `user_id=eq.${uid}` },
+      async () => { await pullRPG(); if(typeof rSystem==='function') rSystem(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'settings', filter: `user_id=eq.${uid}` },
       async () => { await pullSettings(); renderAll(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'the90_meta', filter: `user_id=eq.${uid}` },
@@ -633,6 +657,7 @@ async function rehydrateOnFocus(){
     if(dirty.the90Meta) pushes.push(syncPushThe90Meta());
     if(dirty.the90Daily) pushes.push(syncPushThe90Daily());
     if(dirty.motiv) pushes.push(syncPushMotiv());
+    if(dirty.rpg) pushes.push(syncPushRPG());
     try{ await Promise.all(pushes); }catch(e){ console.error('[sync] flush', e); }
   }
 

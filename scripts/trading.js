@@ -2,7 +2,7 @@
 let trOpen=false;
 function toggleTRForm(){trOpen=!trOpen;document.getElementById('tr-new-form').style.display=trOpen?'block':'none';}
 function addTRItem(){const t=document.getElementById('tr-new-text').value.trim();if(!t)return;S.tr.list.push({id:'t'+Date.now(),t,d:false});document.getElementById('tr-new-text').value='';trOpen=false;document.getElementById('tr-new-form').style.display='none';saveTR();rTR();rMetrics();}
-function toggleTR(id){const i=S.tr.list.find(i=>i.id===id);if(i)i.d=!i.d;saveTR();rTR();rMetrics();}
+function toggleTR(id){const i=S.tr.list.find(i=>i.id===id);if(i)i.d=!i.d;saveTR();rTR();rMetrics();if(typeof rpgAfterChange==='function')rpgAfterChange();}
 function delTR(id){if(editingTR===id)editingTR=null;S.tr.list=S.tr.list.filter(i=>i.id!==id);saveTR();rTR();}
 function startTREdit(id){editingTR=id;rTR();}
 function cancelTREdit(){editingTR=null;rTR();}

@@ -129,6 +129,11 @@ let S={
   fin:{ accounts:[], categories:[], transactions:[], budgets:[], goals:[], recurring:[], snapshots:{}, baseCurrency:'TWD', fxRates:{TWD:1,USD:31.5,MYR:7.1} },
   /* Motivation Center — YouTube (unlisted) videos. Each: {id, videoId, title, position} */
   motiv:{ videos:[] },
+  /* RPG "System" layer — only the non-derivable bits are stored; everything else
+     (level/exp/attrs/rank) is computed from real data by computeRPG().
+     seenLevel = highest level already celebrated (de-dupes the LEVEL UP modal).
+     achievements = { achievementId: unlockedAtISO } */
+  rpg:{ seenLevel:1, achievements:{} },
 };
 
 let editingAC=null, editingJP=null, editingTR=null, editingTD=null;
@@ -153,7 +158,7 @@ function saveLS(key,val){
 const dirty = {
   morning: false, academics: false, japanese: false,
   trading: false, categories: false, todos: false, settings: false,
-  the90Meta: false, the90Daily: false, motiv: false,
+  the90Meta: false, the90Daily: false, motiv: false, rpg: false,
 };
 
 function saveMR(){saveLSRaw('mr',S.mr); dirty.morning=true; if(typeof syncPushMorning==='function') syncPushMorning();}
@@ -165,3 +170,4 @@ function saveCats(){saveLSRaw('cats', S.cats); dirty.categories=true; if(typeof 
 function saveThe90Meta(){saveLSRaw('the90_meta', S.the90?.meta); dirty.the90Meta=true; if(typeof syncPushThe90Meta==='function') syncPushThe90Meta();}
 function saveThe90Daily(){saveLSRaw('the90_daily', S.the90?.daily); dirty.the90Daily=true; if(typeof syncPushThe90Daily==='function') syncPushThe90Daily();}
 function saveMotiv(){saveLSRaw('motiv', S.motiv); dirty.motiv=true; if(typeof syncPushMotiv==='function') syncPushMotiv();}
+function saveRPG(){saveLSRaw('rpg', S.rpg); dirty.rpg=true; if(typeof syncPushRPG==='function') syncPushRPG();}

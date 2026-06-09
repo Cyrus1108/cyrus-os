@@ -21,6 +21,7 @@ function onReorderMR(ids){
 function toggleMR(id,event){
   const i=S.mr.list.find(i=>i.id===id);
   if(i)i.d=!i.d;saveMR();rMR();
+  if(typeof rpgAfterChange==='function')rpgAfterChange();
   if(event){
     setTimeout(()=>{
       const el=document.querySelector(`.mr-pill[data-id="${id}"]`);

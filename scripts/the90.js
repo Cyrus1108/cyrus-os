@@ -103,6 +103,7 @@ function toggleThe90(targetId){
   }
   saveThe90Daily();
   rThe90();
+  if(typeof rpgAfterChange === 'function') rpgAfterChange();   // settle EXP / level / achievements
   if(typeof window.lifeTreePulse === 'function') window.lifeTreePulse();   // tree energy feedback on check-in
 }
 

@@ -12,7 +12,7 @@ function checkIn(){
   const was=S.jp.log[TODAY];
   if(!was){S.jp.log[TODAY]=true;const y=new Date();y.setDate(y.getDate()-1);const ys=y.toLocaleDateString('sv-SE');S.jp.streak=(S.jp.last===ys)?S.jp.streak+1:1;S.jp.last=TODAY;}
   else{delete S.jp.log[TODAY];S.jp.streak=Math.max(0,S.jp.streak-1);S.jp.last=Object.keys(S.jp.log).sort().reverse()[0]||null;}
-  saveJP();rJP();rMetrics();
+  saveJP();rJP();rMetrics();if(typeof rpgAfterChange==='function')rpgAfterChange();
 }
 let jpNT;function onJPNote(){S.jp.note=document.getElementById('jp-note').value;clearTimeout(jpNT);jpNT=setTimeout(saveJP,600);}
 

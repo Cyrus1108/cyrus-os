@@ -230,7 +230,7 @@ function toggleTd(id){
       S.todos.push({...t,id:crypto.randomUUID(),date:nextDate,done:false,doneAt:null,created:TODAY});
     }
   }
-  saveTodos(); rTodos(); rMetrics(); updateShowDoneBtn();
+  saveTodos(); rTodos(); rMetrics(); updateShowDoneBtn(); if(typeof rpgAfterChange==='function')rpgAfterChange();
 }
 function computeNextRepeatDate(currentDate, repeat, customDays){
   const next = new Date(currentDate+'T00:00:00');
