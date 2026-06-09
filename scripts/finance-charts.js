@@ -82,7 +82,8 @@ function finNetWorthAsOf(date){
 
 /* ── shell + draw ── */
 function finRenderAnalytics(){
-  setTimeout(()=>{ if(typeof finAnaDraw==='function') finAnaDraw(); }, 0);
+  clearTimeout(finAna._drawT);
+  finAna._drawT = setTimeout(()=>{ if(typeof finAnaDraw==='function') finAnaDraw(); }, 0);
   const R = (k,label)=>`<button class="fin-vt ${finAna.range===k?'active':''}" onclick="finAnaSetRange('${k}')">${label}</button>`;
   const seg = (cur,opts,fn)=>opts.map(o=>`<button class="fin-anatoggle ${cur===o.k?'active':''}" onclick="${fn}('${o.k}')">${o.label}</button>`).join('');
   const w = finAnaWindow();
@@ -137,6 +138,8 @@ async function finAnaDraw(){
     if(tl) tl.innerHTML='<div class="fin-empty sm">图表库加载失败（需联网）</div>';
     return;
   }
+  // honour reduced-motion: skip Chart.js entrance animations (mirrors rpg.js)
+  if(window.Chart && window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches){ Chart.defaults.animation = false; }
   if(!finUI.open || finUI.tab!=='analytics' || !document.getElementById('fin-ana-donut')) return;
   finAnaDestroy();
   Chart.defaults.font.family = finCss('--mono') || 'monospace';

@@ -52,7 +52,7 @@ function rMotivation(){
   const cards = vids.map(v => `
     <div class="motiv-card" onclick="playMotiv('${v.id}')">
       <div class="motiv-thumb">
-        <img src="https://img.youtube.com/vi/${v.videoId}/mqdefault.jpg" alt="" loading="lazy">
+        <img src="https://img.youtube.com/vi/${v.videoId}/mqdefault.jpg" alt="" loading="lazy" width="320" height="180" decoding="async">
         <span class="motiv-play">&#9658;</span>
       </div>
       <div class="motiv-card-title">${escH(v.title || '未命名')}</div>
@@ -73,7 +73,7 @@ function rMotivation(){
     const el = document.getElementById(id);
     if(el) el.addEventListener('keydown', e=>{ if(e.key==='Enter') addMotivVideo(); });
   });
-  if(typeof attachRipples==='function') attachRipples();
+  if(typeof attachRipples==='function') attachRipples(body);
 }
 
 function motivMsg(text){

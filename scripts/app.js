@@ -304,8 +304,10 @@ function addRipple(e){
   btn.appendChild(ripple);
   setTimeout(()=>ripple.remove(), 600);
 }
-function attachRipples(){
-  document.querySelectorAll('button.primary, button.ghost, button.check-btn').forEach(btn=>{
+function attachRipples(root){
+  // scope to the just-rendered container when given, so a partial re-render doesn't
+  // walk the ENTIRE document re-binding ripples (cost scaled to total app buttons)
+  (root || document).querySelectorAll('button.primary, button.ghost, button.check-btn').forEach(btn=>{
     if(btn.dataset.rippleAttached) return;
     btn.dataset.rippleAttached = '1';
     btn.addEventListener('click', addRipple);

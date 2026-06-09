@@ -320,6 +320,10 @@ body.sys-locked{ overflow:hidden; }
   animation:rdrIn .6s var(--ease-press) both;
 }
 @keyframes rdrIn{ from{ transform:scale(.15); opacity:0; } to{ transform:scale(1); opacity:1; } }
+/* during the entrance ceremony only, hold the radar scale-in until the cover lifts
+   (single render → rdrIn would otherwise finish hidden behind the cover); plain
+   tab-switches have no .sys-entering, so they stay instant */
+.sys-view.sys-entering .rdr-data{ animation-delay:1.25s; }
 .rdr-dot{ filter:drop-shadow(0 0 3px var(--brass-glow)); }
 .rdr-label{ font-family:var(--sans); font-size:9px; }
 .rdr-lv{ font-family:var(--mono); font-size:9px; font-weight:600; }
@@ -349,6 +353,9 @@ body.sys-locked{ overflow:hidden; }
 @media (prefers-reduced-motion:reduce){
   .rdr-data{ animation:none !important; }
   .rdr-dot-weak{ animation:none; }
+  /* still the always-on HUD loops (conic border spin, scanline, badge pulse) so the
+     panel settles to a calm idle instead of repainting forever */
+  .sys-card::before, .sys-scan, .sys-rank-badge, .sys-cover-crest{ animation:none !important; }
 }
 
 /* ── achievements grid ── */

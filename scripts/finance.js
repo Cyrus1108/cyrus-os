@@ -256,7 +256,7 @@ function rFinance(){
   else if(finUI.tab==='ledger')   body.innerHTML = finRenderLedger();
   else if(finUI.tab==='analytics')body.innerHTML = finRenderAnalytics();
   else if(finUI.tab==='more')     body.innerHTML = finRenderMore();
-  if(typeof attachRipples==='function') attachRipples();
+  if(typeof attachRipples==='function') attachRipples(body);
 }
 
 /* ════════════ WALLET ════════════ */
@@ -1326,7 +1326,12 @@ async function finFetchRates(force){
       S.fin.fxMeta = { updated:Date.now(), auto:true };
       saveLSRaw('fin_fxmeta', S.fin.fxMeta);
       if(typeof saveFinConfig==='function') saveFinConfig();
-      if(finUI.open && finUI.tab==='more') rFinance();
+      // don't clobber the More tab — or an input the user is typing into — when the
+      // async FX refresh lands; only repaint when nothing is focused
+      if(finUI.open && finUI.tab==='more'){
+        const ae = document.activeElement;
+        if(!(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))) rFinance();
+      }
     }
   }catch(e){ console.warn('[fin] fx fetch failed', e); }
 }

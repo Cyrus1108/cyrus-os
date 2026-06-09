@@ -6,12 +6,14 @@
    so a level once gained never drops. Attributes reflect recent 30-day form.
    The 90 targets → attributes:  V 健身→STR · II 篮球→AGI · IV 日语→INT · III 赚钱→WIS · I 睡眠→VIT */
 
+// icons carry U+FE0E (text-presentation selector) so they never render as
+// full-colour OS emoji and stay monochrome with the brass / sterile palette
 const RPG_ATTR_MAP = {
-  V:  { key:'STR', name:'力量', icon:'⚔' },   // 健身
-  II: { key:'AGI', name:'敏捷', icon:'➹' },   // 篮球
-  IV: { key:'INT', name:'智力', icon:'✦' },   // 日语
-  III:{ key:'WIS', name:'智慧', icon:'☯' },   // 赚钱
-  I:  { key:'VIT', name:'体力', icon:'❀' },   // 睡眠
+  V:  { key:'STR', name:'力量', icon:'⚔︎' },   // 健身
+  II: { key:'AGI', name:'敏捷', icon:'➹︎' },   // 篮球
+  IV: { key:'INT', name:'智力', icon:'✦︎' },   // 日语
+  III:{ key:'WIS', name:'智慧', icon:'☯︎' },   // 赚钱
+  I:  { key:'VIT', name:'体力', icon:'❀︎' },   // 睡眠
 };
 const RPG_ATTR_ORDER = ['V','II','IV','III','I']; // STR, AGI, INT, WIS, VIT
 const RPG_TITLES = { E:'觉醒者', D:'挑战者', C:'攀登者', B:'破限者', A:'支配者', S:'君主' };
@@ -75,8 +77,9 @@ function rpgRank(L){
 function rpgAttrValueAt(targetId, anchor){
   // recent form anchored at `anchor`: 10 + days-met in the 30 days ending there (→ 10..40)
   let count = 0;
+  const base = new Date(anchor + 'T00:00:00+08:00');
   for(let i=0;i<30;i++){
-    const d = new Date(anchor + 'T00:00:00+08:00'); d.setDate(d.getDate() - i);
+    const d = new Date(base); d.setDate(base.getDate() - i);
     const ds = d.toLocaleDateString('sv-SE');
     if(ds > TODAY) continue;
     const day = S.the90 && S.the90.daily && S.the90.daily[ds];
@@ -97,8 +100,9 @@ function rpgPerfectStreak(){
   // consecutive days (back from today) with ALL targets met
   const n = rpgTargets().length; if(!n) return 0;
   let streak = 0;
+  const base = new Date(TODAY + 'T00:00:00+08:00');
   for(let i=0;i<120;i++){
-    const dt = new Date(TODAY + 'T00:00:00+08:00'); dt.setDate(dt.getDate() - i);
+    const dt = new Date(base); dt.setDate(base.getDate() - i);
     const ds = dt.toLocaleDateString('sv-SE');
     if(ds > TODAY) continue;
     if(rpgMetOn(ds) === n) streak++; else break;
@@ -251,7 +255,19 @@ function rpgAfterChange(){
   if(rpgUpdateChallenge(probe.attrs, firstRun)) changed = true;
   _rpgChallengeGranted = (S.rpg.bonusExp || 0) > beforeBonus;
 
-  const rpg = computeRPG(); // includes any fresh challenge bonus
+  // Avoid a 2nd full computeRPG() (all-history scan + 5×30 attr loops): the
+  // challenge grant only adds a flat RPG_CHALLENGE_EXP, so derive the post-grant
+  // EXP scalars from `probe` (attrs / todayExp are unaffected by the bonus).
+  let rpg = probe;
+  if(_rpgChallengeGranted){
+    const totalExp = probe.totalExp + RPG_CHALLENGE_EXP;
+    const level = rpgLevelFromExp(totalExp), rank = rpgRank(level);
+    rpg = Object.assign({}, probe, {
+      totalExp, level, rank, title: RPG_TITLES[rank] || '',
+      expInLevel: totalExp - rpgExpForLevel(level),
+      expForLevel: rpgExpForLevel(level + 1) - rpgExpForLevel(level),
+    });
+  }
 
   if(firstRun){
     // silent backfill so an existing user doesn't get a flood of pop-ups on first load
@@ -367,18 +383,31 @@ function openSystem(fromHash){
   if(!fromHash && location.hash!=='#system') location.hash='system';
   rSystem();
   // Entrance ceremony: the boot cover masks the HUD while the window unfurls.
-  // Re-render once as the cover lifts (~1300ms) so the attribute numbers count
-  // up in front of the user instead of settling behind the cover.
+  // Reveal the count-up as the cover lifts WITHOUT rebuilding the panel — a 2nd
+  // full rSystem() here used to re-pop the radar and reset every number mid-
+  // dissolve (a visible hiccup at the worst moment). Instead we re-animate the
+  // existing number nodes; the radar scale-in waits for the lift via .sys-entering.
   const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches;
-  clearTimeout(sysUI._enterT);
-  if(!reduce) sysUI._enterT = setTimeout(()=>{ if(sysUI.open) rSystem(); }, 1300);
+  clearTimeout(sysUI._enterT); clearTimeout(sysUI._enterClsT);
+  if(!reduce){
+    v.classList.add('sys-entering');
+    sysUI._enterT = setTimeout(()=>{
+      if(sysUI.open && sysUI.tab==='status' && typeof animateNumber==='function'){
+        document.querySelectorAll('#sys-body .sys-attr-val[data-attr]').forEach(el=>{
+          const target = parseInt(el.textContent, 10);
+          if(!isNaN(target)) animateNumber(el, 10, target, 500);
+        });
+      }
+    }, 1300);
+    sysUI._enterClsT = setTimeout(()=>{ v.classList.remove('sys-entering'); }, 1950);
+  }
 }
 function closeSystem(fromHash){
   const v = document.getElementById('system-view'); if(!v) return;
   sysUI.open = false;
   if(window.Sfx) Sfx.close();
-  clearTimeout(sysUI._enterT);
-  v.classList.remove('open'); v.setAttribute('aria-hidden','true');
+  clearTimeout(sysUI._enterT); clearTimeout(sysUI._enterClsT);
+  v.classList.remove('open'); v.classList.remove('sys-entering'); v.setAttribute('aria-hidden','true');
   document.body.classList.remove('sys-locked');
   if(!fromHash && location.hash==='#system') history.replaceState(null,'',location.pathname+location.search);
 }
@@ -506,8 +535,9 @@ function rpgGrowthSVG(days){
   days = days || 30; const W = 30;
   const total = days + W - 1;
   const mets = [], dates = [];                       // oldest → newest
+  const base = new Date(TODAY+'T00:00:00+08:00');
   for(let i=total-1;i>=0;i--){
-    const dt = new Date(TODAY+'T00:00:00+08:00'); dt.setDate(dt.getDate()-i);
+    const dt = new Date(base); dt.setDate(base.getDate()-i);
     const ds = dt.toLocaleDateString('sv-SE'); dates.push(ds);
     mets.push(ds<=TODAY ? rpgMetOn(ds) : 0);
   }
@@ -555,7 +585,7 @@ function rpgGrowthSVG(days){
 function rSysStatus(body){
   const rpg = computeRPG();
   const pct = rpg.expForLevel>0 ? Math.min(100, Math.round(rpg.expInLevel/rpg.expForLevel*100)) : 0;
-  const debuff = rpgPenaltyActive() ? '<span class="sys-debuff" title="未完成的惩罚任务">⚠ 衰弱</span>' : '';
+  const debuff = rpgPenaltyActive() ? '<span class="sys-debuff" title="未完成的惩罚任务">⚠︎ 衰弱</span>' : '';
   const attrRows = RPG_ATTR_ORDER.map(tid=>{
     const m = RPG_ATTR_MAP[tid];
     const val = rpg.attrs[m.key];
@@ -655,7 +685,7 @@ function rSysQuests(body){
   const chText = d.attr ? RPG_CHALLENGE_TEXT[d.attr] : null;
   const penaltyHtml = rpgPenaltyActive() && chText ? `
     <div class="sys-q-card sys-q-penalty">
-      <div class="sys-q-card-head"><span class="sys-q-tag penalty">⚠ 惩罚任务</span><span class="sys-q-reward penalty">解除衰弱</span></div>
+      <div class="sys-q-card-head"><span class="sys-q-tag penalty">⚠︎ 惩罚任务</span><span class="sys-q-reward penalty">解除衰弱</span></div>
       <div class="sys-q-title">${escH(chText.verb)}</div>
       <div class="sys-q-desc">昨日的弱点仍未直面。「系统」在注视——完成它，解除「衰弱」。</div>
     </div>` : '';
