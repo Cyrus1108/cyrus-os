@@ -147,12 +147,19 @@ body.sys-locked{ overflow:hidden; }
    the revealed System as the cover dissolves. Two rings stagger into a wave. ── */
 .sys-ripple{ position:absolute; inset:0; z-index:5; pointer-events:none; }
 .sys-ripple i{
-  position:absolute; left:50%; top:50%; width:18px; height:18px; margin:-9px 0 0 -9px;
+  /* base size = the lock ring's outer diameter (58px), so the wave emerges from the
+     circle's outer frame. Size (not transform:scale) is animated so the 1.5px border
+     stays as thin as the lock's, instead of thickening as the ring grows. */
+  position:absolute; left:50%; top:50%; width:58px; height:58px; margin:-29px 0 0 -29px;
   border-radius:50%; border:1.5px solid var(--brass); opacity:0;
 }
-.sys-view.open .sys-ripple i{ animation:sysRippleWave 760ms var(--ease-silk) 1250ms both; }
-.sys-view.open .sys-ripple i:nth-child(2){ animation-delay:1430ms; }
-@keyframes sysRippleWave{ 0%{ transform:scale(.4); opacity:0; } 18%{ opacity:.85; } 100%{ transform:scale(7); opacity:0; } }
+.sys-view.open .sys-ripple i{ animation:sysRippleWave 1520ms var(--ease-silk) 1250ms both; }   /* ~half the old speed */
+.sys-view.open .sys-ripple i:nth-child(2){ animation-delay:1550ms; }
+@keyframes sysRippleWave{
+  0%  { width:58px;  height:58px;  margin:-29px  0 0 -29px;  opacity:0; }
+  12% { opacity:.8; }
+  100%{ width:300px; height:300px; margin:-150px 0 0 -150px; opacity:0; }
+}
 
 /* interior stays hidden beneath the cover, then fades in as the cover lifts */
 .sys-view.open .sys-top,
