@@ -25,9 +25,17 @@ body.sys-locked{ overflow:hidden; }
   background:var(--sys-glass);
   border:.5px solid var(--brass); border-radius:var(--border-radius-lg);
   box-shadow:0 26px 80px -22px rgba(0,0,0,.6), 0 0 42px -12px var(--brass-glow);
-  animation:sysWinIn var(--dur-slow) var(--ease-press) both;
 }
-@keyframes sysWinIn{ from{ opacity:0; transform:translateY(16px) scale(.97); } to{ opacity:1; transform:none; } }
+/* entrance: re-plays every open (selector keyed on .open). scale-up + fade + boot scan. */
+.sys-view.open .sys-window{ animation:sysWinIn 420ms var(--ease-press) both; }
+@keyframes sysWinIn{ 0%{ opacity:0; transform:translateY(22px) scale(.92); } 60%{ opacity:1; } 100%{ opacity:1; transform:none; } }
+.sys-window::after{
+  content:''; position:absolute; left:0; right:0; top:0; height:2px; z-index:6; pointer-events:none; opacity:0;
+  background:linear-gradient(90deg, transparent, var(--brass), transparent);
+  box-shadow:0 0 16px 2px var(--brass-glow);
+}
+.sys-view.open .sys-window::after{ animation:sysBoot 540ms var(--ease-silk) both; }
+@keyframes sysBoot{ 0%{ top:0; opacity:1; } 90%{ opacity:.85; } 100%{ top:100%; opacity:0; } }
 .sys-top{ display:flex; align-items:center; gap:12px; padding:14px 16px 10px; }
 .sys-title{ flex:1; font-family:var(--mono); font-size:12px; letter-spacing:.24em; text-transform:uppercase; color:var(--brass); }
 .sys-back{
@@ -43,7 +51,8 @@ body.sys-locked{ overflow:hidden; }
   transition:color var(--dur-base) var(--ease-silk),border-color var(--dur-base) var(--ease-silk);
 }
 .sys-tab.active{ color:var(--brass); border-bottom-color:var(--brass); font-weight:600; }
-.sys-body{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:14px 14px 20px; }
+.sys-body{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:14px 14px 20px; scrollbar-width:none; -ms-overflow-style:none; }
+.sys-body::-webkit-scrollbar{ width:0; height:0; display:none; }
 
 /* ── quests tab ── */
 .sys-q-card{ position:relative; overflow:hidden; padding:14px 14px 13px; margin-bottom:12px; border:.5px solid var(--hair); border-radius:var(--border-radius-md); background:var(--color-background-secondary); }
@@ -72,6 +81,13 @@ body.sys-locked{ overflow:hidden; }
 .sys-q-side-name{ flex:1; font-size:12px; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .sys-q-side-due{ font-family:var(--mono); font-size:10px; color:var(--ghost); flex:none; }
 .sys-empty{ text-align:center; color:var(--ghost); font-style:italic; font-family:var(--serif); font-size:13px; padding:24px; }
+
+/* ── penalty quest / debuff / system voice (color-coded danger) ── */
+.sys-q-penalty{ border-color:var(--color-border-danger) !important; background:rgba(180,69,58,.06); }
+.sys-q-tag.penalty{ background:var(--color-text-danger); color:#fff; }
+.sys-q-reward.penalty{ color:var(--color-text-danger); }
+.sys-debuff{ margin-left:8px; font-family:var(--mono); font-size:8.5px; letter-spacing:.1em; color:var(--color-text-danger); border:.5px solid var(--color-text-danger); border-radius:3px; padding:1px 5px; vertical-align:middle; }
+.sys-cele-voice{ position:relative; z-index:1; font-family:var(--serif); font-style:italic; font-size:12px; color:var(--mute); line-height:1.5; margin-top:10px; }
 
 /* ── skills tab ── */
 .sys-skill-row{ display:grid; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); gap:10px; margin-bottom:6px; }

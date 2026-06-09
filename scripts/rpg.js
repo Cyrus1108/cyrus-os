@@ -90,6 +90,18 @@ function rpgPerfectToday(){
   const n = rpgTargets().length;
   return n>0 && rpgMetOn(TODAY) === n;
 }
+function rpgPerfectStreak(){
+  // consecutive days (back from today) with ALL targets met
+  const n = rpgTargets().length; if(!n) return 0;
+  let streak = 0;
+  for(let i=0;i<120;i++){
+    const dt = new Date(TODAY + 'T00:00:00+08:00'); dt.setDate(dt.getDate() - i);
+    const ds = dt.toLocaleDateString('sv-SE');
+    if(ds > TODAY) continue;
+    if(rpgMetOn(ds) === n) streak++; else break;
+  }
+  return streak;
+}
 function rpgTodayExp(){
   // soft "today's activity" meter across all modules (display only, resets daily)
   let e = 0;
@@ -152,9 +164,13 @@ const RPG_CHALLENGE_EXP = 20;
 function rpgUpdateChallenge(attrs, silent){
   let changed = false;
   if(!S.rpg.daily || S.rpg.daily.date !== TODAY){
+    const prev = S.rpg.daily;
+    // missed yesterday's challenge → the System carries a penalty into today
+    const missed = !!(prev && prev.attr && !prev.claimed && prev.date && prev.date < TODAY);
     const weak = rpgWeakestAttr(attrs);
-    S.rpg.daily = { date:TODAY, attr:weak, claimed:false };
+    S.rpg.daily = { date:TODAY, attr:weak, claimed:false, penalty:missed };
     changed = true;
+    if(missed && !silent) sysToast('系统 · 检测到昨日的懈怠 — 惩罚任务已下达');
   }
   const d = S.rpg.daily;
   if(d && d.date===TODAY && !d.claimed){
@@ -163,7 +179,7 @@ function rpgUpdateChallenge(attrs, silent){
       d.claimed = true;
       S.rpg.bonusExp = (S.rpg.bonusExp||0) + RPG_CHALLENGE_EXP;
       changed = true;
-      if(!silent) sysToast('[ 系统 ] 每日挑战完成 +' + RPG_CHALLENGE_EXP + ' 经验');
+      if(!silent) sysToast((d.penalty ? '系统 · 惩罚已解除 · 弱点已被直面 +' : '系统 · 弱点已被直面 +') + RPG_CHALLENGE_EXP);
     }
   }
   return changed;
@@ -196,6 +212,9 @@ const RPG_ACHIEVEMENTS = [
   { id:'lv10',     name:'D 级觉醒', desc:'等级达到 10',          hidden:false, test:(r)=> r.level>=10 },
   { id:'lv20',     name:'C 级猎人', desc:'等级达到 20',          hidden:true,  test:(r)=> r.level>=20 },
   { id:'cleardesk',name:'万事清零', desc:'把待办全部清空',        hidden:true,  test:()=> (S.todos && S.todos.length>0 && S.todos.every(t=>t.done)) },
+  // hidden / adaptive —門檻明显高于常规曲线，由行为触发
+  { id:'streak14', name:'意志试炼', desc:'连续达标 14 天',        hidden:true,  test:()=> (typeof computeThe90Streak==='function' && computeThe90Streak()>=14) },
+  { id:'perfectwk',name:'影之支配', desc:'连续 7 天五项全清',      hidden:true,  test:()=> rpgPerfectStreak()>=7 },
 ];
 
 /* ── orchestration: recompute, fire level-ups + achievements, persist ── */
@@ -274,6 +293,7 @@ function sysShowModal(p){
       <div class="sys-cele-title">LEVEL&nbsp;UP</div>
       <div class="sys-cele-num"><span id="sys-cele-num">${p.from}</span></div>
       <div class="sys-cele-rank">${p.rank} 级 · ${escH(p.title||'')}</div>
+      <div class="sys-cele-voice">「玩家」的极限，已被重新定义。</div>
       <button class="sys-cele-close" onclick="sysCloseModal()">确定</button>
     </div>`;
   } else {
@@ -285,6 +305,7 @@ function sysShowModal(p){
       <div class="sys-cele-badge">✦</div>
       <div class="sys-cele-title sys-cele-title-sm">${escH(a.name)}</div>
       <div class="sys-cele-desc">${escH(a.desc)}</div>
+      <div class="sys-cele-voice">${a.hidden?'「系统」承认了你逾越常规的轨迹。':'「系统」已记录你的轨迹。'}</div>
       <button class="sys-cele-close" onclick="sysCloseModal()">确定</button>
     </div>`;
   }
@@ -329,6 +350,32 @@ function sysHashRoute(){
 }
 window.addEventListener('hashchange', sysHashRoute);
 
+const SYS_TABS = ['status','quests','skills'];
+function sysCycleTab(dir){
+  let i = SYS_TABS.indexOf(sysUI.tab); if(i<0) i=0;
+  sysSwitchTab(SYS_TABS[(i + dir + SYS_TABS.length) % SYS_TABS.length]);
+}
+function sysAnyOverlayOpen(){
+  return (typeof finUI!=='undefined' && finUI && finUI.open)
+      || (typeof motivUI!=='undefined' && motivUI && motivUI.open)
+      || sysUI.open;
+}
+// Keyboard: inside System ←/→ switch tabs, Esc closes; on the main page ↑ (near top) opens System.
+document.addEventListener('keydown', (e)=>{
+  const t = e.target, tag = (t && t.tagName) || '';
+  if(/^(INPUT|TEXTAREA|SELECT)$/.test(tag) || (t && t.isContentEditable)) return;
+  if(sysUI.open){
+    if(e.key==='ArrowRight'){ e.preventDefault(); sysCycleTab(1); }
+    else if(e.key==='ArrowLeft'){ e.preventDefault(); sysCycleTab(-1); }
+    else if(e.key==='Escape'){ e.preventDefault(); closeSystem(); }
+  } else if(e.key==='ArrowUp' && !e.repeat && !sysAnyOverlayOpen() && (window.scrollY||0) < 4
+            && !(typeof _nav!=='undefined' && _nav && _nav.active)){
+    // pull up from the top of the dashboard to summon the System HUD
+    e.preventDefault();
+    openSystem();
+  }
+});
+
 function sysSwitchTab(tab){
   sysUI.tab = tab;
   if(typeof withViewTransition==='function') withViewTransition(rSystem); else rSystem();
@@ -346,9 +393,14 @@ function rSystem(){
 }
 
 /* ── tab: STATUS (level / attrs / achievements / log) ── */
+function rpgPenaltyActive(){
+  const d = S.rpg && S.rpg.daily;
+  return !!(d && d.date===TODAY && d.penalty && !d.claimed);
+}
 function rSysStatus(body){
   const rpg = computeRPG();
   const pct = rpg.expForLevel>0 ? Math.min(100, Math.round(rpg.expInLevel/rpg.expForLevel*100)) : 0;
+  const debuff = rpgPenaltyActive() ? '<span class="sys-debuff" title="未完成的惩罚任务">⚠ 衰弱</span>' : '';
   const attrRows = RPG_ATTR_ORDER.map(tid=>{
     const m = RPG_ATTR_MAP[tid];
     const val = rpg.attrs[m.key];
@@ -382,7 +434,7 @@ function rSysStatus(body){
       <div class="sys-scan"></div>
       <div class="sys-rank-badge">${rpg.rank}</div>
       <div class="sys-card-main">
-        <div class="sys-kicker">[ STATUS ]</div>
+        <div class="sys-kicker">[ STATUS ]${debuff}</div>
         <div class="sys-level">Lv <span id="sys-level-num">${rpg.level}</span><span class="sys-title"> · ${escH(rpg.title)}</span></div>
         <div class="sys-exp"><i style="width:${pct}%"></i></div>
         <div class="sys-exp-text">${rpg.expInLevel} / ${rpg.expForLevel} EXP　·　今日 +${rpg.todayExp}</div>
@@ -427,6 +479,12 @@ function rSysQuests(body){
   const d = S.rpg.daily || {};
   const chAttrM = d.attr ? RPG_ATTR_MAP[rpgAttrToTargetId(d.attr)] : null;
   const chText = d.attr ? RPG_CHALLENGE_TEXT[d.attr] : null;
+  const penaltyHtml = rpgPenaltyActive() && chText ? `
+    <div class="sys-q-card sys-q-penalty">
+      <div class="sys-q-card-head"><span class="sys-q-tag penalty">⚠ 惩罚任务</span><span class="sys-q-reward penalty">解除衰弱</span></div>
+      <div class="sys-q-title">${escH(chText.verb)}</div>
+      <div class="sys-q-desc">昨日的弱点仍未直面。「系统」在注视——完成它，解除「衰弱」。</div>
+    </div>` : '';
   const chHtml = (d.date===TODAY && chText) ? `
     <div class="sys-q-card sys-q-challenge ${d.claimed?'done':''}">
       <div class="sys-q-card-head"><span class="sys-q-tag chal">每日挑战</span>
@@ -444,6 +502,7 @@ function rSysQuests(body){
   ].join('') || '<div class="sys-empty">暂无支线任务。</div>';
 
   body.innerHTML = `
+    ${penaltyHtml}
     <div class="sys-sec-label">主线 · MAIN QUEST</div>
     <div class="sys-q-card sys-q-main">
       <div class="sys-corner tl"></div><div class="sys-corner tr"></div><div class="sys-corner bl"></div><div class="sys-corner br"></div>
