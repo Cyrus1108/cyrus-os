@@ -26,23 +26,38 @@ body.sys-locked{ overflow:hidden; }
   border:.5px solid var(--brass); border-radius:var(--border-radius-lg);
   box-shadow:0 26px 80px -22px rgba(0,0,0,.6), 0 0 42px -12px var(--brass-glow);
 }
-/* entrance: scroll unrolling from centre — clip-path expands upward and downward
-   simultaneously from the window's vertical midpoint. A brass seam glows at the
-   fold, then fades as the panel settles open. 860ms expo-out for a stately pace. */
-.sys-view.open .sys-window{ animation:sysScrollOpen 860ms cubic-bezier(0.16,1,0.3,1) both; transform-origin:center center; }
+/* entrance — two-phase:
+   ① a compact seed strip springs in at the window's vertical centre and settles.
+   ② after the hold, the scroll unfurls upward + downward simultaneously, slowly.
+   Per-keyframe animation-timing-function controls each phase independently. */
+.sys-view.open .sys-window{ animation:sysScrollOpen 1300ms linear both; transform-origin:center center; }
 @keyframes sysScrollOpen{
-  0%  { clip-path:inset(50% 0 50% 0); }
-  100%{ clip-path:inset(0%  0 0%  0); }
+  /* ① seed materialises: from a hairline to a ~10% strip, springy pop */
+  0%  { clip-path:inset(50% 0 50% 0); opacity:0;
+        animation-timing-function:cubic-bezier(0.34,1.28,0.64,1); }
+  22% { clip-path:inset(45% 0 45% 0); opacity:1;
+        animation-timing-function:linear; }
+  /* ② settle — strip holds steady for a beat */
+  35% { clip-path:inset(45% 0 45% 0); opacity:1;
+        animation-timing-function:cubic-bezier(0.16,1,0.3,1); }
+  /* ③ bilateral unfurl — slow, stately expo-out */
+  100%{ clip-path:inset(0%  0 0%  0); opacity:1; }
 }
-/* brass seam — glows at the centre fold, fades as the panel reaches full height */
+/* brass seam glows at the fold during the seed phase, fades as the panel opens */
 .sys-window::after{
   content:''; position:absolute; left:0; right:0; top:50%; height:2px;
   z-index:6; pointer-events:none; opacity:0; transform:translateY(-50%);
   background:linear-gradient(90deg, transparent, var(--brass) 18%, var(--brass-soft) 50%, var(--brass) 82%, transparent);
   box-shadow:0 0 22px 6px var(--brass-glow);
 }
-.sys-view.open .sys-window::after{ animation:sysFold 860ms cubic-bezier(0.16,1,0.3,1) both; }
-@keyframes sysFold{ 0%{ opacity:0; } 8%{ opacity:1; } 55%{ opacity:.8; } 100%{ opacity:0; } }
+.sys-view.open .sys-window::after{ animation:sysFold 1300ms linear both; }
+@keyframes sysFold{
+  0%  { opacity:0; }
+  14% { opacity:1; }   /* glows through hold */
+  35% { opacity:1; }
+  65% { opacity:.35; } /* fades as scroll opens */
+  100%{ opacity:0; }
+}
 @media (prefers-reduced-motion:reduce){
   .sys-view.open .sys-window,.sys-view.open .sys-window::after{ animation:none !important; clip-path:none !important; opacity:1 !important; }
 }
