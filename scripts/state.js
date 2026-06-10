@@ -115,7 +115,7 @@ function isOn(ss,m){return ss.over?(m>=ss.s||m<ss.e):(m>=ss.s&&m<ss.e);}
 let S={
   mr:{date:TODAY,list:JSON.parse(JSON.stringify(MR_DEFAULT))},
   ac:[],
-  jp:{streak:0,last:null,log:{},note:'',list:JSON.parse(JSON.stringify(DEF_JP))},
+  jp:{date:TODAY,streak:0,last:null,log:{},note:'',list:JSON.parse(JSON.stringify(DEF_JP))},
   tr:{date:TODAY,bias:'',list:JSON.parse(JSON.stringify(DEF_TR))},
   todos:[],
   hermes:[],   /* Hermes notices — read/dismiss only; written server-side by the assistant */

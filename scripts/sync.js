@@ -76,12 +76,19 @@ async function pullJapanese(){
     .eq('user_id', currentUser.id).maybeSingle();
   if(data){
     S.jp = {
+      date: data.date || null,
       streak: data.streak || 0,
       last: data.last_date || null,
       log: data.log || {},
       note: data.note || '',
       list: data.list || JSON.parse(JSON.stringify(DEF_JP)),
     };
+    // daily reset on pull too — another device's yesterday must not arrive
+    // as today's checks (log keeps history; flags belong to one day)
+    if(S.jp.date !== TODAY){
+      S.jp.date = TODAY;
+      S.jp.list = S.jp.list.map(i=>({...i,d:false}));
+    }
   }
 }
 
@@ -366,6 +373,7 @@ async function syncPushJP(){
   await waitForPull();
   const res = await sb.from('japanese').upsert({
     user_id: currentUser.id,
+    date: S.jp.date || TODAY,
     streak: S.jp.streak,
     last_date: S.jp.last || null,
     log: S.jp.log || {},

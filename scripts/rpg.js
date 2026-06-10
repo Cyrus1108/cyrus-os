@@ -507,8 +507,9 @@ function sysShowModal(p){
     else if(num) num.textContent = p.to;
   }
   if(typeof attachRipples==='function') attachRipples();
+  // no auto-close: a level-up deserves a beat, not a blink — stays until
+  // 确定 / backdrop tap (queued celebrations still flow via _celebrateDone)
   clearTimeout(m._timer);
-  m._timer = setTimeout(sysCloseModal, p.type==='levelup' ? 6000 : 4500);
 }
 function sysCloseModal(){
   const m = document.getElementById('sys-modal'); if(!m || !m.classList.contains('open')) return;
@@ -801,7 +802,7 @@ function rSysStatus(body){
     <div class="sys-card">
       <div class="sys-corner tl"></div><div class="sys-corner tr"></div><div class="sys-corner bl"></div><div class="sys-corner br"></div>
       <div class="sys-scan"></div>
-      <div class="sys-rank-badge">${rpg.rank}</div>
+      <div class="sys-rank-badge"><span class="sys-rank-flow">${rpg.rank}</span></div>
       <div class="sys-card-main">
         <div class="sys-kicker">[ STATUS ]${debuff}${lowChip}</div>
         <div class="sys-level">Lv <span id="sys-level-num">${rpg.level}</span><span class="sys-title"> · ${escH(rpg.title)}</span></div>

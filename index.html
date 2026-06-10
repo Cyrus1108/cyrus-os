@@ -379,7 +379,8 @@
         </div>
       </div>
       <div id="week-grid" class="jp-week"></div>
-      <button id="ci-btn" class="check-btn fx-btn" onclick="checkIn()"></button>
+      <!-- display-only since v6.49: 完成即打卡 — the list drives the log, no manual button -->
+      <button id="ci-btn" class="check-btn fx-btn" style="pointer-events:none;"></button>
       <div class="brass-rule"></div>
       <div class="sub-head">
         <div class="sub-label" style="margin-bottom:0;">今日练习</div>

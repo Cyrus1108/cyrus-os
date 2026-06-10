@@ -372,7 +372,13 @@ async function init(){
   }
   if(cleanMorning()) saveMR();
   const ac=loadLS('ac',null);if(ac)S.ac=ac;
-  const jp=loadLS('jp',null);if(jp)S.jp=jp;
+  const jp=loadLS('jp',null);
+  if(jp){
+    S.jp=jp;
+    // daily reset (mirrors mr/tr): yesterday's checks don't carry into today —
+    // the log keeps history, the list flags belong to ONE day only
+    if(jp.date!==TODAY){S.jp.date=TODAY;S.jp.list=(jp.list||[]).map(i=>({...i,d:false}));saveJP();}
+  }
   const tr=loadLS('tr',null);
   if(tr){if(tr.date===TODAY)S.tr=tr;else{S.tr.bias='';S.tr.list=S.tr.list.map(i=>({...i,d:false}));}}
   const tds=loadLS('todos',null);if(tds)S.todos=tds;

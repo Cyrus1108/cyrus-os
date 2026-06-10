@@ -495,3 +495,26 @@ body.sys-locked{ overflow:hidden; }
   transition:opacity .25s var(--ease-silk), transform .25s var(--ease-press);
 }
 .sys-toast.show{ opacity:1; transform:translate(-50%, 0); }
+
+/* ── molten-brass flow on the LEVEL UP title + rank letters ──
+   (brassFlow keyframes live in components.css). Scoped to the levelup card
+   only — achievement names stay ink. The status-page rank letter flows via
+   an inner span so the badge's circle + radial glow stay intact. */
+.sys-cele-level .sys-cele-title, .sys-cele-rank, .sys-rank-flow{
+  background:linear-gradient(115deg,
+    color-mix(in srgb, var(--brass), #000 38%) 0%,
+    var(--brass) 16%,
+    var(--brass-soft) 30%,
+    color-mix(in srgb, var(--brass-soft), #fff 45%) 44%,
+    var(--brass) 58%,
+    color-mix(in srgb, var(--brass), #000 30%) 72%,
+    var(--brass) 86%,
+    var(--brass-soft) 100%);
+  background-size:340% 240%;
+  -webkit-background-clip:text;background-clip:text;
+  color:transparent;-webkit-text-fill-color:transparent;
+  animation:brassFlow 9s ease-in-out infinite;
+}
+@media (prefers-reduced-motion:reduce){
+  .sys-cele-level .sys-cele-title, .sys-cele-rank, .sys-rank-flow{ animation:none; }
+}
