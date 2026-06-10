@@ -695,3 +695,30 @@ html:not([data-theme="sterile"]) .panel-label-row::before{
 html:not([data-theme="sterile"]) .the90-panel{
   box-shadow:0 0 34px -18px var(--brass-glow), 0 12px 36px -26px rgba(0,0,0,.35);
 }
+
+/* todo rows — the same bracket language per ITEM, scaled down: resting state
+   shows faint 6px left-edge brackets (visible on touch devices too); hover
+   lights them to full brass with a soft tint. Done rows inherit the row's
+   opacity fade, so finished items dim brackets and all. */
+html:not([data-theme="sterile"]) .todo-row{
+  padding-left:12px;
+  background-image:
+    linear-gradient(var(--brass-ghost), var(--brass-ghost)),
+    linear-gradient(var(--brass-ghost), var(--brass-ghost)),
+    linear-gradient(var(--brass-ghost), var(--brass-ghost)),
+    linear-gradient(var(--brass-ghost), var(--brass-ghost));
+  background-repeat:no-repeat;
+  background-size:6px 1px, 1px 6px, 6px 1px, 1px 6px;
+  background-position:0 4px, 0 4px, 0 calc(100% - 4px), 0 calc(100% - 4px);
+  transition:background-color .3s var(--ease-silk);
+}
+@media (hover:hover){
+  html:not([data-theme="sterile"]) .todo-row:hover{
+    background-color:rgba(168,132,85,0.035);
+    background-image:
+      linear-gradient(var(--brass), var(--brass)),
+      linear-gradient(var(--brass), var(--brass)),
+      linear-gradient(var(--brass), var(--brass)),
+      linear-gradient(var(--brass), var(--brass));
+  }
+}
