@@ -745,36 +745,48 @@ html:not([data-theme="sterile"]) .todo-row{
   }
 }
 
-/* ── 黄铜流光 (brass sheen) — a narrow highlight band sweeps across the text,
-   then rests as plain brass for most of the cycle. Reserved for IDENTITY
-   lines only (creed pillars, the date hero, the 8/9 countdown) — body text,
-   lists and stats stay static so the sheen keeps its weight. ── */
-@keyframes brassSheen{
-  0%   { background-position:130% 0; }
-  45%  { background-position:-30% 0; }
-  100% { background-position:-30% 0; }
+/* ── 黄铜流光 (molten brass) — a multi-tone gradient WANDERS through the
+   text continuously, like slow liquid metal: the position drifts along a
+   non-linear path (X and Y) and never stops, never "flashes past".
+   Reserved for IDENTITY lines only (creed pillars, the date hero, the 8/9
+   countdown) — body text, lists and stats stay static so this keeps its
+   weight. Shades derive from theme vars via color-mix → sterile adapts. ── */
+@keyframes brassFlow{
+  0%   { background-position:0% 20%; }
+  33%  { background-position:85% 70%; }
+  66%  { background-position:30% 100%; }
+  100% { background-position:0% 20%; }
 }
 .creed-pillars, #the90-tagline{
-  background:linear-gradient(105deg,
-    var(--brass) 0%, var(--brass) 42%,
-    var(--brass-soft) 49%, #F7EAD0 52%, var(--brass-soft) 55%,
-    var(--brass) 62%, var(--brass) 100%);
-  background-size:280% 100%;
+  background:linear-gradient(115deg,
+    color-mix(in srgb, var(--brass), #000 38%) 0%,
+    var(--brass) 16%,
+    var(--brass-soft) 30%,
+    color-mix(in srgb, var(--brass-soft), #fff 45%) 44%,
+    var(--brass) 58%,
+    color-mix(in srgb, var(--brass), #000 30%) 72%,
+    var(--brass) 86%,
+    var(--brass-soft) 100%);
+  background-size:340% 240%;
   -webkit-background-clip:text;background-clip:text;
   color:transparent;-webkit-text-fill-color:transparent;
-  animation:brassSheen 7s var(--ease-silk) infinite;
+  animation:brassFlow 11s ease-in-out infinite;
 }
-/* the big date keeps its ink color — only the highlight band is brass,
-   sweeping slower (a hero moment, not a marquee) */
+/* the big date stays ink-bodied — brass veins drift through it, slower
+   (a hero moment, not a marquee) */
 #dateline{
-  background:linear-gradient(105deg,
-    var(--ink) 0%, var(--ink) 42%,
-    var(--brass-soft) 49%, #F7EAD0 52%, var(--brass-soft) 55%,
-    var(--ink) 62%, var(--ink) 100%);
-  background-size:280% 100%;
+  background:linear-gradient(115deg,
+    var(--ink) 0%, var(--ink) 20%,
+    var(--brass-soft) 33%,
+    var(--ink) 46%,
+    color-mix(in srgb, var(--brass-soft), #fff 40%) 60%,
+    var(--ink) 73%,
+    var(--brass-soft) 87%,
+    var(--ink) 100%);
+  background-size:380% 260%;
   -webkit-background-clip:text;background-clip:text;
   color:transparent;-webkit-text-fill-color:transparent;
-  animation:brassSheen 13s var(--ease-silk) infinite;
+  animation:brassFlow 19s ease-in-out infinite;
 }
 @media (prefers-reduced-motion:reduce){
   .creed-pillars, #the90-tagline, #dateline{ animation:none; background-position:0 0; }
