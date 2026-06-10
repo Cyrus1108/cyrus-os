@@ -1217,6 +1217,7 @@ async function finSubmitTx(){
     S.fin.transactions.unshift({ id:newId, created:new Date().toISOString(), ...tx });
   }
   saveLSRaw('fin_transactions', S.fin.transactions);
+  if(window.Sfx) Sfx.save();
   finCloseModal();
   rFinance();
 }
@@ -1692,6 +1693,7 @@ async function finWizSave(){
   const newId = saved ? saved.id : crypto.randomUUID();
   S.fin.transactions.unshift({ id:newId, created:new Date().toISOString(), ...tx });
   saveLSRaw('fin_transactions', S.fin.transactions);
+  if(window.Sfx) Sfx.save();
   rFinance();
   finToast(`已记一笔 · ${toastLabel}`);
 }

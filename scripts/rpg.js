@@ -203,7 +203,10 @@ function rpgUpdateChallenge(attrs, silent){
     const weak = rpgWeakestAttr(attrs);
     S.rpg.daily = { date:TODAY, attr:weak, target:rpgChallengeActivity(weak), claimed:false, penalty:missed };
     changed = true;
-    if(missed && !silent) sysToast('系统 · 检测到昨日的懈怠 — 惩罚任务已下达');
+    if(missed && !silent){
+      sysToast('系统 · 检测到昨日的懈怠 — 惩罚任务已下达', {silent:true});
+      if(window.Sfx) Sfx.penalty();   // a punishment must not ring like a reward
+    }
   }
   const d = S.rpg.daily;
   if(d && d.date===TODAY && !d.claimed && d.target){
@@ -211,7 +214,7 @@ function rpgUpdateChallenge(attrs, silent){
       d.claimed = true;
       S.rpg.bonusExp = (S.rpg.bonusExp||0) + RPG_CHALLENGE_EXP;
       changed = true;
-      if(!silent) sysToast((d.penalty ? '系统 · 惩罚已解除 · 弱点已被直面 +' : '系统 · 弱点已被直面 +') + RPG_CHALLENGE_EXP);
+      if(!silent) sysToast((d.penalty ? '系统 · 惩罚已解除 · 弱点已被直面 +' : '系统 · 弱点已被直面 +') + RPG_CHALLENGE_EXP, {silent:true});   // Sfx.quest plays for the grant
     }
   }
   return changed;
@@ -378,6 +381,7 @@ function rpgAfterChange(){
   const probe = computeRPG();
   const firstRun = (S.rpg.seenLevel===1 && Object.keys(S.rpg.achievements||{}).length===0 && (probe.level>1 || probe.totalExp>0));
   let changed = false;
+  let _rpgAchExpPass = 0;   // tier EXP of achievements unlocked in THIS pass
 
   // daily challenge: roll today's + auto-grant when the weak pillar is done (silent on first load)
   const beforeBonus = S.rpg.bonusExp || 0;
@@ -410,7 +414,9 @@ function rpgAfterChange(){
   } else {
     if(_rpgChallengeGranted && window.Sfx) Sfx.quest();
     if(!_rpgChallengeGranted && _rpgLastExp != null && rpg.totalExp > _rpgLastExp){
-      sysToast('[ 系统 ] +' + (rpg.totalExp - _rpgLastExp) + ' 经验');
+      // silent: the gesture that earned the EXP already played its own cue
+      // (tick/quest/cross), and sync-replay EXP must never chime at all
+      sysToast('[ 系统 ] +' + (rpg.totalExp - _rpgLastExp) + ' 经验', {silent:true});
     }
     if(rpg.level > (S.rpg.seenLevel || 1)){
       const from = S.rpg.seenLevel || 1;
@@ -424,22 +430,28 @@ function rpgAfterChange(){
       if(ok){
         S.rpg.achievements[a.id] = new Date().toISOString();
         changed = true;
+        _rpgAchExpPass += RPG_TIER_EXP[a.tier] || 0;   // absorb into the snapshot below
         sysCelebrate({ type:'achievement', ach:a });
       }
     }
   }
-  if(!firstRun) _rpgLastExp = rpg.totalExp;
+  // include EXP from achievements unlocked THIS pass, or the next unrelated
+  // action shows a phantom late "+N 经验" toast for it
+  if(!firstRun) _rpgLastExp = rpg.totalExp + _rpgAchExpPass;
   if(changed) saveRPG();
   if(sysUI.open && typeof rSystem==='function') rSystem();
 }
 
-/* ── transient toast (global) ── */
-function sysToast(msg){
+/* ── transient toast (global) ──
+   opts.silent: skip the chime — used when the calling code path already plays
+   its own dedicated cue (tick/quest/cross/blocked/penalty), or when the toast
+   is driven by load/sync rather than a local gesture. */
+function sysToast(msg, opts){
   let t = document.getElementById('sys-toast');
   if(!t){ t = document.createElement('div'); t.id='sys-toast'; t.className='sys-toast'; document.body.appendChild(t); }
   t.textContent = msg;
   t.classList.add('show');
-  if(window.Sfx) Sfx.toast();
+  if(window.Sfx && !(opts && opts.silent)) Sfx.toast();
   clearTimeout(t._timer);
   t._timer = setTimeout(()=> t.classList.remove('show'), 1800);
 }
@@ -591,7 +603,9 @@ document.addEventListener('keydown', (e)=>{
 });
 
 function sysSwitchTab(tab){
+  if(sysUI.tab === tab) return;   // re-clicking the active tab: no re-render, no sound
   sysUI.tab = tab;
+  if(window.Sfx) Sfx.tab();
   if(typeof withViewTransition==='function') withViewTransition(rSystem); else rSystem();
 }
 

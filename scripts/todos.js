@@ -48,8 +48,8 @@ function toggleTdForm(){
   if(tdOpen){
     setDateField('td-date', TODAY);
     setTimeField('td-time', '');
-    segPick('td-pri', 'mid');
-    segPick('td-remind', '15', 'onRemindSeg');
+    segSet('td-pri', 'mid');
+    segSet('td-remind', '15', 'onRemindSeg');
     rCats();
     // Open form navigator so ↑↓/Enter keyboard flow works immediately
     requestAnimationFrame(()=>openFormNav(document.getElementById('td-form')));
@@ -77,8 +77,8 @@ function addTodo(){
   document.getElementById('td-text').value='';
   setDateField('td-date','');
   setTimeField('td-time','');
-  segPick('td-pri','mid');
-  segPick('td-remind','15','onRemindSeg');
+  segSet('td-pri','mid');
+  segSet('td-remind','15','onRemindSeg');
   document.getElementById('td-repeat').value='none';
   document.getElementById('td-repeat-custom').value='';
   document.getElementById('td-repeat-custom').style.display='none';
@@ -230,6 +230,7 @@ function toggleTd(id){
       S.todos.push({...t,id:crypto.randomUUID(),date:nextDate,done:false,doneAt:null,created:TODAY});
     }
   }
+  if(window.Sfx){ t.done ? Sfx.tick() : Sfx.untick(); }
   saveTodos(); rTodos(); rMetrics(); updateShowDoneBtn(); if(typeof rpgAfterChange==='function')rpgAfterChange();
 }
 function computeNextRepeatDate(currentDate, repeat, customDays){

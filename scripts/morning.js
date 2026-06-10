@@ -1,4 +1,5 @@
 /* Morning ritual — daily 8-step pill checklist */
+let _mrQuestDate = null;   // SFX latch: all-done fanfare at most once per day
 function rMR(){
   const list=S.mr.list,done=list.filter(i=>i.d).length;
   const pct=Math.round(done/list.length*100);
@@ -20,7 +21,16 @@ function onReorderMR(ids){
 }
 function toggleMR(id,event){
   const i=S.mr.list.find(i=>i.id===id);
-  if(i)i.d=!i.d;saveMR();rMR();
+  if(i){
+    i.d=!i.d;
+    // SFX inside the guard — saveMR/rMR below run even on a failed id lookup.
+    // The all-done fanfare is latched per day: untick+retick replays only a tick.
+    if(window.Sfx){
+      if(i.d && S.mr.list.every(x=>x.d) && _mrQuestDate !== TODAY){ _mrQuestDate = TODAY; Sfx.quest(); }
+      else if(i.d) Sfx.tick(); else Sfx.untick();
+    }
+  }
+  saveMR();rMR();
   if(typeof rpgAfterChange==='function')rpgAfterChange();
   if(event){
     setTimeout(()=>{

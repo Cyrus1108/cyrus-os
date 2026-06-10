@@ -8,12 +8,26 @@ const KIND_META = {
   nudge:    { label: '提点', glyph: '✦' },
 };
 
+/* Sound guard: rHermes runs on page load, on every renderAll, and on realtime
+   sync echoes (including our own dismiss bouncing back) — so the chime must be
+   driven by ID DIFFING, never by the render itself. First call seeds the set
+   silently; afterwards only a genuinely new id chirps. */
+let _hermesSeen = null;
+
 function rHermes(){
   const panel = document.getElementById('hermes-panel');
   const listEl = document.getElementById('hermes-list');
   if(!panel || !listEl) return;
 
   const active = (S.hermes || []).filter(n => !n.dismissedAt);
+  // only seed/diff once pullHermes has actually run — the pre-sync renderAll
+  // sees an empty S.hermes, and seeding an empty set there would make every
+  // standing notice look "fresh" (and chirp) when the real data lands
+  if(window._hermesPulled){
+    const fresh = _hermesSeen !== null && active.some(n => !_hermesSeen.has(n.id));
+    _hermesSeen = new Set(active.map(n => n.id));
+    if(fresh && window.Sfx) Sfx.notice();
+  }
   if(!active.length){
     panel.style.display = 'none';
     listEl.innerHTML = '';
@@ -56,8 +70,9 @@ function hermesTimeAgo(ts){
 /* Dismiss = soft-delete (stamp dismissed_at). Optimistic: hide locally, then persist. */
 async function dismissNotice(id){
   const n = (S.hermes || []).find(x => x.id === id);
-  if(!n) return;
+  if(!n || n.dismissedAt) return;   // idempotent — double-click can't double-stamp
   n.dismissedAt = Date.now();
+  if(window.Sfx) Sfx.tick();
   rHermes();
   if(typeof syncDismissHermes === 'function') syncDismissHermes(id);
 }

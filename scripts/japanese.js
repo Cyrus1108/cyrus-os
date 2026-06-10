@@ -2,7 +2,7 @@
 let jpOpen=false;
 function toggleJPForm(){jpOpen=!jpOpen;document.getElementById('jp-new-form').style.display=jpOpen?'block':'none';}
 function addJPItem(){const t=document.getElementById('jp-new-text').value.trim();if(!t)return;S.jp.list.push({id:'j'+Date.now(),t,d:false});document.getElementById('jp-new-text').value='';jpOpen=false;document.getElementById('jp-new-form').style.display='none';saveJP();rJP();}
-function toggleJP(id){const i=S.jp.list.find(i=>i.id===id);if(i)i.d=!i.d;saveJP();rJP();rMetrics();}
+function toggleJP(id){const i=S.jp.list.find(i=>i.id===id);if(i){i.d=!i.d;if(window.Sfx){i.d?Sfx.tick():Sfx.untick();}}saveJP();rJP();rMetrics();}
 function delJP(id){if(editingJP===id)editingJP=null;S.jp.list=S.jp.list.filter(i=>i.id!==id);saveJP();rJP();}
 function startJPEdit(id){editingJP=id;rJP();}
 function cancelJPEdit(){editingJP=null;rJP();}
@@ -10,8 +10,8 @@ function saveJPEdit(id){const i=S.jp.list.find(i=>i.id===id);if(!i)return;const 
 
 function checkIn(){
   const was=S.jp.log[TODAY];
-  if(!was){S.jp.log[TODAY]=true;const y=new Date();y.setDate(y.getDate()-1);const ys=y.toLocaleDateString('sv-SE');S.jp.streak=(S.jp.last===ys)?S.jp.streak+1:1;S.jp.last=TODAY;}
-  else{delete S.jp.log[TODAY];S.jp.streak=Math.max(0,S.jp.streak-1);S.jp.last=Object.keys(S.jp.log).sort().reverse()[0]||null;}
+  if(!was){S.jp.log[TODAY]=true;const y=new Date();y.setDate(y.getDate()-1);const ys=y.toLocaleDateString('sv-SE');S.jp.streak=(S.jp.last===ys)?S.jp.streak+1:1;S.jp.last=TODAY;if(window.Sfx)Sfx.quest();}
+  else{delete S.jp.log[TODAY];S.jp.streak=Math.max(0,S.jp.streak-1);S.jp.last=Object.keys(S.jp.log).sort().reverse()[0]||null;if(window.Sfx)Sfx.untick();}
   saveJP();rJP();rMetrics();if(typeof rpgAfterChange==='function')rpgAfterChange();
 }
 let jpNT;function onJPNote(){S.jp.note=document.getElementById('jp-note').value;clearTimeout(jpNT);jpNT=setTimeout(saveJP,600);}

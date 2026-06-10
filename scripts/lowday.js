@@ -43,6 +43,7 @@ function lowdaySetAmp(n){
   const day = _lowEnsureToday();
   day.scores._amp = (day.scores._amp === n) ? null : n;   // tap the selected one again to clear
   if(day.scores._amp == null) delete day.scores._amp;
+  if(window.Sfx){ (typeof day.scores._amp === 'number') ? Sfx.tick() : Sfx.untick(); }
   if(typeof saveThe90Daily === 'function') saveThe90Daily();
   if(typeof rThe90 === 'function') rThe90();
   if(typeof sysUI !== 'undefined' && sysUI.open && typeof rSystem === 'function') rSystem();
@@ -96,10 +97,12 @@ function lowdayShowProtocol(){
       <button class="lowday-enter-btn" onclick="lowdayConfirmEnter()">进入低谷日 →</button>
     </div>`;
   requestAnimationFrame(()=> m.classList.add('open'));
-  if(window.Sfx && typeof Sfx.open === 'function') Sfx.open();
+  // the protocol deserves near-silence — just a neutral click, no HUD fanfare
+  if(window.Sfx && typeof Sfx.tab === 'function') Sfx.tab();
 }
 function lowdayCloseProtocol(){ const m = document.getElementById('lowday-modal'); if(m) m.classList.remove('open'); }
 function lowdayConfirmEnter(){
+  if(isLowDayActive()){ lowdayCloseProtocol(); return; }   // double-click guard
   lowdayCloseProtocol();
   const day = _lowEnsureToday();
   day.scores._low = true;
@@ -109,6 +112,7 @@ function lowdayConfirmEnter(){
   rLowDay();
   if(typeof rThe90 === 'function') rThe90();
   if(typeof sysUI !== 'undefined' && sysUI.open && typeof rSystem === 'function') rSystem();
+  if(window.Sfx && typeof Sfx.lowday === 'function') Sfx.lowday();   // somber, not punishing
 }
 
 /* ── exit: the manual "渡" ritual (always available) → ledger +1, back to normal ── */
@@ -122,12 +126,15 @@ function lowdayCross(){
   if(typeof rThe90 === 'function') rThe90();
   if(typeof rpgAfterChange === 'function') rpgAfterChange();   // settle 渡 achievements + EXP
   if(typeof sysUI !== 'undefined' && sysUI.open && typeof rSystem === 'function') rSystem();
-  if(typeof sysToast === 'function') sysToast('渡 · 你穿过去了 —— 逆境账户 +' + 1);
-  if(window.Sfx && typeof Sfx.quest === 'function') Sfx.quest();
+  if(typeof sysToast === 'function') sysToast('渡 · 你穿过去了 —— 逆境账户 +' + 1, {silent:true});
+  if(window.Sfx && typeof Sfx.cross === 'function') Sfx.cross();   // 渡 — relief, not fanfare
 }
 
 /* ── mechanism-enforced lock of a strategic surface (spec §3.3) ── */
-function lowdayBlocked(what){ if(typeof sysToast === 'function') sysToast('低谷日 · 不做战略决定 —— ' + what + '已封锁'); }
+function lowdayBlocked(what){
+  if(typeof sysToast === 'function') sysToast('低谷日 · 不做战略决定 —— ' + what + '已封锁', {silent:true});
+  if(window.Sfx && typeof Sfx.blocked === 'function') Sfx.blocked();   // dull denial thud
+}
 
 /* ── render: top banner (active only) + the amplitude row (always) ── */
 function rLowDay(){

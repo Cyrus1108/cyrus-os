@@ -87,6 +87,7 @@ function ensureThe90Defaults(){
 
 /* ════════ Interactions ════════ */
 
+let _the90PerfectSfxDate = null;   // SFX latch: 5/5 flourish at most once per day
 function toggleThe90(targetId){
   ensureThe90Defaults();
   const today = TODAY;
@@ -104,6 +105,20 @@ function toggleThe90(targetId){
     S.the90.daily[today].scores[targetId] = !cur;
   }
   saveThe90Daily();
+  /* SFX — direction by MET status, not raw value (stabilize 3→2→1 stays met).
+     Gesture-only: toggleThe90 is reachable solely from the cell onclick.
+     The 5/5 flourish is latched per day — untick+retick replays only a tick. */
+  if(window.Sfx){
+    const scores = S.the90.daily[today].scores;
+    const wasMet = the90ScoreMet(cur, phase), isMet = the90ScoreMet(scores[targetId], phase);
+    if(isMet && !wasMet){
+      const targets = (S.the90.meta && S.the90.meta.targets) || [];
+      const all = targets.length > 0 && targets.every(t => the90ScoreMet(scores[t.id], phase));
+      if(all && _the90PerfectSfxDate !== today){ _the90PerfectSfxDate = today; Sfx.perfect(); }
+      else Sfx.tick();
+    } else if(wasMet && !isMet){ Sfx.untick(); }
+    else { Sfx.tick(); }                         // met→met step-down (stabilize) — plain tactile tick
+  }
   rThe90();
   if(typeof rpgAfterChange === 'function') rpgAfterChange();   // settle EXP / level / achievements
   if(typeof window.lifeTreePulse === 'function') window.lifeTreePulse();   // tree energy feedback on check-in

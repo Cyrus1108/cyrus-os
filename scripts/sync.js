@@ -169,6 +169,7 @@ async function pullHermes(){
     createdAt: r.created_at ? new Date(r.created_at).getTime() : null,
     dismissedAt: r.dismissed_at ? new Date(r.dismissed_at).getTime() : null,
   }));
+  window._hermesPulled = true;   // rHermes only seeds/diffs its sound guard after real data
 }
 
 async function pullMotiv(){

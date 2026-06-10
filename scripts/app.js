@@ -66,10 +66,16 @@ function chipField(id, value, options, onpick){
   const chips = options.map(([v,l])=>`<button type="button" class="fin-chip ${String(v)===String(value)?'active':''}" data-v="${v}" onclick="segPick('${id}','${v}'${onpick?",'"+onpick+"'":''})">${l}</button>`).join('');
   return `<div class="fin-chiprow" data-seg="${id}">${chips}</div><input type="hidden" id="${id}" value="${value}">`;
 }
-function segPick(id, v, onpick){
+/* segSet: programmatic setter (form open/reset defaults) — NO sound.
+   segPick: the user-gesture path (chip onclick / keyboard next.click()) — clicks. */
+function segSet(id, v, onpick){
   const h=document.getElementById(id); if(h) h.value=v;
   document.querySelectorAll('[data-seg="'+id+'"] [data-v]').forEach(b=>b.classList.toggle('active', b.dataset.v===String(v)));
   if(onpick && typeof window[onpick]==='function') window[onpick](id, v);
+}
+function segPick(id, v, onpick){
+  if(window.Sfx) Sfx.tab();
+  segSet(id, v, onpick);
 }
 // Reminder chip handler → show/hide the custom "number×unit" row (`${prefix}-rc`).
 function onRemindSeg(id, v){

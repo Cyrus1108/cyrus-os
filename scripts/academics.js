@@ -45,8 +45,8 @@ function addAcTask(){
   document.getElementById('f-name').value='';
   setDateField('f-date','');
   setTimeField('f-time','');
-  segPick('f-pri','mid');
-  segPick('f-remind','60','onRemindSeg');
+  segSet('f-pri','mid');
+  segSet('f-remind','60','onRemindSeg');
   document.getElementById('f-rc').style.display='none';
   closeFormNav();toggleAcForm();saveAC();rAC();rMetrics();
 }
