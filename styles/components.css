@@ -722,3 +722,28 @@ html:not([data-theme="sterile"]) .todo-row{
       linear-gradient(var(--brass), var(--brass));
   }
 }
+
+/* same per-item bracket language for the JP / trading / academics checklists —
+   they all render rows as .row (japanese.js / trading.js / academics.js) */
+html:not([data-theme="sterile"]) .row{
+  padding-left:12px;
+  background-image:
+    linear-gradient(var(--brass-ghost), var(--brass-ghost)),
+    linear-gradient(var(--brass-ghost), var(--brass-ghost)),
+    linear-gradient(var(--brass-ghost), var(--brass-ghost)),
+    linear-gradient(var(--brass-ghost), var(--brass-ghost));
+  background-repeat:no-repeat;
+  background-size:6px 1px, 1px 6px, 6px 1px, 1px 6px;
+  background-position:0 4px, 0 4px, 0 calc(100% - 4px), 0 calc(100% - 4px);
+  transition:background-color .3s var(--ease-silk);
+}
+@media (hover:hover){
+  html:not([data-theme="sterile"]) .row:hover{
+    background-color:rgba(168,132,85,0.035);
+    background-image:
+      linear-gradient(var(--brass), var(--brass)),
+      linear-gradient(var(--brass), var(--brass)),
+      linear-gradient(var(--brass), var(--brass)),
+      linear-gradient(var(--brass), var(--brass));
+  }
+}
