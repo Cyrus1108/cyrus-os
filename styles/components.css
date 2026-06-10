@@ -643,3 +643,55 @@ button.check-btn.done{border-color:var(--brass);color:var(--brass);}
 }
 .hermes-dismiss:hover{border-color:var(--brass);color:var(--brass);}
 .hermes-dismiss:active{transform:scale(0.95);}
+
+/* ════════════ v6.47.0 — homepage HUD polish (default theme only) ════════════
+   Ports the System panel's STRUCTURAL signatures to the home panels at low
+   intensity: corner brackets, kicker marker, hover glow, layered depth.
+   The heavy effects (scanline sweep, breathing glow, boot animation) stay
+   System-exclusive — if everything glows, nothing glows. Scoped away from
+   the sterile theme, which has its own corner accent + hover language. */
+
+/* four 1px brass corner brackets, painted with background gradients —
+   zero extra DOM, doesn't touch the pseudo-elements sterile uses */
+html:not([data-theme="sterile"]) .panel{
+  background-image:
+    linear-gradient(var(--brass), var(--brass)),
+    linear-gradient(var(--brass), var(--brass)),
+    linear-gradient(var(--brass), var(--brass)),
+    linear-gradient(var(--brass), var(--brass)),
+    linear-gradient(var(--brass), var(--brass)),
+    linear-gradient(var(--brass), var(--brass)),
+    linear-gradient(var(--brass), var(--brass)),
+    linear-gradient(var(--brass), var(--brass));
+  background-repeat:no-repeat;
+  background-size:12px 1px, 1px 12px, 12px 1px, 1px 12px, 12px 1px, 1px 12px, 12px 1px, 1px 12px;
+  background-position:0 0, 0 0, 100% 0, 100% 0, 0 100%, 0 100%, 100% 100%, 100% 100%;
+  box-shadow:0 10px 30px -22px rgba(0,0,0,.30);
+}
+
+/* hover: brass edge + soft outer glow + 1px lift — interactive feedback only,
+   never a resting state, and only on devices that actually hover */
+@media (hover:hover){
+  html:not([data-theme="sterile"]) .panel{
+    transition:box-shadow .35s var(--ease-silk), border-color .35s var(--ease-silk), transform .35s var(--ease-silk);
+  }
+  html:not([data-theme="sterile"]) .panel:hover{
+    border-color:var(--brass-ghost);
+    box-shadow:0 10px 30px -22px rgba(0,0,0,.30), 0 0 26px -14px var(--brass-glow);
+    transform:translateY(-1px);
+  }
+}
+
+/* kicker marker — the small brass diamond the System uses, ahead of the
+   roman-numeral eyebrow (panel-label-row is already flex with gap:10px) */
+html:not([data-theme="sterile"]) .panel-label-row::before{
+  content:''; flex:0 0 auto; width:5px; height:5px;
+  background:var(--brass); transform:rotate(45deg);
+  box-shadow:0 0 6px var(--brass-glow);
+}
+
+/* The 90 — the homepage hero: the ONLY resting glow on the page, so the eye
+   lands on the five pillars first */
+html:not([data-theme="sterile"]) .the90-panel{
+  box-shadow:0 0 34px -18px var(--brass-glow), 0 12px 36px -26px rgba(0,0,0,.35);
+}

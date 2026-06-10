@@ -386,6 +386,10 @@ async function init(){
   const finB=loadLS('fin_budgets',null);if(finB&&Array.isArray(finB))S.fin.budgets=finB;
   const finG=loadLS('fin_goals',null);if(finG&&Array.isArray(finG))S.fin.goals=finG;
   const finR=loadLS('fin_recurring',null);if(finR&&Array.isArray(finR))S.fin.recurring=finR;
+  /* hydrate RPG state from LS so the pre-pull render doesn't run the firstRun
+     backfill against empty data (then re-settle after sync) — kills the
+     load-time churn around seenLevel/achievements/_rpgLastExp */
+  const rpgLS=loadLS('rpg',null);if(rpgLS&&typeof rpgLS==='object'&&!Array.isArray(rpgLS))S.rpg=Object.assign({},S.rpg,rpgLS);
   showDone = loadLS('show_done', false);
   if(typeof initTheme === 'function') initTheme();
   if(typeof initFinance === 'function') initFinance();
