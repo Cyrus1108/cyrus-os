@@ -142,8 +142,30 @@ html[data-theme="sterile"] .form-nav-hl{ border-radius:0; }
 .row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:.5px solid var(--hair);transition:background .2s ease;}
 .row:last-child{border-bottom:none;}
 .row:hover{background:rgba(168,132,85,0.02);}
-.row-cb{margin-top:3px;flex-shrink:0;accent-color:var(--brass);cursor:pointer;transition:transform .15s;}
+/* custom brass checkbox — the native control breaks the HUD language.
+   appearance:none + hand-drawn ✓; checked = brass fill + soft glow,
+   matching .the90-cell.on (brass ground, dark mark). */
+.row-cb{
+  -webkit-appearance:none;appearance:none;
+  width:15px;height:15px;margin-top:3px;flex-shrink:0;cursor:pointer;
+  border:1px solid var(--hair-strong);border-radius:2px;
+  background:var(--color-background-secondary);
+  position:relative;
+  transition:transform .15s, border-color .25s var(--ease-silk), background .25s var(--ease-silk), box-shadow .25s var(--ease-silk);
+}
+.row-cb:hover{border-color:var(--brass);}
 .row-cb:active{transform:scale(1.2);}
+.row-cb:checked{
+  background:var(--brass);border-color:var(--brass);
+  box-shadow:0 0 8px -2px var(--brass-glow);
+}
+.row-cb:checked::after{
+  content:'';position:absolute;left:3.5px;top:4px;
+  width:6px;height:3.5px;
+  border-left:1.5px solid var(--color-background-primary);
+  border-bottom:1.5px solid var(--color-background-primary);
+  transform:rotate(-45deg);
+}
 .row-body{flex:1;min-width:0;}
 .row-actions{display:flex;gap:2px;opacity:0;transition:opacity .2s;}
 .row:hover .row-actions{opacity:1;}
@@ -721,6 +743,41 @@ html:not([data-theme="sterile"]) .todo-row{
       linear-gradient(var(--brass), var(--brass)),
       linear-gradient(var(--brass), var(--brass));
   }
+}
+
+/* ── 黄铜流光 (brass sheen) — a narrow highlight band sweeps across the text,
+   then rests as plain brass for most of the cycle. Reserved for IDENTITY
+   lines only (creed pillars, the date hero, the 8/9 countdown) — body text,
+   lists and stats stay static so the sheen keeps its weight. ── */
+@keyframes brassSheen{
+  0%   { background-position:130% 0; }
+  45%  { background-position:-30% 0; }
+  100% { background-position:-30% 0; }
+}
+.creed-pillars, #the90-tagline{
+  background:linear-gradient(105deg,
+    var(--brass) 0%, var(--brass) 42%,
+    var(--brass-soft) 49%, #F7EAD0 52%, var(--brass-soft) 55%,
+    var(--brass) 62%, var(--brass) 100%);
+  background-size:280% 100%;
+  -webkit-background-clip:text;background-clip:text;
+  color:transparent;-webkit-text-fill-color:transparent;
+  animation:brassSheen 7s var(--ease-silk) infinite;
+}
+/* the big date keeps its ink color — only the highlight band is brass,
+   sweeping slower (a hero moment, not a marquee) */
+#dateline{
+  background:linear-gradient(105deg,
+    var(--ink) 0%, var(--ink) 42%,
+    var(--brass-soft) 49%, #F7EAD0 52%, var(--brass-soft) 55%,
+    var(--ink) 62%, var(--ink) 100%);
+  background-size:280% 100%;
+  -webkit-background-clip:text;background-clip:text;
+  color:transparent;-webkit-text-fill-color:transparent;
+  animation:brassSheen 13s var(--ease-silk) infinite;
+}
+@media (prefers-reduced-motion:reduce){
+  .creed-pillars, #the90-tagline, #dateline{ animation:none; background-position:0 0; }
 }
 
 /* same per-item bracket language for the JP / trading / academics checklists —
