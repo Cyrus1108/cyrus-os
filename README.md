@@ -1,8 +1,12 @@
-# Cyrus OS — v6.2
+# Cyrus OS
 
-Personal operating system. Four pillars. Nothing else earns your time.
+Personal operating system. Five pillars. Nothing else earns your time.
 
 Live: <https://cyrus1108.github.io/cyrus-os/>
+
+> 📐 **当前架构的唯一权威地图是 [ARCHITECTURE.md](./ARCHITECTURE.md)**（模块、
+> 数据层、部署拓扑、接入配方）。本 README 是公开门面 + v6.2 时代的设计背景，
+> 下方清单不再逐版本维护。
 
 ## What's here
 
@@ -37,59 +41,14 @@ python -m http.server 8000 --directory /path/to/cyrus-os
 
 Then <http://localhost:8000>. Service Worker works on localhost too.
 
-## Module layout
+## Module layout & data model
 
-```
-index.html              shell only (HTML)
-manifest.json           PWA manifest
-sw.js                   Service Worker (cache + push)
-icon.svg, icons/*.png   PWA icons (incl. maskable)
+→ **[ARCHITECTURE.md](./ARCHITECTURE.md)** §2（28 个 JS 模块地图 + 启动时序）与
+§3（23 张表、四种存储原型、LS 镜像、realtime）。本节在 v6.2 后不再维护清单副本。
 
-styles/
-  tokens.css            CSS variables (brass, cream, easings)
-  base.css              typography, layout, inputs
-  components.css        all panel/drawer/button styles
-  animations.css        @keyframes
-
-scripts/
-  supabase.js           creates the sb client
-  state.js              S, TODAY, constants, saveXX(), dirty flags
-  auth.js               Magic Link, session bridge
-  sync.js               pull/push/Realtime, focus rehydration
-  notifications.js      Web Push subscription + permission UI
-  creed.js              expandable manifesto
-  drawer.js             right-edge reference drawer
-  markets.js            TradingView widgets + calendar
-  morning.js            morning ritual pills
-  academics.js          academic tasks panel
-  japanese.js           N2 streak + checklist + note
-  trading.js            trading checklist + bias
-  todos.js              general todos + categories
-  the90.js              90-day tracker (Stage 5)
-  app.js                init, clock, render orchestration, SW reg
-
-cloudflare/
-  worker.js             cron worker (VAPID + aes128gcm + Supabase reads)
-```
-
-Loading order in `index.html`: Supabase CDN → state.js (defines globals) → feature modules (function declarations) → sync.js → auth.js → app.js (calls `initAuth()` at the bottom).
-
-## Data model
-
-All Supabase tables RLS-scoped to `auth.uid() = user_id`. Realtime enabled on all of them.
-
-| Table | Shape |
-|---|---|
-| `settings` | one row · creed_idx, show_done, symbols, banner state |
-| `morning` | (user_id, date) · list jsonb |
-| `academics` | one row per task · sub, name, date, time, pri, remind, done, notified_for |
-| `japanese` | one row · streak, last_date, log jsonb, note, list jsonb |
-| `trading` | (user_id, date) · bias, list jsonb |
-| `categories` | one row per cat · name |
-| `todos` | one row per todo · text, cat_id, date, time, pri, remind, repeat, custom_days, done, done_at, notified_for |
-| `push_subscriptions` | one row per device · endpoint, p256dh, auth |
-| `the90_meta` | one row · start_date, end_date, targets jsonb, current_phase |
-| `the90_daily` | (user_id, date) · scores jsonb {I..V}, note |
+当前规模一览：28 JS + 10 CSS 模块；面板含 The 90 五柱、晨间、课业、日语 N2
+（完成即打卡）、交易、待办、财务（插入式记账 + 预算/目标/周期）、动机墙、
+RPG 系统层（属性/成就/低谷日断路器）、信条与原则（每日宣读/晚间核查）。
 
 ## Sync strategy
 

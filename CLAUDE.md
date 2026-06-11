@@ -1,9 +1,11 @@
 # CLAUDE.md — operating manual for Claude
 
+> ⚠️ **动工前先读 [ARCHITECTURE.md](./ARCHITECTURE.md)** —— 环境拓扑、模块地图、
+> 数据层、接入配方（Recipes）全在那里，读它代替考古式读码。本文件只保留
+> 红线（golden rules）与部署纪律。
+
 CyrusOS is a **vanilla-JS PWA. No build, no bundler, no npm.** You edit static
-files and they ship as-is. Full architecture, data model, sync and push design
-live in [README.md](./README.md) — read it for the "how it works". This file is
-the "how to change it safely".
+files and they ship as-is.
 
 ## Golden rules (do not break)
 
@@ -43,18 +45,10 @@ re-download for every client.
   `Co-Authored-By: Claude <noreply@anthropic.com>`. A one-line subject naming
   the version + what changed works well (matches existing history).
 
-## Layout (current; README has the base set)
+## Layout
 
-The README module map is the v6.2 baseline. The app has since grown — notably:
-
-- `scripts/finance.js`, `scripts/finance-charts.js` — finance ledger, budgets,
-  analytics (Chart.js), insert-only transactions, themed calendar/time pickers.
-- `scripts/the90.js` — 90-day tracker: check-in cells, per-target hard-standard
-  boxes, weekly stats, streak, 90-day heatmap, lifetree hero.
-- `scripts/theme.js` + `styles/theme-sterile.css` — theme switcher (Cappa /
-  Sterile).
-- `scripts/hermes.js` — notices from the Hermes agent (`hermes_notices` table).
-- `scripts/ambient.js`, `lifetree.js`, `dragsort.js`, `applock.js`.
+完整模块地图（28 JS / 10 CSS，一行一文件）在 **[ARCHITECTURE.md §2](./ARCHITECTURE.md)**，
+此处不再维护副本。仅保留一条部署规则：
 
 `sw.js`'s `APP_SHELL` array is the authoritative list of shipped files — **add
 any new CSS/JS module there**, or it won't be cached/offline-available.
