@@ -1,0 +1,111 @@
+/* 信条与原则 (Creed & Principles) — the constitution modal.
+   Mirrors the low-day protocol's calm brass language; z-index sits between
+   the low-day modal (1200) and the System celebration modal (1400). */
+
+.principles-modal{ position:fixed; inset:0; z-index:1300; display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity var(--dur-base) var(--ease-silk); padding:24px; }
+.principles-modal.open{ opacity:1; pointer-events:auto; }
+.principles-modal-back{ position:absolute; inset:0; background:rgba(8,7,5,.7); backdrop-filter:blur(3px); }
+.principles-card{
+  position:relative; max-width:460px; width:100%; max-height:88vh; overflow:auto;
+  padding:22px 22px 20px; border:.5px solid var(--brass-ghost); border-radius:var(--border-radius-md);
+  background:var(--color-background-secondary); box-shadow:0 24px 80px rgba(0,0,0,.5), inset 0 0 40px color-mix(in srgb, var(--brass) 4%, transparent);
+  transform:scale(.96); transition:transform var(--dur-base) var(--ease-press); }
+.principles-modal.open .principles-card{ transform:scale(1); }
+
+/* ── header: kicker + mode tabs + close ── */
+.pr-kicker{ font-family:var(--mono); font-size:10px; letter-spacing:.18em; color:var(--brass-soft); text-align:center; margin-bottom:12px; }
+.pr-head{ display:flex; align-items:center; gap:6px; margin-bottom:14px; }
+.pr-modes{ display:flex; gap:6px; flex:1; }
+.pr-mode-btn{
+  font-family:var(--serif); font-size:12px; letter-spacing:.08em; color:var(--ghost); cursor:pointer;
+  background:transparent; border:.5px solid var(--hair); border-radius:5px; padding:5px 12px;
+  transition:color var(--dur-fast) var(--ease-silk), border-color var(--dur-fast) var(--ease-silk), background var(--dur-fast) var(--ease-silk);
+}
+.pr-mode-btn:hover{ color:var(--brass); border-color:var(--brass-ghost); }
+.pr-mode-btn.active{ color:var(--brass); border-color:var(--brass); background:color-mix(in srgb, var(--brass) 10%, transparent); }
+.pr-x{
+  flex:0 0 auto; width:26px; height:26px; display:grid; place-items:center; cursor:pointer;
+  color:var(--ghost); background:transparent; border:.5px solid var(--hair); border-radius:5px;
+  font-size:13px; transition:color var(--dur-fast) var(--ease-silk), border-color var(--dur-fast) var(--ease-silk);
+}
+.pr-x:hover{ color:var(--brass); border-color:var(--brass-ghost); }
+
+/* ── 宣读 (read) ── */
+.pr-creed-block{ display:flex; flex-direction:column; gap:12px; margin:4px 0 2px; }
+.pr-creed-item{ font-family:var(--serif); font-size:15.5px; color:var(--ink); line-height:1.75; letter-spacing:.01em; }
+.pr-creed-why{ font-size:10.5px; color:var(--ghost); margin-top:3px; line-height:1.6; }
+.pr-divider{ height:.5px; background:var(--brass-ghost); margin:16px 0 14px; }
+.pr-items{ display:flex; flex-direction:column; gap:11px; }
+.pr-item{ display:flex; gap:10px; align-items:flex-start; }
+.pr-n{ flex:0 0 20px; height:20px; border-radius:50%; display:grid; place-items:center;
+  font-family:var(--mono); font-size:11px; color:var(--brass); border:.5px solid var(--brass-ghost); margin-top:1px; }
+.pr-t{ font-size:12.5px; color:var(--mute); line-height:1.7; }
+.pr-why{ font-size:10.5px; color:var(--ghost); margin-top:2px; line-height:1.6; }
+.pr-oath-btn{
+  display:block; width:100%; margin-top:18px; padding:11px; cursor:pointer;
+  font-family:var(--serif); font-size:13px; letter-spacing:.04em; color:var(--brass);
+  background:color-mix(in srgb, var(--brass) 10%, transparent); border:.5px solid var(--brass); border-radius:6px;
+  transition:background var(--dur-fast) var(--ease-silk), box-shadow var(--dur-fast) var(--ease-silk); }
+.pr-oath-btn:hover{ background:color-mix(in srgb, var(--brass) 20%, transparent); box-shadow:0 0 16px var(--brass-glow); }
+.pr-empty{ text-align:center; color:var(--ghost); font-size:12px; line-height:1.8; padding:18px 0 6px; }
+
+/* ── 核查 (evening review) ── */
+.pr-review-creed{ font-family:var(--serif); font-size:12px; color:var(--ghost); line-height:1.7; margin-bottom:4px; }
+.pr-review-rows{ display:flex; flex-direction:column; }
+.pr-review-row{ padding:10px 0; border-bottom:.5px solid var(--hair); }
+.pr-review-row:last-child{ border-bottom:none; }
+.pr-review-text{ font-size:12.5px; color:var(--mute); line-height:1.6; margin-bottom:7px; }
+.pr-review-ctl{ display:flex; align-items:center; gap:6px; }
+.pr-seg{ display:inline-flex; gap:5px; }
+.pr-seg-btn{
+  min-width:34px; padding:4px 9px; cursor:pointer; text-align:center;
+  font-family:var(--serif); font-size:11.5px; color:var(--ghost);
+  background:var(--color-background-tertiary); border:.5px solid var(--hair); border-radius:5px;
+  transition:color var(--dur-fast) var(--ease-silk), border-color var(--dur-fast) var(--ease-silk), background var(--dur-fast) var(--ease-silk), box-shadow var(--dur-fast) var(--ease-silk);
+}
+.pr-seg-btn:hover{ border-color:var(--brass-ghost); }
+.pr-seg-btn.sel.kept{ color:var(--ink); border-color:var(--brass); background:color-mix(in srgb, var(--brass) 18%, transparent); box-shadow:0 0 8px var(--brass-glow); }
+.pr-seg-btn.sel.broke{ color:var(--color-text-danger, #C25E4B); border-color:var(--color-border-danger, #C25E4B); background:color-mix(in srgb, #C25E4B 12%, transparent); }
+.pr-seg-btn.sel.na{ color:var(--mute); border-color:var(--hair-strong); background:color-mix(in srgb, var(--ghost) 10%, transparent); }
+.pr-rev-flag{
+  margin-left:auto; min-width:30px; padding:4px 9px; cursor:pointer; text-align:center;
+  font-family:var(--serif); font-size:11.5px; color:var(--ghost);
+  background:transparent; border:.5px dashed var(--hair); border-radius:5px;
+  transition:color var(--dur-fast) var(--ease-silk), border-color var(--dur-fast) var(--ease-silk);
+}
+.pr-rev-flag.on{ color:var(--brass); border:.5px solid var(--brass); box-shadow:0 0 8px var(--brass-glow); }
+.pr-note{
+  width:100%; min-height:54px; margin-top:12px; resize:vertical;
+  font-family:var(--serif); font-size:12px; color:var(--ink); line-height:1.6;
+  background:var(--color-background-tertiary); border:.5px solid var(--hair); border-radius:6px; padding:9px 10px;
+}
+.pr-note::placeholder{ color:var(--ghost); }
+.pr-save-btn{
+  display:block; width:100%; margin-top:14px; padding:10px; cursor:pointer;
+  font-family:var(--serif); font-size:12.5px; letter-spacing:.04em; color:var(--brass);
+  background:color-mix(in srgb, var(--brass) 10%, transparent); border:.5px solid var(--brass); border-radius:6px;
+  transition:background var(--dur-fast) var(--ease-silk), box-shadow var(--dur-fast) var(--ease-silk); }
+.pr-save-btn:hover{ background:color-mix(in srgb, var(--brass) 20%, transparent); box-shadow:0 0 16px var(--brass-glow); }
+.pr-review-empty{ text-align:center; color:var(--ghost); font-size:12px; padding:14px 0 4px; }
+
+/* ── 修订 (edit) — rows reuse the house .row / .edit-box / .drag-handle ── */
+.pr-edit-sec{ margin-top:6px; }
+.pr-edit-sec + .pr-edit-sec{ margin-top:16px; }
+.pr-edit-sec-head{ display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+.pr-edit-sec-title{ font-family:var(--mono); font-size:10px; letter-spacing:.2em; color:var(--brass); text-transform:uppercase; }
+.pr-edit-sec-head::after{ content:''; flex:1; height:.5px; background:var(--brass-ghost); }
+.pr-add-link{
+  font-size:10.5px; color:var(--ghost); cursor:pointer; background:transparent;
+  border:.5px solid var(--hair); border-radius:5px; padding:3px 9px;
+  transition:color var(--dur-fast) var(--ease-silk), border-color var(--dur-fast) var(--ease-silk);
+}
+.pr-add-link:hover{ color:var(--brass); border-color:var(--brass-ghost); }
+.pr-add-form{ display:flex; flex-direction:column; gap:6px; padding:8px 0; }
+.pr-add-form input{
+  font-size:12px; color:var(--ink); background:var(--color-background-tertiary);
+  border:.5px solid var(--hair); border-radius:5px; padding:7px 9px; font-family:var(--serif);
+}
+.pr-add-form input::placeholder{ color:var(--ghost); }
+.pr-add-form-btns{ display:flex; gap:6px; justify-content:flex-end; }
+.pr-edit-why{ font-size:10px; color:var(--ghost); margin-top:1px; }

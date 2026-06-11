@@ -396,6 +396,8 @@ async function init(){
      backfill against empty data (then re-settle after sync) — kills the
      load-time churn around seenLevel/achievements/_rpgLastExp */
   const rpgLS=loadLS('rpg',null);if(rpgLS&&typeof rpgLS==='object'&&!Array.isArray(rpgLS))S.rpg=Object.assign({},S.rpg,rpgLS);
+  const prI=loadLS('principles',null);if(prI&&Array.isArray(prI))S.principles.items=prI;
+  const prD=loadLS('principles_daily',null);if(prD&&typeof prD==='object'&&!Array.isArray(prD))S.principles.daily=prD;
   showDone = loadLS('show_done', false);
   if(typeof initTheme === 'function') initTheme();
   if(typeof initFinance === 'function') initFinance();
@@ -410,7 +412,9 @@ async function init(){
     if(dailyCache) S.the90.daily = dailyCache;
   }
 
-  initCreed();
+  // v6.50: the THE CREED row now opens the 信条与原则 protocol modal
+  // (the old inline variant rotation retired; CREED_VARIANTS stays for the login card)
+  if(typeof initPrinciples === 'function') initPrinciples();
   renderAll();
   updateShowDoneBtn();
   tick();
@@ -428,6 +432,9 @@ async function init(){
   if(typeof pullAll === 'function'){
     await pullAll();
     renderAll();
+    // 晨间宣读 / 晚间核查 auto-show — once per day, only after the synced
+    // markers arrived (runs exactly once per page load; rehydrate never re-enters init)
+    if(typeof principlesAutoShow === 'function') principlesAutoShow();
     if(typeof subscribeRealtime === 'function') subscribeRealtime();
   }
 

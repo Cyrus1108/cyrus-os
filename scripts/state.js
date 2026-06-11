@@ -134,6 +134,9 @@ let S={
      seenLevel = highest level already celebrated (de-dupes the LEVEL UP modal).
      achievements = { achievementId: unlockedAtISO } */
   rpg:{ seenLevel:1, achievements:{}, bonusExp:0, daily:{} },
+  /* 信条与原则 — items: [{id, kind:'creed'|'principle', text, why, position, active}]
+     daily: { 'YYYY-MM-DD': { checks:{itemId:'kept'|'broke'|'na'}, revise:{itemId:true}, note:'' } } */
+  principles:{ items:[], daily:{} },
 };
 
 let editingAC=null, editingJP=null, editingTR=null, editingTD=null;
@@ -144,7 +147,7 @@ function loadLS(key,fallback){try{const raw=localStorage.getItem(STORAGE_PREFIX+
 /* saveLSRaw: pure local write, used by sync layer when mirroring DB → LS (no re-sync). */
 function saveLSRaw(key,val){try{localStorage.setItem(STORAGE_PREFIX+key,JSON.stringify(val));}catch(e){}}
 /* saveLS: local write + auto-sync if the key is a settings field. */
-const SETTINGS_KEYS = ['creed_idx','creed_open','show_done','symbols','subjects','notif_banner_dismissed','theme'];
+const SETTINGS_KEYS = ['creed_idx','creed_open','show_done','symbols','subjects','notif_banner_dismissed','theme','principles_last_shown','principles_review_prompted'];
 function saveLS(key,val){
   saveLSRaw(key,val);
   if(SETTINGS_KEYS.includes(key)){
@@ -159,6 +162,7 @@ const dirty = {
   morning: false, academics: false, japanese: false,
   trading: false, categories: false, todos: false, settings: false,
   the90Meta: false, the90Daily: false, motiv: false, rpg: false,
+  principles: false, principlesDaily: false,
 };
 
 function saveMR(){saveLSRaw('mr',S.mr); dirty.morning=true; if(typeof syncPushMorning==='function') syncPushMorning();}
@@ -171,3 +175,5 @@ function saveThe90Meta(){saveLSRaw('the90_meta', S.the90?.meta); dirty.the90Meta
 function saveThe90Daily(){saveLSRaw('the90_daily', S.the90?.daily); dirty.the90Daily=true; if(typeof syncPushThe90Daily==='function') syncPushThe90Daily();}
 function saveMotiv(){saveLSRaw('motiv', S.motiv); dirty.motiv=true; if(typeof syncPushMotiv==='function') syncPushMotiv();}
 function saveRPG(){saveLSRaw('rpg', S.rpg); dirty.rpg=true; if(typeof syncPushRPG==='function') syncPushRPG();}
+function savePrinciples(){saveLSRaw('principles', S.principles.items); dirty.principles=true; if(typeof syncPushPrinciples==='function') syncPushPrinciples();}
+function savePrinciplesDaily(){saveLSRaw('principles_daily', S.principles.daily); dirty.principlesDaily=true; if(typeof syncPushPrinciplesDaily==='function') syncPushPrinciplesDaily();}

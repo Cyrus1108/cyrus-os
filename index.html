@@ -28,6 +28,7 @@
 <link rel="stylesheet" href="./styles/motivation.css">
 <link rel="stylesheet" href="./styles/system.css">
 <link rel="stylesheet" href="./styles/lowday.css">
+<link rel="stylesheet" href="./styles/principles.css">
 
 <!-- Web fonts for the Sterile / Endfield theme -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -160,21 +161,13 @@
     <div id="dateline" class="serif-big"></div>
     <div id="datemeta" class="serif-it" style="color:var(--brass);margin-top:6px;"></div>
 
+    <!-- v6.50: opens the 信条与原则 protocol modal (principles.js);
+         the old inline variant slot retired — CREED_VARIANTS lives on in the login card -->
     <div id="creed-wrap" class="creed-wrap">
       <button id="creed-trigger" class="creed-trigger" type="button" aria-expanded="false">
-        <span class="creed-trigger-label">The creed</span>
+        <span class="creed-trigger-label">信条与原则 · The Creed</span>
         <span class="creed-chevron" aria-hidden="true"></span>
       </button>
-      <div class="creed-slot">
-        <div class="creed-slot-inner">
-          <div class="creed-body-wrap">
-            <button class="creed-swap" onclick="swapCreed()" aria-label="切换信条" title="切换信条">
-              <span class="creed-swap-arrow"></span>
-            </button>
-            <div id="creed-variant" class="creed-variant"></div>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -615,6 +608,7 @@
 <script src="./scripts/sound.js"></script>
 <script src="./scripts/rpg.js"></script>
 <script src="./scripts/lowday.js"></script>
+<script src="./scripts/principles.js"></script>
 <script src="./scripts/applock.js"></script>
 <script src="./scripts/theme.js"></script>
 <script src="./scripts/ambient.js"></script>

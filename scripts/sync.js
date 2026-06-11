@@ -40,6 +40,9 @@ async function pullSettings(){
   if(data.theme != null){ saveLSRaw('theme', data.theme); if(typeof applyTheme === 'function') applyTheme(data.theme, false); }
   if(data.fin_base_currency != null) S.fin.baseCurrency = data.fin_base_currency;
   if(data.fin_fx_rates != null) S.fin.fxRates = { TWD:1, ...data.fin_fx_rates };
+  // 信条与原则 auto-show markers (PostgREST returns date columns as 'YYYY-MM-DD')
+  if(data.principles_last_shown != null) saveLSRaw('principles_last_shown', data.principles_last_shown);
+  if(data.principles_review_prompted != null) saveLSRaw('principles_review_prompted', data.principles_review_prompted);
 }
 
 async function pullMorning(){
@@ -198,6 +201,27 @@ async function pullRPG(){
   }
 }
 
+/* ════════════ 信条与原则 (Creed & Principles) ════════════ */
+async function pullPrinciples(){
+  const { data } = await sb.from('principles').select('*')
+    .eq('user_id', currentUser.id).order('position');
+  S.principles.items = (data || []).map(r => ({
+    id: r.id, kind: r.kind, text: r.text, why: r.why || '',
+    position: r.position || 0, active: r.active !== false,
+  }));
+  saveLSRaw('principles', S.principles.items);
+}
+async function pullPrinciplesDaily(){
+  const since = new Date(Date.now() - 95 * 86400000).toISOString().slice(0,10);
+  const { data } = await sb.from('principles_daily').select('*')
+    .eq('user_id', currentUser.id).gte('date', since);
+  S.principles.daily = {};
+  for(const row of (data || [])){
+    S.principles.daily[row.date] = { checks: row.checks || {}, revise: row.revise || {}, note: row.note || '' };
+  }
+  saveLSRaw('principles_daily', S.principles.daily);
+}
+
 /* ════════════ Finance (Phase 1) ════════════
    accounts + categories are small (replace-all on edit, like categories/todos).
    transactions can grow, so they use targeted single-row insert/update/delete
@@ -317,6 +341,7 @@ async function pullAll(force){
         pullSettings(), pullMorning(), pullAcademics(),
         pullJapanese(), pullTrading(), pullCategories(), pullTodos(),
         pullThe90Meta(), pullThe90Daily(), pullHermes(), pullMotiv(), pullRPG(),
+        pullPrinciples(), pullPrinciplesDaily(),
         pullFinAccounts(), pullFinCategories(), pullFinTransactions(), pullFinBudgets(),
         pullFinGoals(), pullFinRecurring(), pullFinSnapshots(),
       ]);
@@ -351,6 +376,8 @@ async function syncPushSettings(){
     theme: loadLS('theme', 'cappa'),
     fin_base_currency: S.fin.baseCurrency || 'TWD',
     fin_fx_rates: S.fin.fxRates || {TWD:1},
+    principles_last_shown: loadLS('principles_last_shown', null),
+    principles_review_prompted: loadLS('principles_review_prompted', null),
   });
   logIfError('push settings', res);
   if(!res.error) dirty.settings = false;
@@ -515,6 +542,33 @@ async function syncPushRPG(){
   if(!res.error) dirty.rpg = false;
 }
 
+async function syncPushPrinciples(){
+  if(!currentUser) return;
+  await waitForPull();   // guards replaceTable's delete-all against an un-pulled local list
+  const ok = await replaceTable('principles', S.principles.items, p => ({
+    id: p.id, user_id: currentUser.id, kind: p.kind, text: p.text,
+    why: p.why || null, position: p.position || 0, active: p.active !== false,
+  }));
+  if(ok) dirty.principles = false;
+}
+
+async function syncPushPrinciplesDaily(){
+  if(!currentUser || !S.principles?.daily) return;
+  await waitForPull();
+  const day = S.principles.daily[TODAY];
+  if(!day) return;
+  const res = await sb.from('principles_daily').upsert({
+    user_id: currentUser.id,
+    date: TODAY,
+    checks: day.checks || {},
+    revise: day.revise || {},
+    note: day.note || '',
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id,date' });
+  logIfError('push principles_daily', res);
+  if(!res.error) dirty.principlesDaily = false;
+}
+
 /* Hermes notices are read+dismiss only on the client — no full push.
    Dismiss stamps dismissed_at; the row stays for history but drops off the panel. */
 async function syncDismissHermes(id){
@@ -612,6 +666,10 @@ function subscribeRealtime(){
       () => rtCoalesce('motivation_videos', async () => { await pullMotiv(); if(typeof rMotivation==='function') rMotivation(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'rpg_state', filter: `user_id=eq.${uid}` },
       () => rtCoalesce('rpg_state', async () => { await pullRPG(); if(typeof rSystem==='function') rSystem(); }))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'principles', filter: `user_id=eq.${uid}` },
+      () => rtCoalesce('principles', async () => { await pullPrinciples(); if(typeof rPrinciplesModal==='function') rPrinciplesModal(); }))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'principles_daily', filter: `user_id=eq.${uid}` },
+      () => rtCoalesce('principles_daily', async () => { await pullPrinciplesDaily(); if(typeof rPrinciplesModal==='function') rPrinciplesModal(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'settings', filter: `user_id=eq.${uid}` },
       () => rtCoalesce('settings', async () => { await pullSettings(); renderAll(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'the90_meta', filter: `user_id=eq.${uid}` },
@@ -677,12 +735,16 @@ async function rehydrateOnFocus(){
     if(dirty.the90Daily) pushes.push(syncPushThe90Daily());
     if(dirty.motiv) pushes.push(syncPushMotiv());
     if(dirty.rpg) pushes.push(syncPushRPG());
+    if(dirty.principles) pushes.push(syncPushPrinciples());
+    if(dirty.principlesDaily) pushes.push(syncPushPrinciplesDaily());
     try{ await Promise.all(pushes); }catch(e){ console.error('[sync] flush', e); }
   }
 
   // Then pull (clean tables are now up-to-date with remote; dirty tables are now pushed and authoritative)
   await pullAll(true);
   renderAll();
+  // 晚间核查: after 21:00 the first return to the app prompts the review once
+  if(typeof principlesEveningAutoShow === 'function') principlesEveningAutoShow();
 }
 document.addEventListener('visibilitychange', rehydrateOnFocus);
 window.addEventListener('focus', rehydrateOnFocus);
