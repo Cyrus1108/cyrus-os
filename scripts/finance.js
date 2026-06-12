@@ -348,10 +348,22 @@ function finRenderWallet(){
       for(const a of accts){
         const bal = finBalance(a.id);
         const excl = a.status===FIN_ACCT_STATUS.EXCLUDED;
+        // make the monthly-interest cron visible: it accrues on the 1st of each
+        // month (server pg_cron), so without this the feature looks broken
+        const ir = +a.interestRate || 0;
+        let irLine = '';
+        if(ir > 0){
+          const nf = new Date(); const nm = new Date(nf.getFullYear(), nf.getMonth()+1, 1);
+          const md = `${nm.getMonth()+1}/${nm.getDate()}`;
+          irLine = bal > 0
+            ? `<span class="fin-acct-interest">↑ 下次计息 ${md} · 预计 +${finMoney(Math.round(bal*ir/100/12*100)/100, a.currency)}</span>`
+            : `<span class="fin-acct-interest">${md} 起计息 · 需正余额</span>`;
+        }
         h += `<div class="fin-acct-card">
           <div class="fin-acct-meta">
             <span class="fin-acct-name">${escH(a.name)}${excl?' <span class="fin-acct-tag">不计净资产</span>':''}${a.isLiability?' <span class="fin-acct-tag liab">负债</span>':''}</span>
             <span class="fin-acct-cur">${a.currency}${a.interestRate>0?` · <span class="fin-acct-rate">${(+a.interestRate)}%/年</span>`:''}</span>
+            ${irLine}
           </div>
           <span class="fin-acct-bal ${bal<0?'fin-neg':''}">${finMoney(bal, a.currency)}</span>
         </div>`;
