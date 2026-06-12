@@ -416,6 +416,8 @@ async function init(){
   // (the old inline variant rotation retired; CREED_VARIANTS stays for the login card)
   if(typeof initPrinciples === 'function') initPrinciples();
   renderAll();
+  // v6.51 黄铜玻璃: daily text reveal + pointer tilt (after first paint, once per load)
+  if(typeof initGlass === 'function') initGlass();
   updateShowDoneBtn();
   tick();
   setInterval(tick,1000);

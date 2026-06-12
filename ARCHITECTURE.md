@@ -1,6 +1,6 @@
 # CyrusOS · 活体架构地图（ARCHITECTURE.md）
 
-> **对齐版本：`cyrus-os-v6.50.0`**（= sw.js `CACHE_VERSION`，每次 bump 顺手更新此行——
+> **对齐版本：`cyrus-os-v6.51.0`**（= sw.js `CACHE_VERSION`，每次 bump 顺手更新此行——
 > 两者不一致即说明本文档已开始腐烂，修文档）。最后全面核对：2026-06-11。
 
 **这份文档的用途**：动工前读它，代替考古式读码。红线与部署纪律在
@@ -131,6 +131,7 @@ rMotivation → rMetrics → rpgAfterChange → attachRipples`
 | ambient.js | sterile 主题环境音 |
 | lifetree.js | Three.js 粒子生命树（The 90 进度驱动生长；不可见自动暂停）；动态 import 加载，但**仍列在 APP_SHELL**（SW 缓存它，离线 sterile 才能用——别"清理"掉） |
 | dragsort.js | 通用拖拽排序 `makeSortable`（jp/tr/todos/principles 等共用） |
+| glass.js | v6.51 黄铜玻璃交互层：`glassDailyReveal()` 每日一次文字浮现（设备本地 LS 键 `reveal_last`，不同步——纯呈现）+ `glassInitTilt()` 指针 tilt/光斑（--rx/--ry/--mx/--my，仅 hover+fine）；sterile 与 reduced-motion 全跳过 |
 
 ### styles/（10 个）
 
@@ -205,6 +206,14 @@ realtime publication 是逐表的**——新表必须 `alter publication supabas
 - 角标：background 8 渐变画 1px brass 短线（零 DOM）；行内元素用左缘 4 渐变缩小版
 - 标签：`panel-label-row::before` brass 菱形 kicker
 - 流光：复用 `@keyframes brassFlow`（components.css），只给"身份宣言级"文字
+- **玻璃（v6.51 起的面板材质）**：`background-color: color-mix(bg-primary 66%, transparent)`
+  + `backdrop-filter: blur(16px) saturate(1.15)`（带 -webkit- 前缀）+ inset 顶部高光；
+  玻璃只上**面板级**容器（panel/the90/hermes/弹窗卡），绝不上列表行（性能）；
+  底下必须有东西可糊——`body::before` 三团 brass 流光底场（ambientDrift 90s）就是为此存在
+- **transform 归属权**：面板的 transform 由 glass.js tilt 独占（--rx/--ry），
+  CSS hover 只许碰 border/box-shadow——再写 `:hover{transform:...}` 会覆盖 tilt
+- 每日文字浮现：新增目标加进 `glassDailyReveal()`，配 `.rv-pre-*` 预隐类；
+  **绝不在渲染函数里触发**（同音效纪律）
 - **一切新装饰作用域 `html:not([data-theme="sterile"])`**，sterile 有自己的语言
 
 ### R4 SW 部署纪律
