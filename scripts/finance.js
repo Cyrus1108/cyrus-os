@@ -353,11 +353,9 @@ function finRenderWallet(){
         const ir = +a.interestRate || 0;
         let irLine = '';
         if(ir > 0){
-          const nf = new Date(); const nm = new Date(nf.getFullYear(), nf.getMonth()+1, 1);
-          const md = `${nm.getMonth()+1}/${nm.getDate()}`;
           irLine = bal > 0
-            ? `<span class="fin-acct-interest">↑ 下次计息 ${md} · 预计 +${finMoney(Math.round(bal*ir/100/12*100)/100, a.currency)}</span>`
-            : `<span class="fin-acct-interest">${md} 起计息 · 需正余额</span>`;
+            ? `<span class="fin-acct-interest">↑ 每日计息 · 预计 +${finMoney(Math.round(bal*ir/100/365*100)/100, a.currency)}/天</span>`
+            : `<span class="fin-acct-interest">每日计息 · 需正余额</span>`;
         }
         h += `<div class="fin-acct-card">
           <div class="fin-acct-meta">
@@ -1265,7 +1263,7 @@ function finOpenAcctForm(id){
     <div class="fin-field"><label>类型</label><select id="fin-acct-type">${typeOpts}</select></div>
     <div class="fin-field"><label>币种</label><select id="fin-acct-currency">${curOpts}</select></div>
     <div class="fin-field"><label>${id?'初始余额（建账时的余额，不可追溯改流水）':'当前余额'}</label><input id="fin-acct-init" type="number" step="0.01" inputmode="decimal" placeholder="0.00" value="${a?a.initialBalance:''}"></div>
-    <div class="fin-field"><label>年利率 % <span class="fin-hint-inline">储蓄账户填写 · 每月 1 号自动计入利息</span></label><input id="fin-acct-rate" type="number" step="0.001" min="0" inputmode="decimal" placeholder="0（不计息）" value="${a&&a.interestRate?a.interestRate:''}"></div>
+    <div class="fin-field"><label>年利率 % <span class="fin-hint-inline">储蓄账户填写 · 每日自动计入利息（年利率÷365）</span></label><input id="fin-acct-rate" type="number" step="0.001" min="0" inputmode="decimal" placeholder="0（不计息）" value="${a&&a.interestRate?a.interestRate:''}"></div>
     <label class="fin-check"><input type="checkbox" id="fin-acct-liab" ${a&&a.isLiability?'checked':''}> 这是负债账户（信用卡 / 借款）</label>
     <div class="fin-form-btns">
       ${id&&!finTxUsesAccount(id)?`<button class="ghost fx-btn danger" onclick="finDeleteAcct('${id}')">删除</button>`:''}

@@ -965,6 +965,10 @@ html:not([data-theme="sterile"]) .todo-row{
   -webkit-background-clip:text;background-clip:text;
   color:transparent;-webkit-text-fill-color:transparent;
   animation:brassFlow 19s ease-in-out infinite;
+  /* .serif-big is line-height:1 — with background-clip:text the descender
+     ('y','g','p' tails) falls outside the line-box and gets clipped. Give it
+     room + negative margin so the layout below (datemeta) doesn't shift. */
+  line-height:1.18; padding-bottom:.06em; margin-bottom:-.12em;
 }
 @media (prefers-reduced-motion:reduce){
   .creed-pillars, #the90-tagline, #dateline{ animation:none; background-position:0 0; }
