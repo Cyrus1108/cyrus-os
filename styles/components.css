@@ -726,10 +726,11 @@ html:not([data-theme="sterile"]) .the90-panel{
 html:not([data-theme="sterile"]) body::before{
   content:''; position:fixed; inset:-20%; z-index:-1; pointer-events:none;
   background:
-    radial-gradient(38% 30% at 18% 22%, color-mix(in srgb, var(--brass) 13%, transparent), transparent 70%),
-    radial-gradient(30% 26% at 82% 12%, color-mix(in srgb, var(--brass-soft) 9%, transparent), transparent 70%),
-    radial-gradient(42% 34% at 64% 86%, color-mix(in srgb, var(--brass) 10%, transparent), transparent 70%);
-  animation:ambientDrift 90s ease-in-out infinite alternate;
+    radial-gradient(38% 30% at 18% 22%, color-mix(in srgb, var(--brass) 24%, transparent), transparent 70%),
+    radial-gradient(30% 26% at 82% 12%, color-mix(in srgb, var(--brass-soft) 17%, transparent), transparent 70%),
+    radial-gradient(42% 34% at 64% 86%, color-mix(in srgb, var(--brass) 19%, transparent), transparent 70%),
+    radial-gradient(24% 20% at 40% 55%, color-mix(in srgb, var(--brass-soft) 10%, transparent), transparent 70%);
+  animation:ambientDrift 64s ease-in-out infinite alternate;
 }
 @keyframes ambientDrift{
   0%  { transform:translate(0,0) scale(1); }
@@ -755,9 +756,9 @@ html:not([data-theme="sterile"]) .the90-panel,
 html:not([data-theme="sterile"]) .hermes-panel,
 html:not([data-theme="sterile"]) .principles-card,
 html:not([data-theme="sterile"]) .lowday-card{
-  background-color:color-mix(in srgb, var(--color-background-primary) 66%, transparent);
-  -webkit-backdrop-filter:blur(16px) saturate(1.15);
-  backdrop-filter:blur(16px) saturate(1.15);
+  background-color:color-mix(in srgb, var(--color-background-primary) 55%, transparent);
+  -webkit-backdrop-filter:blur(26px) saturate(1.3);
+  backdrop-filter:blur(26px) saturate(1.3);
 }
 html:not([data-theme="sterile"]) .panel{
   box-shadow:0 10px 30px -22px rgba(0,0,0,.30),
@@ -773,25 +774,28 @@ html:not([data-theme="sterile"]) .the90-panel{
 @media (hover:hover) and (pointer:fine){
   html:not([data-theme="sterile"]) .panel::after{
     content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    background:radial-gradient(220px 180px at var(--mx,50%) var(--my,50%),
-      color-mix(in srgb, var(--brass-soft) 10%, transparent), transparent 70%);
+    background:radial-gradient(320px 260px at var(--mx,50%) var(--my,50%),
+      color-mix(in srgb, var(--brass-soft) 17%, transparent), transparent 70%);
     opacity:0; transition:opacity .35s var(--ease-silk);
   }
   html:not([data-theme="sterile"]) .panel:hover::after{ opacity:1; }
-  /* tilt — glass.js drives --rx/--ry; replaces the old flat translateY lift */
+  /* tilt — glass.js lerps --rx/--ry per frame; transform must NOT be in the
+     transition list (it would double-smooth against the JS lerp and fight
+     GSAP's entrance tweens) */
   html:not([data-theme="sterile"]) .panel{
     transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));
-    transition:box-shadow .35s var(--ease-silk), border-color .35s var(--ease-silk),
-               transform .12s ease-out;
+    transition:box-shadow .35s var(--ease-silk), border-color .35s var(--ease-silk);
   }
 }
 
-/* ── daily text reveal (nirnor-style, once per day, driven by glass.js) ──
-   pre-state classes applied only when the reveal will actually play, so
-   non-reveal loads render instantly with zero flash */
-.rv-pre-wipe-up{ clip-path:inset(0 0 100% 0); }
-.rv-pre-wipe-lr{ clip-path:inset(0 100% 0 0); }
-.rv-pre-rise{ opacity:0; }
+/* v7.0 — 五柱黄铜立方 (herocube.js): fixed ambient sculpture behind the glass */
+#herocube{
+  position:fixed; z-index:-1; pointer-events:none;
+  top:clamp(54px, 9vh, 130px); right:clamp(6px, 5vw, 78px);
+  width:clamp(170px, 24vw, 330px); aspect-ratio:1/1;
+  opacity:.95;
+}
+html[data-theme="sterile"] #herocube{ display:none; }
 
 /* todo rows — the same bracket language per ITEM, scaled down: resting state
    shows faint 6px left-edge brackets (visible on touch devices too); hover

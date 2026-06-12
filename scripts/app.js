@@ -437,6 +437,8 @@ async function init(){
     // 晨间宣读 / 晚间核查 auto-show — once per day, only after the synced
     // markers arrived (runs exactly once per page load; rehydrate never re-enters init)
     if(typeof principlesAutoShow === 'function') principlesAutoShow();
+    // pulled data may change layout heights — re-measure scroll triggers
+    if(window.ScrollTrigger) ScrollTrigger.refresh();
     if(typeof subscribeRealtime === 'function') subscribeRealtime();
   }
 

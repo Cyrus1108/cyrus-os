@@ -83,7 +83,7 @@ function adversityLedger(){
 function lowdayRequestEnter(){ if(!isLowDayActive()) lowdayShowProtocol(); }
 function lowdayShowProtocol(){
   let m = document.getElementById('lowday-modal');
-  if(!m){ m = document.createElement('div'); m.id = 'lowday-modal'; m.className = 'lowday-modal'; document.body.appendChild(m); }
+  if(!m){ m = document.createElement('div'); m.id = 'lowday-modal'; m.className = 'lowday-modal'; m.setAttribute('data-lenis-prevent',''); document.body.appendChild(m); }
   const items = LOWDAY_PROTOCOL_ITEMS.map((t,i)=>
     `<div class="lowday-p-item"><span class="lowday-p-n">${i+1}</span><span class="lowday-p-t">${escH(t)}</span></div>`
   ).join('');

@@ -40,6 +40,7 @@ function principlesShowModal(auto, mode){
     m = document.createElement('div');
     m.id = 'principles-modal'; m.className = 'principles-modal';
     m.setAttribute('aria-hidden','true');
+    m.setAttribute('data-lenis-prevent','');   // the card scrolls natively, not through Lenis
     document.body.appendChild(m);
   }
   prMode = mode || 'read';

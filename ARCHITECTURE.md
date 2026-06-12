@@ -1,6 +1,6 @@
 # CyrusOS · 活体架构地图（ARCHITECTURE.md）
 
-> **对齐版本：`cyrus-os-v6.52.0`**（= sw.js `CACHE_VERSION`，每次 bump 顺手更新此行——
+> **对齐版本：`cyrus-os-v7.0.0`**（= sw.js `CACHE_VERSION`，每次 bump 顺手更新此行——
 > 两者不一致即说明本文档已开始腐烂，修文档）。最后全面核对：2026-06-11。
 
 **这份文档的用途**：动工前读它，代替考古式读码。红线与部署纪律在
@@ -73,9 +73,10 @@ Permission denied）；SSM 以非 ubuntu 用户跑会触发 git `safe.directory`
 ### 脚本加载顺序（index.html 底部）
 
 Supabase CDN → `supabase.js`(sb 客户端) → `state.js`(S/TODAY/常量/saveXX/dirty)
-→ 各功能模块（纯函数声明，互不执行）→ `sync.js` → `auth.js` → `app.js`
-（末尾 `initAuth()` 启动一切）。`lifetree.js` 例外：ES module，仅 sterile 主题时由
-theme.js 动态 import（Three.js）。
+→ `vendor/`（gsap + ScrollTrigger + SplitText + lenis，UMD 本地化供离线；GSAP
+3.13 起全插件免费）→ 各功能模块（纯函数声明，互不执行）→ `sync.js` → `auth.js`
+→ `app.js`（末尾 `initAuth()` 启动一切）。ES module 例外：`lifetree.js`（仅
+sterile 时 theme.js 动态 import）与 `herocube.js`（importmap 'three'）。
 
 ### init() 时序（app.js，auth 成功后 onAuthReady → init）
 
@@ -131,7 +132,8 @@ rMotivation → rMetrics → rpgAfterChange → attachRipples`
 | ambient.js | sterile 主题环境音 |
 | lifetree.js | Three.js 粒子生命树（The 90 进度驱动生长；不可见自动暂停）；动态 import 加载，但**仍列在 APP_SHELL**（SW 缓存它，离线 sterile 才能用——别"清理"掉） |
 | dragsort.js | 通用拖拽排序 `makeSortable`（jp/tr/todos/principles 等共用） |
-| glass.js | v6.51+ 黄铜玻璃交互层：`glassDailyReveal()` 每日一次文字浮现（设备本地 LS 键 `reveal_last`，不同步——纯呈现）+ `glassInitTilt()` 指针 tilt/光斑（--rx/--ry/--mx/--my，仅 hover+fine）+ `glassInitTrails()` nirnor 素描线迹背景（#glass-trails canvas，brass 墨线游走+缓慢溶解，30fps 上限、tab 隐藏即停、手机减负）；sterile 与 reduced-motion 全跳过 |
+| glass.js | v7.0 黄铜玻璃 maximalist 交互层（GSAP 栈）：Lenis 平滑滚动（内部滚动容器**必须**带 `data-lenis-prevent`）；英雄字符 3D 打散重组（SplitText，完成后 revert 归还 brassFlow）；面板标题/眉行滚动打散重组（可逆）；面板 3D 汇聚入场（once + clearProps 归还 transform 给 tilt）；指针 tilt（JS lerp ±3.2°，CSS transition 不得含 transform）+ 光斑；素描墨线 v2（15 走线、指针吸引、tab 隐藏即停）；sterile 与 reduced-motion 全跳过 |
+| herocube.js | v7.0 五柱黄铜立方（ES module，importmap three）：六面 canvas 纹理（Ⅰ–Ⅴ+◆，HUD 角标边框），固定定位 z:-1 翻滚，滚动速度加转、指针拉拽、浮沉；sterile/reduced-motion 跳过 |
 
 ### styles/（10 个）
 
