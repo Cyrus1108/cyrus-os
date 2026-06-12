@@ -855,6 +855,19 @@ body.has-focus .focus-backdrop{ opacity:1; pointer-events:auto; }
   will-change:transform;
 }
 
+/* v7.5 — View Transitions flight: the browser pairs the panel's old/new
+   snapshots via view-transition-name and morphs them on the compositor
+   thread — main-thread jank can no longer eat the first frame */
+::view-transition-group(focus-card){
+  animation-duration:.65s;
+  animation-timing-function:cubic-bezier(.65, 0, .35, 1);
+}
+::view-transition-old(focus-card),
+::view-transition-new(focus-card){
+  animation-duration:.65s;
+  height:100%;
+}
+
 /* smoothness: promote the glass to its own layers; lighter blur on touch
    devices where 26px genuinely drops frames */
 html:not([data-theme="sterile"]) .panel,

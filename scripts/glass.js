@@ -50,6 +50,8 @@ function glassFlicker(chars, baseDelay, spread){
 function glassInitScrollFX(){
   if(!(window.gsap && window.ScrollTrigger)) return;
   gsap.registerPlugin(ScrollTrigger);
+  // a heavy frame must SLOW a tween down, not swallow it (侧聊保险 #2)
+  gsap.ticker.lagSmoothing(100, 16);
   const hasSplit = typeof SplitText !== 'undefined';
   if(hasSplit) gsap.registerPlugin(SplitText);
 
@@ -262,73 +264,120 @@ function glassInitFocus(){
    never skew the math (the Flip-plugin absolute mode did exactly that).
    .in-flight suspends backdrop-filter during the flight: blurring glass is
    what made the animation stutter. */
+/* Focus flight v3 (侧聊诊断): the manual-FLIP math was right but the takeoff
+   frame was too expensive — reparent reflow + backdrop blur + page-wide 3D
+   recede all landed on frame 0 (300-500ms), and GSAP runs on wall-clock time,
+   so frame 2 was already at 70-100% → "open grows from center, close snaps".
+   PRIMARY: View Transitions API — the browser snapshots old/new states and
+   animates the snapshots on the COMPOSITOR thread; main-thread jank cannot
+   eat the animation, and the blur is baked into the snapshot. The shared
+   element pairs via view-transition-name (set BEFORE startViewTransition,
+   cleared after finished, or it degrades to a center crossfade).
+   FALLBACK (old browsers): GSAP flight with lagSmoothing + the heavy side
+   effects (backdrop/pageDepth) deferred ~90ms off the takeoff frame. */
 function focusPanel(panel){
   if(_focus) return;
-  const first = panel.getBoundingClientRect();
   const ph = document.createElement('div');
   ph.className = 'focus-ph';
   ph.style.height = panel.offsetHeight + 'px';
   _focus = { panel, ph, flying: true };
-  panel.parentNode.insertBefore(ph, panel);
-  document.body.appendChild(panel);
-  panel.classList.add('panel-focused', 'in-flight');
-  panel.setAttribute('data-lenis-prevent','');
-  document.body.classList.add('has-focus');
-  pageDepth(true);
   if(_lenis) _lenis.stop();
-  const last = panel.getBoundingClientRect();
-  gsap.fromTo(panel, {
-    x: first.left - last.left, y: first.top - last.top,
-    scaleX: first.width / last.width, scaleY: first.height / last.height,
-    transformOrigin: '0 0',
-  }, {
-    x: 0, y: 0, scaleX: 1, scaleY: 1, duration: 0.7, ease: 'power3.inOut',
-    onComplete: () => {
-      panel.classList.remove('in-flight');
-      gsap.set(panel, { clearProps: 'transform' });
+
+  const mutate = () => {
+    panel.parentNode.insertBefore(ph, panel);
+    document.body.appendChild(panel);
+    panel.classList.add('panel-focused');
+    panel.setAttribute('data-lenis-prevent','');
+    document.body.classList.add('has-focus');
+    pageDepth(true);
+  };
+
+  if(document.startViewTransition){
+    panel.style.viewTransitionName = 'focus-card';
+    const vt = document.startViewTransition(mutate);
+    vt.finished.finally(() => {
+      panel.style.viewTransitionName = '';
       if(_focus) _focus.flying = false;
-    },
-  });
+    });
+  } else {
+    const first = panel.getBoundingClientRect();
+    panel.parentNode.insertBefore(ph, panel);
+    document.body.appendChild(panel);
+    panel.classList.add('panel-focused', 'in-flight');
+    panel.setAttribute('data-lenis-prevent','');
+    const last = panel.getBoundingClientRect();
+    gsap.fromTo(panel, {
+      x: first.left - last.left, y: first.top - last.top,
+      scaleX: first.width / last.width, scaleY: first.height / last.height,
+      transformOrigin: '0 0',
+    }, {
+      x: 0, y: 0, scaleX: 1, scaleY: 1, duration: 0.7, ease: 'power3.inOut',
+      onComplete: () => {
+        panel.classList.remove('in-flight');
+        gsap.set(panel, { clearProps: 'transform' });
+        if(_focus) _focus.flying = false;
+      },
+    });
+    // heavy side effects ride a later frame so the takeoff frame only flies
+    setTimeout(() => { document.body.classList.add('has-focus'); pageDepth(true); }, 90);
+  }
   if(window.Sfx && typeof Sfx.open === 'function') Sfx.open();
 }
 function unfocusPanel(){
   if(!_focus || _focus.flying) return;
   const { panel, ph } = _focus;
   _focus.flying = true;
-  panel.classList.add('in-flight');
-  document.body.classList.remove('has-focus');
   if(_lenis) _lenis.start();
-  /* CRITICAL ORDER: snap the receded page back to identity INSTANTLY (no
-     transition) BEFORE measuring the slot. Measuring while the un-recede
-     transition was still playing aimed the flight at a stale, shrunken rect —
-     the card landed wrong and the final reinsert read as an instant jump. */
-  const pw = document.querySelector('.page-wrapper');
-  let pwTrans = null;
-  if(pw){
-    pwTrans = pw.style.transition;
-    pw.style.transition = 'none';
-    pw.classList.remove('page-depth');
-    void pw.offsetHeight;                      // force reflow at identity
-  }
-  const cur = panel.getBoundingClientRect();
-  const tgt = ph.getBoundingClientRect();      // NOW the true visual slot
-  if(pw) pw.style.transition = pwTrans || '';
-  gsap.fromTo(panel, {
-    x: 0, y: 0, scaleX: 1, scaleY: 1, transformOrigin: '0 0',
-  }, {
-    x: tgt.left - cur.left, y: tgt.top - cur.top,
-    scaleX: tgt.width / cur.width, scaleY: tgt.height / cur.height,
-    duration: 0.62, ease: 'power3.inOut',
-    onComplete: () => {
-      panel.classList.remove('panel-focused', 'in-flight');
-      panel.removeAttribute('data-lenis-prevent');
-      ph.parentNode.insertBefore(panel, ph);
-      ph.remove();
-      gsap.set(panel, { clearProps: 'transform' });
+
+  const cleanup = () => {
+    panel.classList.remove('panel-focused');
+    panel.removeAttribute('data-lenis-prevent');
+    ph.parentNode.insertBefore(panel, ph);
+    ph.remove();
+  };
+
+  if(document.startViewTransition){
+    panel.style.viewTransitionName = 'focus-card';
+    const vt = document.startViewTransition(() => {
+      cleanup();
+      document.body.classList.remove('has-focus');
+      pageDepth(false);
+    });
+    vt.finished.finally(() => {
+      panel.style.viewTransitionName = '';
       _focus = null;
       if(window.ScrollTrigger) ScrollTrigger.refresh();
-    },
-  });
+    });
+  } else {
+    panel.classList.add('in-flight');
+    document.body.classList.remove('has-focus');
+    /* measure the slot at identity — un-recede the page instantly first */
+    const pw = document.querySelector('.page-wrapper');
+    let pwTrans = null;
+    if(pw){
+      pwTrans = pw.style.transition;
+      pw.style.transition = 'none';
+      pw.classList.remove('page-depth');
+      void pw.offsetHeight;
+    }
+    const cur = panel.getBoundingClientRect();
+    const tgt = ph.getBoundingClientRect();
+    if(pw) pw.style.transition = pwTrans || '';
+    gsap.fromTo(panel, {
+      x: 0, y: 0, scaleX: 1, scaleY: 1, transformOrigin: '0 0',
+    }, {
+      x: tgt.left - cur.left, y: tgt.top - cur.top,
+      scaleX: tgt.width / cur.width, scaleY: tgt.height / cur.height,
+      duration: 0.62, ease: 'power3.inOut',
+      onComplete: () => {
+        panel.classList.remove('panel-focused', 'in-flight');
+        cleanup();
+        gsap.set(panel, { clearProps: 'transform' });
+        _focus = null;
+        if(window.ScrollTrigger) ScrollTrigger.refresh();
+      },
+    });
+  }
   if(window.Sfx && typeof Sfx.close === 'function') Sfx.close();
 }
 window.unfocusPanel = unfocusPanel;
