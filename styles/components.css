@@ -952,6 +952,35 @@ html:not([data-theme="sterile"]) .todo-row{
 }
 /* the big date stays ink-bodied — brass veins drift through it, slower
    (a hero moment, not a marquee) */
+/* v7.7 — Morning Ritual 完成态 (Fully ready): a glass veil over the whole
+   panel, a date-random phrase that flickers in, and a brass line that sweeps
+   from the left edge to the phrase, then (after a beat) from the phrase to the
+   right edge — the text breaks the line, it's never crossed. Tap to dismiss. */
+.mr-ready{
+  position:absolute; inset:0; z-index:6; border-radius:inherit;
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none; cursor:pointer;
+  background:color-mix(in srgb, var(--color-background-primary) 30%, transparent);
+  -webkit-backdrop-filter:blur(10px) saturate(1.1); backdrop-filter:blur(10px) saturate(1.1);
+  transition:opacity .55s var(--ease-silk);
+}
+.mr-ready.show{ opacity:1; pointer-events:auto; }
+.mr-ready-inner{ display:flex; align-items:center; gap:16px; width:86%; max-width:540px; }
+.mr-ready-phrase{
+  flex:0 0 auto; white-space:nowrap;
+  font-family:var(--serif); font-size:clamp(17px, 3.1vw, 26px);
+  letter-spacing:.04em; color:var(--brass-soft); text-shadow:0 0 18px var(--brass-glow);
+}
+.mr-ready-line{ flex:1 1 auto; height:1px; transform:scaleX(0); }
+.mr-ready-line-l{ transform-origin:left; background:linear-gradient(90deg, transparent, var(--brass)); }
+.mr-ready-line-r{ transform-origin:left; background:linear-gradient(90deg, var(--brass), transparent); }
+.mr-ready.show .mr-ready-line-l{ animation:mrLineGrow .7s var(--ease-silk) .15s forwards; }
+.mr-ready.show .mr-ready-line-r{ animation:mrLineGrow .7s var(--ease-silk) .9s forwards; }
+@keyframes mrLineGrow{ from{ transform:scaleX(0); } to{ transform:scaleX(1); } }
+@media (prefers-reduced-motion:reduce){
+  .mr-ready.show .mr-ready-line-l, .mr-ready.show .mr-ready-line-r{ animation:none; transform:scaleX(1); }
+}
+
 #dateline{
   background:linear-gradient(115deg,
     var(--ink) 0%, var(--ink) 20%,

@@ -2,24 +2,35 @@
 const TODAY = new Date().toLocaleDateString('sv-SE');
 const STORAGE_PREFIX = 'cyrus_dashboard_v6_';
 
+/* 身心灵 morning ritual (v7.7) — body + spirit only; Walk & Breakfast retired.
+   Two Baths: a 3-min state-switch, then a 10-15 min proper wash. */
 const MR_DEFAULT=[
-  {id:'mr1',t:'Drink water',mins:2,d:false},
-  {id:'mr2',t:"Man's work",mins:15,d:false},
+  {id:'mr1',t:'Water',mins:1,d:false},
   {id:'mr3',t:'Meditation',mins:10,d:false},
-  {id:'mr5',t:'Walk',mins:10,d:false},
-  {id:'mr6',t:'Breakfast',mins:20,d:false},
-  {id:'mr7',t:'Calisthenics',mins:60,d:false},
-  {id:'mr8',t:'Bath',mins:6,d:false},
+  {id:'mr8',t:'Bath · 切换',mins:3,d:false},
+  {id:'mr7',t:'Calisthenics',mins:30,d:false},
+  {id:'mr9',t:'Bath · 洗净',mins:13,d:false},
+  {id:'mr2',t:"Men's work",mins:3,d:false},
 ];
 
-/* Migration: strip removed items and deduplicate by id from any loaded morning list.
-   (Supabase rows may carry mr4/Prep meals or duplicate mr5/Walk entries.) */
+/* Migration: normalize any loaded morning list to the current ritual. Legacy
+   lists (Walk/Breakfast/Prep meals, old durations, missing the 2nd bath mr9)
+   are rebuilt from MR_DEFAULT, carrying over the done-state of surviving ids —
+   morning resets daily anyway, so a lost tick is cheap. Idempotent: a list
+   that already matches only gets a defensive de-dup. */
 function cleanMorning(){
   if(!S.mr || !Array.isArray(S.mr.list)) return false;
+  const ids = S.mr.list.map(i => i.id);
+  const legacy = S.mr.list.some(i => i.t === 'Walk' || i.t === 'Breakfast' || i.id === 'mr4' || i.t === 'Prep meals')
+    || !ids.includes('mr9')
+    || S.mr.list.length !== MR_DEFAULT.length;
+  if(legacy){
+    const doneById = {};
+    S.mr.list.forEach(i => { doneById[i.id] = i.d; });
+    S.mr.list = MR_DEFAULT.map(d => ({ ...d, d: !!doneById[d.id] }));
+    return true;
+  }
   const before = S.mr.list.length;
-  // 1. Remove explicitly retired items
-  S.mr.list = S.mr.list.filter(i => i.id !== 'mr4' && i.t !== 'Prep meals');
-  // 2. Deduplicate by id (keep first occurrence)
   const seen = new Set();
   S.mr.list = S.mr.list.filter(i => { if(seen.has(i.id)) return false; seen.add(i.id); return true; });
   return S.mr.list.length !== before;

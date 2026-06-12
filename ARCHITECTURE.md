@@ -1,6 +1,6 @@
 # CyrusOS · 活体架构地图（ARCHITECTURE.md）
 
-> **对齐版本：`cyrus-os-v7.6.0`**（= sw.js `CACHE_VERSION`，每次 bump 顺手更新此行——
+> **对齐版本：`cyrus-os-v7.7.0`**（= sw.js `CACHE_VERSION`，每次 bump 顺手更新此行——
 > 两者不一致即说明本文档已开始腐烂，修文档）。最后全面核对：2026-06-11。
 
 **这份文档的用途**：动工前读它，代替考古式读码。红线与部署纪律在
@@ -113,7 +113,7 @@ rMotivation → rMetrics → rpgAfterChange → attachRipples`
 | creed.js | （v6.50 退役）旧三段轮播；文件仍在但主页不再调用，见 §7 技术债 5 |
 | drawer.js | 右缘抽屉开合 |
 | markets.js | TradingView widgets + 财经日历 + 符号选择 |
-| morning.js | 晨间药丸 `rMR`/`toggleMR`（全清 quest 音按日闩锁 `_mrQuestDate`） |
+| morning.js | 晨间药丸（v7.7 身心灵 6 项：Water/Meditation/Bath·切换/Calisthenics/Bath·洗净/Men's work，MR_DEFAULT+cleanMorning 迁移在 state.js）；`rMR`/`toggleMR`（全清 quest 音按日闩锁 `_mrQuestDate`）；**完成态** `rMRReady`：全勾→面板玻璃遮罩 `#mr-ready` + 日随机短句(MR_READY_PHRASES,date-seeded)glassFlicker 闪现 + 双段穿线(CSS)，点遮罩 `mrDismissReady` 收起(当日不重弹除非破完成) |
 | academics.js | 课业任务 CRUD + 提醒（`rAC/toggleAC`） |
 | japanese.js | N2 清单；**完成即打卡**：`jpSettle()` 全勾→log[TODAY]，streak 由 `jpComputeStreak()` 从 log 推导（连续天数）；清单按日重置（jp.date）；ci-btn 仅展示 |
 | trading.js | 交易清单 + 偏向笔记（每日重置） |
