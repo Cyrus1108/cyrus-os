@@ -830,6 +830,34 @@ html:not([data-theme="sterile"]) .page-wrapper.page-depth{
   opacity:.72; filter:saturate(.85) brightness(.85);
 }
 
+/* v7.3 — Focus Spaces (板块聚焦): the same panel node FLIPs between its deck
+   slot and a fullscreen dedicated space. Backdrop dims the receded world. */
+.focus-btn{
+  position:absolute; top:14px; right:14px; z-index:3; cursor:pointer;
+  width:30px; height:30px; display:grid; place-items:center;
+  font-size:14px; color:var(--brass);
+  background:color-mix(in srgb, var(--brass) 8%, transparent);
+  border:.5px solid var(--brass-ghost); border-radius:5px;
+  transition:border-color var(--dur-fast) var(--ease-silk), box-shadow var(--dur-fast) var(--ease-silk);
+}
+.focus-btn:hover{ border-color:var(--brass); box-shadow:0 0 10px var(--brass-glow); }
+.flip-host .flip-btn{ right:54px; }   /* make room for ⤢ on the trading panel */
+
+.focus-backdrop{
+  position:fixed; inset:0; z-index:1050; pointer-events:none; opacity:0;
+  background:rgba(8,7,5,.55); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
+  transition:opacity .5s var(--ease-silk);
+}
+body.has-focus .focus-backdrop{ opacity:1; pointer-events:auto; }
+
+.panel-focused{
+  position:fixed !important; z-index:1060;
+  inset:0; margin:auto;
+  width:min(94vw, 880px); height:min(92svh, 980px);
+  overflow:auto; overscroll-behavior:contain;
+}
+.panel-focused .focus-btn{ position:sticky; top:6px; float:right; }
+
 /* v7.0 — 五柱黄铜立方 (herocube.js): fixed ambient sculpture behind the glass */
 #herocube{
   position:fixed; z-index:-1; pointer-events:none;

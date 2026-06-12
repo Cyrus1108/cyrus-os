@@ -217,6 +217,82 @@ function pageDepth(on){
 }
 window.pageDepth = pageDepth;
 
+/* ── Focus Spaces (板块聚焦) — click ⤢ on a board and the SAME panel node
+   FLIP-animates out of the deck into a fullscreen dedicated space (all ids,
+   checkboxes and sync untouched); the page recedes behind it. Exit: ×,
+   backdrop or Esc — it flies back into its slot. GSAP Flip plugin. ── */
+let _focus = null;
+function glassInitFocus(){
+  if(!(window.gsap && typeof Flip !== 'undefined')) return;
+  gsap.registerPlugin(Flip);
+
+  // backdrop (also the click-out exit)
+  const bd = document.createElement('div');
+  bd.className = 'focus-backdrop';
+  bd.addEventListener('click', unfocusPanel);
+  document.body.appendChild(bd);
+
+  const targets = [
+    document.getElementById('the90-panel'),
+    document.querySelector('.mr-panel'),
+    ...(document.getElementById('m-ac') ?
+        [...document.getElementById('m-ac').closest('.panel').parentElement.children].filter(el => el.classList.contains('panel')) : []),
+    document.getElementById('td-list') ? document.getElementById('td-list').closest('.panel') : null,
+  ].filter(Boolean);
+
+  targets.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'focus-btn';
+    btn.title = '聚焦此板块';
+    btn.textContent = '⤢';
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      (_focus && _focus.panel === p) ? unfocusPanel() : focusPanel(p);
+    });
+    p.insertBefore(btn, p.firstChild);
+  });
+
+  document.addEventListener('keydown', e => { if(e.key === 'Escape' && _focus) unfocusPanel(); });
+}
+function focusPanel(panel){
+  if(_focus) return;
+  const ph = document.createElement('div');
+  ph.className = 'focus-ph';
+  ph.style.height = panel.offsetHeight + 'px';
+  _focus = { panel, ph };
+  const state = Flip.getState(panel);
+  panel.parentNode.insertBefore(ph, panel);
+  document.body.appendChild(panel);
+  panel.classList.add('panel-focused');
+  panel.setAttribute('data-lenis-prevent','');
+  document.body.classList.add('has-focus');
+  pageDepth(true);
+  if(_lenis) _lenis.stop();
+  const fb = panel.querySelector('.focus-btn');
+  if(fb){ fb.textContent = '×'; fb.title = '退出聚焦'; }
+  Flip.from(state, { duration: 0.85, ease: 'power3.inOut', absolute: true });
+  if(window.Sfx && typeof Sfx.open === 'function') Sfx.open();
+}
+function unfocusPanel(){
+  if(!_focus) return;
+  const { panel, ph } = _focus;
+  _focus = null;
+  const fb = panel.querySelector('.focus-btn');
+  if(fb){ fb.textContent = '⤢'; fb.title = '聚焦此板块'; }
+  const state = Flip.getState(panel);
+  panel.classList.remove('panel-focused');
+  panel.removeAttribute('data-lenis-prevent');
+  ph.parentNode.insertBefore(panel, ph);
+  ph.remove();
+  document.body.classList.remove('has-focus');
+  pageDepth(false);
+  if(_lenis) _lenis.start();
+  Flip.from(state, { duration: 0.75, ease: 'power3.inOut', absolute: true,
+    onComplete: () => { if(window.ScrollTrigger) ScrollTrigger.refresh(); } });
+  if(window.Sfx && typeof Sfx.close === 'function') Sfx.close();
+}
+window.unfocusPanel = unfocusPanel;
+
 /* ── pointer tilt + light spot (JS lerp — no CSS transition fighting GSAP) ── */
 function glassInitTilt(){
   if(!(window.matchMedia && window.matchMedia('(hover:hover) and (pointer:fine)').matches)) return;
@@ -232,7 +308,7 @@ function glassInitTilt(){
     }
     p.addEventListener('pointerenter', () => { hovering = true; if(!raf) raf = requestAnimationFrame(tick); });
     p.addEventListener('pointermove', e => {
-      if(glassSterile()) return;
+      if(glassSterile() || p.classList.contains('panel-focused')) return;
       const r = p.getBoundingClientRect();
       const nx = (e.clientX - r.left) / r.width - 0.5;
       const ny = (e.clientY - r.top) / r.height - 0.5;
@@ -335,6 +411,7 @@ function initGlass(){
   glassInitFlip();       // restructure the trading panel before measuring
   glassInitStacking();   // wrap sections first — triggers measure final layout
   glassInitScrollFX();
+  glassInitFocus();
   glassInitTilt();
   glassInitTrails();
 }
