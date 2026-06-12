@@ -830,19 +830,11 @@ html:not([data-theme="sterile"]) .page-wrapper.page-depth{
   opacity:.72; filter:saturate(.85) brightness(.85);
 }
 
-/* v7.3 — Focus Spaces (板块聚焦): the same panel node FLIPs between its deck
-   slot and a fullscreen dedicated space. Backdrop dims the receded world. */
-.focus-btn{
-  position:absolute; top:14px; right:14px; z-index:3; cursor:pointer;
-  width:30px; height:30px; display:grid; place-items:center;
-  font-size:14px; color:var(--brass);
-  background:color-mix(in srgb, var(--brass) 8%, transparent);
-  border:.5px solid var(--brass-ghost); border-radius:5px;
-  transition:border-color var(--dur-fast) var(--ease-silk), box-shadow var(--dur-fast) var(--ease-silk);
-}
-.focus-btn:hover{ border-color:var(--brass); box-shadow:0 0 10px var(--brass-glow); }
-.flip-host .flip-btn{ right:54px; }   /* make room for ⤢ on the trading panel */
-
+/* v7.4 — Focus Spaces (板块聚焦, 无按钮版): tap anywhere on a board to send
+   it into its fullscreen space (manual FLIP in viewport coords); exit =
+   backdrop tap or Esc. .in-flight suspends the backdrop blur during flight —
+   that blur was the jank. */
+.focusable{ cursor:pointer; }
 .focus-backdrop{
   position:fixed; inset:0; z-index:1050; pointer-events:none; opacity:0;
   background:rgba(8,7,5,.55); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
@@ -855,8 +847,32 @@ body.has-focus .focus-backdrop{ opacity:1; pointer-events:auto; }
   inset:0; margin:auto;
   width:min(94vw, 880px); height:min(92svh, 980px);
   overflow:auto; overscroll-behavior:contain;
+  cursor:default;
 }
-.panel-focused .focus-btn{ position:sticky; top:6px; float:right; }
+.in-flight{
+  -webkit-backdrop-filter:none !important; backdrop-filter:none !important;
+  background-color:color-mix(in srgb, var(--color-background-primary) 96%, transparent) !important;
+  will-change:transform;
+}
+
+/* smoothness: promote the glass to its own layers; lighter blur on touch
+   devices where 26px genuinely drops frames */
+html:not([data-theme="sterile"]) .panel,
+html:not([data-theme="sterile"]) .the90-panel{ will-change:transform; }
+@media (pointer:coarse){
+  html:not([data-theme="sterile"]) .panel,
+  html:not([data-theme="sterile"]) .the90-panel,
+  html:not([data-theme="sterile"]) .hermes-panel,
+  html:not([data-theme="sterile"]) .principles-card,
+  html:not([data-theme="sterile"]) .lowday-card{
+    -webkit-backdrop-filter:blur(13px) saturate(1.25);
+    backdrop-filter:blur(13px) saturate(1.25);
+  }
+}
+
+/* v7.4 — 无退出键纪律: backdrop / Esc / 系统返回手势是唯一收回方式 */
+html:not([data-theme="sterile"]) .sys-back[aria-label="关闭"]{ display:none !important; }
+html:not([data-theme="sterile"]) .fin-back{ display:none !important; }
 
 /* v7.0 — 五柱黄铜立方 (herocube.js): fixed ambient sculpture behind the glass */
 #herocube{

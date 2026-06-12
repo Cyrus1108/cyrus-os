@@ -222,14 +222,14 @@ window.pageDepth = pageDepth;
    checkboxes and sync untouched); the page recedes behind it. Exit: ×,
    backdrop or Esc — it flies back into its slot. GSAP Flip plugin. ── */
 let _focus = null;
+const FOCUS_INTERACTIVE = 'button,input,textarea,select,a,label,[onclick],.row,.mr-pill,.the90-cell,.lowday-amp-dot,.drag-handle,.cat-pills,.flip-btn,.flip3d';
 function glassInitFocus(){
-  if(!(window.gsap && typeof Flip !== 'undefined')) return;
-  gsap.registerPlugin(Flip);
+  if(!window.gsap) return;
 
-  // backdrop (also the click-out exit)
+  // backdrop = the only exit surface besides Esc (按用户要求：无按钮无×)
   const bd = document.createElement('div');
   bd.className = 'focus-backdrop';
-  bd.addEventListener('click', unfocusPanel);
+  bd.addEventListener('click', () => unfocusPanel());
   document.body.appendChild(bd);
 
   const targets = [
@@ -240,58 +240,102 @@ function glassInitFocus(){
     document.getElementById('td-list') ? document.getElementById('td-list').closest('.panel') : null,
   ].filter(Boolean);
 
+  /* click-ANYWHERE on the card opens its space — but only a real tap:
+     ≤10px pointer travel, ≤600ms, and not on any interactive element
+     (so scrolling never misfires and checkboxes stay checkboxes) */
   targets.forEach(p => {
-    const btn = document.createElement('button');
-    btn.className = 'focus-btn';
-    btn.title = '聚焦此板块';
-    btn.textContent = '⤢';
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      (_focus && _focus.panel === p) ? unfocusPanel() : focusPanel(p);
+    let sx = 0, sy = 0, st = 0;
+    p.addEventListener('pointerdown', e => { sx = e.clientX; sy = e.clientY; st = Date.now(); }, { passive:true });
+    p.addEventListener('pointerup', e => {
+      if(_focus) return;
+      if(Math.hypot(e.clientX - sx, e.clientY - sy) > 10 || Date.now() - st > 600) return;
+      if(e.target.closest(FOCUS_INTERACTIVE)) return;
+      focusPanel(p);
     });
-    p.insertBefore(btn, p.firstChild);
+    p.classList.add('focusable');
   });
 
-  document.addEventListener('keydown', e => { if(e.key === 'Escape' && _focus) unfocusPanel(); });
+  document.addEventListener('keydown', e => { if(e.key === 'Escape') unfocusPanel(); });
 }
+/* manual FLIP — the flight happens entirely as a body-level fixed element in
+   viewport coordinates, so transformed ancestors (the deck's scrub scale) can
+   never skew the math (the Flip-plugin absolute mode did exactly that).
+   .in-flight suspends backdrop-filter during the flight: blurring glass is
+   what made the animation stutter. */
 function focusPanel(panel){
   if(_focus) return;
+  const first = panel.getBoundingClientRect();
   const ph = document.createElement('div');
   ph.className = 'focus-ph';
   ph.style.height = panel.offsetHeight + 'px';
-  _focus = { panel, ph };
-  const state = Flip.getState(panel);
+  _focus = { panel, ph, flying: true };
   panel.parentNode.insertBefore(ph, panel);
   document.body.appendChild(panel);
-  panel.classList.add('panel-focused');
+  panel.classList.add('panel-focused', 'in-flight');
   panel.setAttribute('data-lenis-prevent','');
   document.body.classList.add('has-focus');
   pageDepth(true);
   if(_lenis) _lenis.stop();
-  const fb = panel.querySelector('.focus-btn');
-  if(fb){ fb.textContent = '×'; fb.title = '退出聚焦'; }
-  Flip.from(state, { duration: 0.85, ease: 'power3.inOut', absolute: true });
+  const last = panel.getBoundingClientRect();
+  gsap.fromTo(panel, {
+    x: first.left - last.left, y: first.top - last.top,
+    scaleX: first.width / last.width, scaleY: first.height / last.height,
+    transformOrigin: '0 0',
+  }, {
+    x: 0, y: 0, scaleX: 1, scaleY: 1, duration: 0.7, ease: 'power3.inOut',
+    onComplete: () => {
+      panel.classList.remove('in-flight');
+      gsap.set(panel, { clearProps: 'transform' });
+      if(_focus) _focus.flying = false;
+    },
+  });
   if(window.Sfx && typeof Sfx.open === 'function') Sfx.open();
 }
 function unfocusPanel(){
-  if(!_focus) return;
+  if(!_focus || _focus.flying) return;
   const { panel, ph } = _focus;
-  _focus = null;
-  const fb = panel.querySelector('.focus-btn');
-  if(fb){ fb.textContent = '⤢'; fb.title = '聚焦此板块'; }
-  const state = Flip.getState(panel);
-  panel.classList.remove('panel-focused');
-  panel.removeAttribute('data-lenis-prevent');
-  ph.parentNode.insertBefore(panel, ph);
-  ph.remove();
+  _focus.flying = true;
+  const cur = panel.getBoundingClientRect();
+  const tgt = ph.getBoundingClientRect();   // true visual slot — ancestor scrub scale included
+  panel.classList.add('in-flight');
   document.body.classList.remove('has-focus');
   pageDepth(false);
   if(_lenis) _lenis.start();
-  Flip.from(state, { duration: 0.75, ease: 'power3.inOut', absolute: true,
-    onComplete: () => { if(window.ScrollTrigger) ScrollTrigger.refresh(); } });
+  gsap.fromTo(panel, {
+    x: 0, y: 0, scaleX: 1, scaleY: 1, transformOrigin: '0 0',
+  }, {
+    x: tgt.left - cur.left, y: tgt.top - cur.top,
+    scaleX: tgt.width / cur.width, scaleY: tgt.height / cur.height,
+    duration: 0.62, ease: 'power3.inOut',
+    onComplete: () => {
+      panel.classList.remove('panel-focused', 'in-flight');
+      panel.removeAttribute('data-lenis-prevent');
+      ph.parentNode.insertBefore(panel, ph);
+      ph.remove();
+      gsap.set(panel, { clearProps: 'transform' });
+      _focus = null;
+      if(window.ScrollTrigger) ScrollTrigger.refresh();
+    },
+  });
   if(window.Sfx && typeof Sfx.close === 'function') Sfx.close();
 }
 window.unfocusPanel = unfocusPanel;
+
+/* ── Finance → System HUD unification: same backdrop, same .sys-window shell
+   (corners/border/glass/seam), same scroll-unfurl open and furl close.
+   DOM is wrapped here at init so finance.js internals stay untouched. ── */
+function glassInitFinanceHUD(){
+  const v = document.getElementById('finance-view');
+  if(!v || v.querySelector('.sys-window')) return;
+  const bd = document.createElement('div');
+  bd.className = 'sys-backdrop';
+  bd.addEventListener('click', () => { if(typeof closeFinance === 'function') closeFinance(); });
+  const win = document.createElement('div');
+  win.className = 'sys-window fin-hud';
+  win.innerHTML = '<div class="sys-corner tl"></div><div class="sys-corner tr"></div><div class="sys-corner bl"></div><div class="sys-corner br"></div>';
+  while(v.firstChild) win.appendChild(v.firstChild);
+  v.appendChild(bd); v.appendChild(win);
+}
 
 /* ── pointer tilt + light spot (JS lerp — no CSS transition fighting GSAP) ── */
 function glassInitTilt(){
@@ -409,6 +453,7 @@ function initGlass(){
   if(glassSterile() || glassReducedMotion()) return;
   glassInitLenis();
   glassInitFlip();       // restructure the trading panel before measuring
+  glassInitFinanceHUD();
   glassInitStacking();   // wrap sections first — triggers measure final layout
   glassInitScrollFX();
   glassInitFocus();

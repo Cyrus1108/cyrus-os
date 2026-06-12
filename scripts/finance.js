@@ -250,6 +250,7 @@ function openFinance(fromHash){
   v.classList.add('open');
   v.setAttribute('aria-hidden','false');
   document.body.classList.add('fin-locked');
+  if(typeof pageDepth === 'function') pageDepth(true);   // HUD floats over the receded page
   if(!fromHash && location.hash!=='#finance'){ location.hash='finance'; }
   // Seed default categories the first time (only once we know the DB is truly empty)
   if(initialPullDone && S.fin.categories.length===0){
@@ -262,10 +263,20 @@ function openFinance(fromHash){
 }
 function closeFinance(fromHash){
   const v = document.getElementById('finance-view'); if(!v) return;
+  // v7.4: furl the HUD scroll first (mirrors closeSystem), then tear down
+  if(v.classList.contains('open') && !v.classList.contains('fin-closing') && v.querySelector('.sys-window')){
+    v.classList.add('fin-closing');
+    setTimeout(()=>{ v.classList.remove('fin-closing'); _closeFinanceCore(v, fromHash); }, 480);
+    return;
+  }
+  _closeFinanceCore(v, fromHash);
+}
+function _closeFinanceCore(v, fromHash){
   finUI.open = false;
   v.classList.remove('open');
   v.setAttribute('aria-hidden','true');
   document.body.classList.remove('fin-locked');
+  if(typeof pageDepth === 'function') pageDepth(false);
   finCloseModal();
   if(!fromHash && location.hash==='#finance'){ history.replaceState(null,'',location.pathname+location.search); }
 }
