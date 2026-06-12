@@ -295,12 +295,24 @@ function unfocusPanel(){
   if(!_focus || _focus.flying) return;
   const { panel, ph } = _focus;
   _focus.flying = true;
-  const cur = panel.getBoundingClientRect();
-  const tgt = ph.getBoundingClientRect();   // true visual slot — ancestor scrub scale included
   panel.classList.add('in-flight');
   document.body.classList.remove('has-focus');
-  pageDepth(false);
   if(_lenis) _lenis.start();
+  /* CRITICAL ORDER: snap the receded page back to identity INSTANTLY (no
+     transition) BEFORE measuring the slot. Measuring while the un-recede
+     transition was still playing aimed the flight at a stale, shrunken rect —
+     the card landed wrong and the final reinsert read as an instant jump. */
+  const pw = document.querySelector('.page-wrapper');
+  let pwTrans = null;
+  if(pw){
+    pwTrans = pw.style.transition;
+    pw.style.transition = 'none';
+    pw.classList.remove('page-depth');
+    void pw.offsetHeight;                      // force reflow at identity
+  }
+  const cur = panel.getBoundingClientRect();
+  const tgt = ph.getBoundingClientRect();      // NOW the true visual slot
+  if(pw) pw.style.transition = pwTrans || '';
   gsap.fromTo(panel, {
     x: 0, y: 0, scaleX: 1, scaleY: 1, transformOrigin: '0 0',
   }, {
