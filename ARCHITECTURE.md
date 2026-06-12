@@ -1,6 +1,6 @@
 # CyrusOS · 活体架构地图（ARCHITECTURE.md）
 
-> **对齐版本：`cyrus-os-v6.51.0`**（= sw.js `CACHE_VERSION`，每次 bump 顺手更新此行——
+> **对齐版本：`cyrus-os-v6.52.0`**（= sw.js `CACHE_VERSION`，每次 bump 顺手更新此行——
 > 两者不一致即说明本文档已开始腐烂，修文档）。最后全面核对：2026-06-11。
 
 **这份文档的用途**：动工前读它，代替考古式读码。红线与部署纪律在
@@ -131,7 +131,7 @@ rMotivation → rMetrics → rpgAfterChange → attachRipples`
 | ambient.js | sterile 主题环境音 |
 | lifetree.js | Three.js 粒子生命树（The 90 进度驱动生长；不可见自动暂停）；动态 import 加载，但**仍列在 APP_SHELL**（SW 缓存它，离线 sterile 才能用——别"清理"掉） |
 | dragsort.js | 通用拖拽排序 `makeSortable`（jp/tr/todos/principles 等共用） |
-| glass.js | v6.51 黄铜玻璃交互层：`glassDailyReveal()` 每日一次文字浮现（设备本地 LS 键 `reveal_last`，不同步——纯呈现）+ `glassInitTilt()` 指针 tilt/光斑（--rx/--ry/--mx/--my，仅 hover+fine）；sterile 与 reduced-motion 全跳过 |
+| glass.js | v6.51+ 黄铜玻璃交互层：`glassDailyReveal()` 每日一次文字浮现（设备本地 LS 键 `reveal_last`，不同步——纯呈现）+ `glassInitTilt()` 指针 tilt/光斑（--rx/--ry/--mx/--my，仅 hover+fine）+ `glassInitTrails()` nirnor 素描线迹背景（#glass-trails canvas，brass 墨线游走+缓慢溶解，30fps 上限、tab 隐藏即停、手机减负）；sterile 与 reduced-motion 全跳过 |
 
 ### styles/（10 个）
 

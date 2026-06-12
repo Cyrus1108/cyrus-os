@@ -740,6 +740,14 @@ html:not([data-theme="sterile"]) body::before{
   html:not([data-theme="sterile"]) body::before{ animation:none; }
 }
 
+/* Phase B — sketch-trail canvas (created by glass.js): drifting brass ink
+   threads between the ambient blobs and the glass panels */
+#glass-trails{
+  position:fixed; inset:0; width:100vw; height:100vh;
+  z-index:-1; pointer-events:none;
+}
+html[data-theme="sterile"] #glass-trails{ display:none; }
+
 /* the glass itself — translucent ground + blur; corner brackets (background-image
    layers from v6.47) sit on top of the glass ground untouched */
 html:not([data-theme="sterile"]) .panel,

@@ -84,9 +84,103 @@ function glassInitTilt(){
   });
 }
 
+/* ── Phase B: nirnor-style sketch trails ──
+   A fixed background canvas where a handful of brass "ink walkers" wander in
+   smooth curves; strokes accumulate and slowly dissolve (destination-out),
+   giving the drifting pencil-thread field behind the glass. Discipline:
+   ~30fps cap, paused while the tab is hidden, skipped under reduced-motion,
+   hidden on sterile (CSS), lighter on touch devices. */
+function glassInitTrails(){
+  if(glassReducedMotion()) return;
+  const cv = document.createElement('canvas');
+  cv.id = 'glass-trails';
+  document.body.appendChild(cv);
+  const ctx = cv.getContext('2d');
+
+  const mobile = window.matchMedia('(pointer:coarse)').matches;
+  const DPR = mobile ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
+  const N = mobile ? 4 : 7;            // walkers
+  const FRAME = 1000 / 30;             // 30fps is plenty for drifting ink
+  let W = 0, H = 0, walkers = [], raf = 0, last = 0, t = 0;
+
+  function brass(){
+    return getComputedStyle(document.documentElement).getPropertyValue('--brass').trim() || '#A88455';
+  }
+  let stroke = brass();
+
+  function resize(){
+    W = innerWidth; H = innerHeight;
+    cv.width = W * DPR; cv.height = H * DPR;
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.lineWidth = 0.7;
+    seed(); prewarm(400);              // never start from an empty page
+  }
+  function seed(){
+    walkers = Array.from({ length: N }, () => ({
+      x: Math.random() * W, y: Math.random() * H,
+      h: Math.random() * Math.PI * 2,
+      s: 0.5 + Math.random() * 0.5,                       // px per step
+      f1: 0.003 + Math.random() * 0.004, p1: Math.random() * 7,
+      f2: 0.011 + Math.random() * 0.006, p2: Math.random() * 7,
+    }));
+  }
+  function step(){
+    // dissolve old ink a touch (≈12s half-life at 30fps)
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fillStyle = 'rgba(0,0,0,0.0035)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = stroke;
+    ctx.globalAlpha = 0.05;            // each pass is a whisper; density comes from time
+    ctx.beginPath();
+    for(const w of walkers){
+      // layered sine steering ≈ organic pencil wander
+      w.h += 0.045 * Math.sin(t * w.f1 + w.p1) + 0.028 * Math.sin(t * w.f2 + w.p2)
+           + (Math.random() - 0.5) * 0.05;
+      const nx = w.x + Math.cos(w.h) * w.s;
+      const ny = w.y + Math.sin(w.h) * w.s;
+      if(nx < -8 || nx > W + 8 || ny < -8 || ny > H + 8 || Math.random() < 0.0006){
+        // wrap/re-seed with a pen lift — no screen-crossing strokes
+        w.x = Math.random() * W; w.y = Math.random() * H;
+        w.h = Math.random() * Math.PI * 2;
+        continue;
+      }
+      ctx.moveTo(w.x, w.y); ctx.lineTo(nx, ny);
+      w.x = nx; w.y = ny;
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    t++;
+  }
+  function prewarm(n){ for(let i = 0; i < n; i++) step(); }
+
+  function loop(ts){
+    raf = requestAnimationFrame(loop);
+    if(ts - last < FRAME) return;
+    last = ts;
+    step();
+  }
+  function start(){ if(!raf){ last = 0; raf = requestAnimationFrame(loop); } }
+  function stop(){ if(raf){ cancelAnimationFrame(raf); raf = 0; } }
+
+  document.addEventListener('visibilitychange', () => {
+    document.hidden ? stop() : start();
+  });
+  window.addEventListener('resize', () => { stroke = brass(); resize(); });
+  if(window.matchMedia){
+    // theme flip (light/dark) changes --brass → restroke
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => {
+      stroke = brass();
+    });
+  }
+  resize();
+  start();
+}
+
 /* called from app.js init(), right after the first renderAll (content exists,
    LS-painted) — runs exactly once per page load */
 function initGlass(){
   glassDailyReveal();
   glassInitTilt();
+  glassInitTrails();
 }
