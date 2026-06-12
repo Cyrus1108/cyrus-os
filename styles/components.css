@@ -788,6 +788,16 @@ html:not([data-theme="sterile"]) .the90-panel{
   }
 }
 
+/* v7.1 — stacked cards (粘性滚动堆叠): glass.js wraps each top-level section
+   in a .stack-card; sticky pinning + DOM order does the covering, GSAP scrub
+   adds the scale/dim of the card being buried. Tall runway between cards so
+   each one gets its moment. */
+html:not([data-theme="sterile"]) .stack-card{
+  position:sticky;
+  margin-bottom:clamp(64px, 14vh, 160px);
+}
+html:not([data-theme="sterile"]) .stack-card:last-of-type{ margin-bottom:24px; }
+
 /* v7.0 — 五柱黄铜立方 (herocube.js): fixed ambient sculpture behind the glass */
 #herocube{
   position:fixed; z-index:-1; pointer-events:none;

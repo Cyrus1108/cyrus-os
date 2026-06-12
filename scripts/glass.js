@@ -31,34 +31,42 @@ function glassInitLenis(){
   (function raf(time){ _lenis.raf(time); requestAnimationFrame(raf); })(0);
 }
 
-/* ── scroll-bound typography + panel choreography ── */
+/* ── flicker reveal — nirnor's signal-lamp typography: each char blinks a few
+   random times then settles lit. No positional flight (用户钦定). ── */
+function glassFlicker(chars, baseDelay, spread){
+  chars.forEach(ch => {
+    const tl = gsap.timeline({ delay: (baseDelay || 0) + Math.random() * (spread == null ? 0.55 : spread) });
+    const blinks = 2 + Math.floor(Math.random() * 3);
+    tl.set(ch, { autoAlpha: 0 });
+    for(let i = 0; i < blinks; i++){
+      tl.set(ch, { autoAlpha: 0.8 + Math.random() * 0.2 }, `+=${0.03 + Math.random() * 0.07}`);
+      tl.set(ch, { autoAlpha: 0.05 + Math.random() * 0.25 }, `+=${0.02 + Math.random() * 0.05}`);
+    }
+    tl.to(ch, { autoAlpha: 1, duration: 0.1 }, `+=${0.02 + Math.random() * 0.04}`);
+  });
+}
+
+/* ── scroll-bound typography + stacked-card choreography ── */
 function glassInitScrollFX(){
   if(!(window.gsap && window.ScrollTrigger)) return;
   gsap.registerPlugin(ScrollTrigger);
   const hasSplit = typeof SplitText !== 'undefined';
   if(hasSplit) gsap.registerPlugin(SplitText);
 
-  /* A. hero — chars fly in from 3D chaos, every load */
+  /* A. hero — dateline chars flicker alive one by one, every load; SplitText
+     reverts afterwards so the brassFlow gradient owns the element again */
   const dl = document.getElementById('dateline');
   if(dl && hasSplit && dl.textContent.trim()){
     const split = new SplitText(dl, { type:'chars' });
-    gsap.fromTo(split.chars, {
-      x: () => gsap.utils.random(-360, 360),
-      y: () => gsap.utils.random(-240, 200),
-      z: () => gsap.utils.random(-600, 300),
-      rotationX: () => gsap.utils.random(-100, 100),
-      rotationY: () => gsap.utils.random(-100, 100),
-      rotation: () => gsap.utils.random(-45, 45),
-      autoAlpha: 0,
-    }, {
-      x:0, y:0, z:0, rotationX:0, rotationY:0, rotation:0, autoAlpha:1,
-      duration: 1.6, ease: 'power3.out',
-      stagger: { each: 0.05, from: 'random' },
-      onComplete: () => split.revert(),   // brassFlow gradient resumes intact
-    });
+    glassFlicker(split.chars, 0.15, 0.8);
+    gsap.delayedCall(2.6, () => { try{ split.revert(); }catch(e){} });
   }
   const dm = document.getElementById('datemeta');
-  if(dm) gsap.from(dm, { autoAlpha:0, y:26, letterSpacing:'0.4em', duration:1.1, delay:0.9, ease:'power2.out' });
+  if(dm && hasSplit && dm.textContent.trim()){
+    const sp = new SplitText(dm, { type:'chars' });
+    glassFlicker(sp.chars, 0.7, 0.7);
+    gsap.delayedCall(3.0, () => { try{ sp.revert(); }catch(e){} });
+  }
 
   /* B. the 8/9 tagline — ink-stroke wipe, scroll-reactive (element survives
      re-renders; only textContent changes, inline clip-path persists) */
@@ -68,51 +76,75 @@ function glassInitScrollFX(){
     { clipPath:'inset(0 -5% 0 0)', autoAlpha:1, duration:1.1, ease:'power2.inOut',
       scrollTrigger:{ trigger: tg, start:'top 92%', toggleActions:'play none none reverse' } });
 
-  /* C. section titles — scatter/assemble bound to scroll, reversible */
+  /* C. section titles + eyebrows — flicker in when scrolled into view,
+     go dark again when you scroll back above them (typography stays alive) */
   if(hasSplit){
     document.querySelectorAll('.panel .serif-it, .the90-head .serif-it').forEach(el => {
       if(!el.textContent.trim()) return;
       const sp = new SplitText(el, { type:'chars' });
-      gsap.from(sp.chars, {
-        y: () => gsap.utils.random(40, 90),
-        x: () => gsap.utils.random(-60, 60),
-        rotationX: () => gsap.utils.random(-110, -60),
-        autoAlpha: 0,
-        duration: 0.9, ease: 'back.out(1.6)',
-        stagger: { each: 0.04, from: 'random' },
-        scrollTrigger: { trigger: el, start: 'top 90%', toggleActions: 'play none none reverse' },
+      gsap.set(sp.chars, { autoAlpha: 0 });
+      ScrollTrigger.create({
+        trigger: el, start: 'top 92%',
+        onEnter: () => glassFlicker(sp.chars, 0, 0.45),
+        onLeaveBack: () => gsap.set(sp.chars, { autoAlpha: 0 }),
       });
     });
   }
   document.querySelectorAll('.panel-label-row').forEach(el => {
-    gsap.from(el, {
-      autoAlpha:0, x:-36, duration:0.7, ease:'power2.out',
-      scrollTrigger:{ trigger: el, start:'top 92%', toggleActions:'play none none reverse' },
+    gsap.set(el, { autoAlpha: 0 });
+    ScrollTrigger.create({
+      trigger: el, start: 'top 94%',
+      onEnter: () => glassFlicker([el], 0, 0.15),
+      onLeaveBack: () => gsap.set(el, { autoAlpha: 0 }),
     });
   });
 
-  /* D. panels — converge from scattered 3D space into the grid (once; then
-     hand transform back to the tilt) */
-  document.querySelectorAll('.panel, .the90-panel, .hermes-panel').forEach(p => {
-    gsap.fromTo(p, {
-      transformPerspective: 1100,
-      rotationX: gsap.utils.random(-32, 32),
-      rotationY: gsap.utils.random(-26, 26),
-      y: 110, z: -180, autoAlpha: 0,
-    }, {
-      rotationX:0, rotationY:0, y:0, z:0, autoAlpha:1,
-      duration: 1.25, ease: 'power3.out',
-      scrollTrigger: { trigger: p, start: 'top 96%', once: true },
-      onComplete: () => gsap.set(p, { clearProps: 'transform,opacity,visibility,perspective' }),
-    });
-  });
-
-  /* E. hero drifts up slightly as you scroll away (parallax breath) */
+  /* D. hero drifts up slightly as you scroll away (parallax breath) */
   const hd = dl ? dl.parentElement : null;
   if(hd) gsap.to(hd, {
     yPercent: -14, autoAlpha: 0.35, ease: 'none',
     scrollTrigger: { trigger: document.body, start: 'top top', end: '38% top', scrub: 0.6 },
   });
+}
+
+/* ── stacked cards (粘性滚动堆叠) — each top-level section pins near the top
+   and the next one slides up OVER it; the covered card scales down and dims
+   under the incoming glass (scrub-bound). Wrapping happens in JS so renderAll
+   (which only ever touches ids INSIDE panels) never notices. ── */
+function glassInitStacking(){
+  if(!(window.gsap && window.ScrollTrigger)) return;
+  const grid = document.getElementById('m-ac') ?
+    document.getElementById('m-ac').closest('.panel').parentElement : null;   // the II/III/IV grid row
+  const todos = document.getElementById('td-list') ?
+    document.getElementById('td-list').closest('.panel') : null;
+  const sections = [
+    document.getElementById('the90-panel'),
+    document.querySelector('.mr-panel'),
+    grid,
+    todos,
+  ].filter(Boolean);
+
+  const cards = sections.map((sec, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'stack-card';
+    wrap.style.top = `calc(clamp(8px, 3.5vh, 36px) + ${i * 14}px)`;  // deck edges peek out
+    sec.parentNode.insertBefore(wrap, sec);
+    wrap.appendChild(sec);
+    return wrap;
+  });
+
+  for(let i = 0; i < cards.length - 1; i++){
+    gsap.to(cards[i], {
+      scale: 0.95, autoAlpha: 0.5, transformOrigin: 'center top', ease: 'none',
+      scrollTrigger: {
+        trigger: cards[i + 1],
+        start: 'top bottom',
+        end: 'top top+=120',
+        scrub: true,
+      },
+    });
+  }
+  ScrollTrigger.refresh();
 }
 
 /* ── pointer tilt + light spot (JS lerp — no CSS transition fighting GSAP) ── */
@@ -230,6 +262,7 @@ function glassInitTrails(){
 function initGlass(){
   if(glassSterile() || glassReducedMotion()) return;
   glassInitLenis();
+  glassInitStacking();   // wrap sections first — triggers measure final layout
   glassInitScrollFX();
   glassInitTilt();
   glassInitTrails();
