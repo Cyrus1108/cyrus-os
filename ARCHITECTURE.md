@@ -1,6 +1,6 @@
 # CyrusOS · 活体架构地图（ARCHITECTURE.md）
 
-> **对齐版本：`cyrus-os-v7.1.0`**（= sw.js `CACHE_VERSION`，每次 bump 顺手更新此行——
+> **对齐版本：`cyrus-os-v7.2.0`**（= sw.js `CACHE_VERSION`，每次 bump 顺手更新此行——
 > 两者不一致即说明本文档已开始腐烂，修文档）。最后全面核对：2026-06-11。
 
 **这份文档的用途**：动工前读它，代替考古式读码。红线与部署纪律在
@@ -132,7 +132,7 @@ rMotivation → rMetrics → rpgAfterChange → attachRipples`
 | ambient.js | sterile 主题环境音 |
 | lifetree.js | Three.js 粒子生命树（The 90 进度驱动生长；不可见自动暂停）；动态 import 加载，但**仍列在 APP_SHELL**（SW 缓存它，离线 sterile 才能用——别"清理"掉） |
 | dragsort.js | 通用拖拽排序 `makeSortable`（jp/tr/todos/principles 等共用） |
-| glass.js | v7.1 黄铜玻璃 maximalist 交互层（GSAP 栈）：Lenis 平滑滚动（内部滚动容器**必须**带 `data-lenis-prevent`）；文字一律**闪烁显形**（glassFlicker——信号灯式逐字符随机眨亮，无位移，用户钦定；英雄字符 revert 归还 brassFlow，标题滚动可逆熄灭/复燃）；**粘性堆叠卡**（glassInitStacking 用 JS 把四个顶层段落包进 .stack-card：sticky 钉顶+DOM 序覆盖+scrub 缩暗被埋卡——包装层不碰面板内部，renderAll 无感知）；指针 tilt（JS lerp ±3.2°，CSS transition 不得含 transform）+ 光斑；素描墨线 v2（15 走线、指针吸引）；sterile 与 reduced-motion 全跳过。**坑：改 glass.js 后预览必须 bump CACHE_VERSION 或清 caches——SW 缓存优先会喂旧文件** |
+| glass.js | v7.1 黄铜玻璃 maximalist 交互层（GSAP 栈）：Lenis 平滑滚动（内部滚动容器**必须**带 `data-lenis-prevent`）；文字一律**闪烁显形**（glassFlicker——信号灯式逐字符随机眨亮，无位移，用户钦定；英雄字符 revert 归还 brassFlow，标题滚动可逆熄灭/复燃）；**粘性堆叠卡**（glassInitStacking 用 JS 把四个顶层段落包进 .stack-card：sticky 钉顶+DOM 序覆盖+scrub 缩暗被埋卡——包装层不碰面板内部，renderAll 无感知）；指针 tilt（JS lerp ±3.2°，CSS transition 不得含 transform）+ 光斑；素描墨线 v2（15 走线、指针吸引）；sterile 与 reduced-motion 全跳过。v7.2 增：**高卡钉底**（卡比视口高→负 top 钉底边，内容先看完再被盖；refreshInit 时重算）、**3D 卡片翻转**（glassInitFlip，交易面板 front=清单/back=市场时段，子节点连 id 整体搬进面、tick() 无感知；扩展到其他面板照此模式）、**pageDepth(on)** 景深后退（信条/低谷/系统弹层打开时 .page-wrapper 退后——新全屏层记得调它）。**坑：改 glass.js 后预览必须 bump CACHE_VERSION 或清 caches——SW 缓存优先会喂旧文件** |
 | herocube.js | v7.0 五柱黄铜立方（ES module，importmap three）：六面 canvas 纹理（Ⅰ–Ⅴ+◆，HUD 角标边框），固定定位 z:-1 翻滚，滚动速度加转、指针拉拽、浮沉；sterile/reduced-motion 跳过 |
 
 ### styles/（10 个）

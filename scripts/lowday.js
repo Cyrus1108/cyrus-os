@@ -97,10 +97,11 @@ function lowdayShowProtocol(){
       <button class="lowday-enter-btn" onclick="lowdayConfirmEnter()">进入低谷日 →</button>
     </div>`;
   requestAnimationFrame(()=> m.classList.add('open'));
+  if(typeof pageDepth === 'function') pageDepth(true);
   // the protocol deserves near-silence — just a neutral click, no HUD fanfare
   if(window.Sfx && typeof Sfx.tab === 'function') Sfx.tab();
 }
-function lowdayCloseProtocol(){ const m = document.getElementById('lowday-modal'); if(m) m.classList.remove('open'); }
+function lowdayCloseProtocol(){ const m = document.getElementById('lowday-modal'); if(m) m.classList.remove('open'); if(typeof pageDepth === 'function') pageDepth(false); }
 function lowdayConfirmEnter(){
   if(isLowDayActive()){ lowdayCloseProtocol(); return; }   // double-click guard
   lowdayCloseProtocol();

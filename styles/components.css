@@ -798,6 +798,38 @@ html:not([data-theme="sterile"]) .stack-card{
 }
 html:not([data-theme="sterile"]) .stack-card:last-of-type{ margin-bottom:24px; }
 
+/* v7.2 — 3D card flip (交易面板): perspective on the host, rotateY on the
+   wrapper, backface-visibility keeps each face clean. Wrapper height is
+   JS-synced to the active face (ResizeObserver). */
+html:not([data-theme="sterile"]) .flip-host{ perspective:1400px; }
+.flip3d{
+  position:relative; transform-style:preserve-3d;
+  transition:transform .7s var(--ease-press), height .45s var(--ease-silk);
+}
+.flip3d .flip-face{ backface-visibility:hidden; -webkit-backface-visibility:hidden; }
+.flip3d .flip-back{ position:absolute; top:0; left:0; right:0; transform:rotateY(180deg); }
+.flip3d.flipped{ transform:rotateY(180deg); }
+.flip-btn{
+  position:absolute; top:14px; right:14px; z-index:2; cursor:pointer;
+  font-family:var(--mono); font-size:10px; letter-spacing:.1em; color:var(--brass);
+  background:color-mix(in srgb, var(--brass) 8%, transparent);
+  border:.5px solid var(--brass-ghost); border-radius:5px; padding:4px 10px;
+  transition:border-color var(--dur-fast) var(--ease-silk), box-shadow var(--dur-fast) var(--ease-silk);
+}
+.flip-btn:hover{ border-color:var(--brass); box-shadow:0 0 10px var(--brass-glow); }
+
+/* v7.2 — 3D perspective page transition: the page recedes while a protocol
+   modal is up (class toggled by pageDepth(); modals live outside .page-wrapper
+   so they stay crisp in front) */
+html:not([data-theme="sterile"]) .page-wrapper{
+  transition:transform .65s var(--ease-press), opacity .65s var(--ease-silk), filter .65s var(--ease-silk);
+}
+html:not([data-theme="sterile"]) .page-wrapper.page-depth{
+  transform:perspective(1500px) translateZ(-120px) rotateX(1.5deg) scale(.965);
+  transform-origin:50% 28%;
+  opacity:.72; filter:saturate(.85) brightness(.85);
+}
+
 /* v7.0 — 五柱黄铜立方 (herocube.js): fixed ambient sculpture behind the glass */
 #herocube{
   position:fixed; z-index:-1; pointer-events:none;

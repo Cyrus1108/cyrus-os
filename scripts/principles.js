@@ -48,6 +48,7 @@ function principlesShowModal(auto, mode){
   editingPR = null; prAddOpen = null;
   rPrinciplesModal(true);
   requestAnimationFrame(()=>{ m.classList.add('open'); m.setAttribute('aria-hidden','false'); });
+  if(typeof pageDepth === 'function') pageDepth(true);   // page recedes behind the constitution
   // the gesture gate keeps the load-time auto-show silent by itself
   if(window.Sfx && typeof Sfx.tab === 'function') Sfx.tab();
 }
@@ -55,6 +56,7 @@ function principlesCloseModal(silent){
   const m = document.getElementById('principles-modal');
   if(!m || !m.classList.contains('open')) return;
   m.classList.remove('open'); m.setAttribute('aria-hidden','true');
+  if(typeof pageDepth === 'function') pageDepth(false);
   if(!silent && window.Sfx && typeof Sfx.close === 'function') Sfx.close();
 }
 /* the daily oath — manual reads also count as today's 宣读 */

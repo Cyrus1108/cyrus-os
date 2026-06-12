@@ -124,14 +124,29 @@ function glassInitStacking(){
     todos,
   ].filter(Boolean);
 
-  const cards = sections.map((sec, i) => {
+  const cards = sections.map((sec) => {
     const wrap = document.createElement('div');
     wrap.className = 'stack-card';
-    wrap.style.top = `calc(clamp(8px, 3.5vh, 36px) + ${i * 14}px)`;  // deck edges peek out
     sec.parentNode.insertBefore(wrap, sec);
     wrap.appendChild(sec);
     return wrap;
   });
+
+  /* sticky top per card — THE tall-card fix: a card taller than the viewport
+     pins by its BOTTOM edge (negative top), so every line of it scrolls into
+     view before the next card starts covering it. Recomputed on resize and on
+     every ScrollTrigger refresh (pull-render / flip change heights). */
+  function setTops(){
+    const vh = innerHeight;
+    cards.forEach((c, i) => {
+      const base = Math.min(Math.max(8, vh * 0.035), 36) + i * 14;
+      const h = c.offsetHeight;
+      c.style.top = (h + base + 24 < vh) ? base + 'px' : (vh - h - 16) + 'px';
+    });
+  }
+  setTops();
+  window.addEventListener('resize', setTops);
+  ScrollTrigger.addEventListener('refreshInit', setTops);
 
   for(let i = 0; i < cards.length - 1; i++){
     gsap.to(cards[i], {
@@ -146,6 +161,61 @@ function glassInitStacking(){
   }
   ScrollTrigger.refresh();
 }
+
+/* ── 3D card flip (交易面板 v1) — front: 今日清单+偏向, back: 市场时段.
+   Pure CSS3 transforms (perspective + rotateY + backface-visibility);
+   JS is just the class switch. Children move INTO the faces with their ids
+   intact, so app.js tick() keeps updating #sessions/#sesh-now untouched. ── */
+function glassInitFlip(){
+  const trList = document.getElementById('tr-list');
+  if(!trList) return;
+  const panel = trList.closest('.panel');
+  if(!panel || panel.querySelector('.flip3d')) return;
+  const head = panel.querySelector('.panel-head');
+  const rest = [...panel.children].filter(el => el !== head);
+  if(rest.length < 5) return;
+
+  const wrap = document.createElement('div');  wrap.className = 'flip3d';
+  const front = document.createElement('div'); front.className = 'flip-face flip-front';
+  const back = document.createElement('div');  back.className = 'flip-face flip-back';
+  // children 0-3 = 市场时段 sub-label + #sessions + #sesh-now-wrap + rule → back
+  rest.slice(0, 4).forEach(el => back.appendChild(el));
+  rest.slice(4).forEach(el => front.appendChild(el));
+  wrap.appendChild(front); wrap.appendChild(back);
+  panel.appendChild(wrap);
+  panel.classList.add('flip-host');
+
+  const btn = document.createElement('button');
+  btn.className = 'flip-btn';
+  btn.textContent = '⇄ 市场时段';
+  panel.insertBefore(btn, wrap);
+
+  function syncHeight(){
+    const face = wrap.classList.contains('flipped') ? back : front;
+    wrap.style.height = face.scrollHeight + 'px';
+  }
+  if(window.ResizeObserver){
+    const ro = new ResizeObserver(syncHeight);
+    ro.observe(front); ro.observe(back);
+  }
+  syncHeight();
+
+  btn.addEventListener('click', () => {
+    wrap.classList.toggle('flipped');
+    btn.textContent = wrap.classList.contains('flipped') ? '⇄ 今日清单' : '⇄ 市场时段';
+    syncHeight();
+    if(window.Sfx) Sfx.tab();
+    setTimeout(() => { if(window.ScrollTrigger) ScrollTrigger.refresh(); }, 750);
+  });
+}
+
+/* ── 3D perspective page transition — the main page recedes into depth while
+   a protocol modal is up (App-layering, 纯 CSS transform, JS仅开关 class) ── */
+function pageDepth(on){
+  const pw = document.querySelector('.page-wrapper');
+  if(pw) pw.classList.toggle('page-depth', !!on);
+}
+window.pageDepth = pageDepth;
 
 /* ── pointer tilt + light spot (JS lerp — no CSS transition fighting GSAP) ── */
 function glassInitTilt(){
@@ -262,6 +332,7 @@ function glassInitTrails(){
 function initGlass(){
   if(glassSterile() || glassReducedMotion()) return;
   glassInitLenis();
+  glassInitFlip();       // restructure the trading panel before measuring
   glassInitStacking();   // wrap sections first — triggers measure final layout
   glassInitScrollFX();
   glassInitTilt();

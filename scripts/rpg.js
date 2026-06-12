@@ -526,6 +526,7 @@ function openSystem(fromHash){
   sysUI.open = true;
   v.classList.add('open'); v.setAttribute('aria-hidden','false');
   document.body.classList.add('sys-locked');
+  if(typeof pageDepth === 'function') pageDepth(true);   // main page recedes behind the HUD
   if(window.Sfx){ Sfx.open(); const mb=v.querySelector('.sys-mute'); if(mb) mb.classList.toggle('sfx-muted', Sfx.muted); }
   if(!fromHash && location.hash!=='#system') location.hash='system';
   rSystem();
@@ -553,6 +554,7 @@ function closeSystem(fromHash){
   const v = document.getElementById('system-view'); if(!v) return;
   if(!sysUI.open) return;                                   // already closing/closed
   sysUI.open = false;
+  if(typeof pageDepth === 'function') pageDepth(false);
   if(window.Sfx) Sfx.close();
   clearTimeout(sysUI._enterT); clearTimeout(sysUI._enterClsT); clearTimeout(sysUI._closeT);
   v.classList.remove('sys-entering'); v.setAttribute('aria-hidden','true');
