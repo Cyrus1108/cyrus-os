@@ -25,10 +25,11 @@ function rMR(){
   document.getElementById('mr-count').innerHTML=`${done}<span style="color:var(--brass-ghost);"> / ${list.length}</span>`;
   document.getElementById('mr-time').textContent=done===list.length?'All complete':`~ ${remMins} min remaining`;
   document.getElementById('mr-list').innerHTML=list.map(i=>`
-    <div class="mr-pill ${i.d?'done':''}" data-id="${i.id}" onclick="toggleMR('${i.id}', event)">
+    <div class="mr-pill ${i.d?'done':''}${i.detail&&i.detail.trim()?' has-detail':''}" data-id="${i.id}" onclick="toggleMR('${i.id}', event)">
       <span class="drag-handle" onclick="event.stopPropagation()" aria-label="拖动排序">⠿</span>
       <span class="mr-pill-name">${escH(i.t)}</span>
       <span class="mr-pill-time">${i.mins}m</span>
+      <span class="mr-pill-expand" onclick="event.stopPropagation();mrExpand('${i.id}')" aria-label="详情">⌄</span>
     </div>`).join('');
   makeSortable(document.getElementById('mr-list'), { itemSelector:'.mr-pill', handleSelector:'.drag-handle', onReorder:onReorderMR });
   rMRReady(done === list.length && list.length > 0);
@@ -73,6 +74,49 @@ function mrDismissReady(){
 function onReorderMR(ids){
   S.mr.list = reorderById(S.mr.list, ids);
   saveMR();rMR();
+}
+
+/* 项目详情 — tap a pill's ⌄ to float a card to the center that unrolls like a
+   blind (clip-path top→down); a textarea inside holds free-form notes for that
+   step (how to do it / cues / reminders), auto-saved into the item's `detail`
+   (persisted in morning.list jsonb; daily reset only clears `d`, never detail). */
+let _mrDetailT = null;
+function mrExpand(id){
+  const i = S.mr.list.find(x => x.id === id); if(!i) return;
+  let m = document.getElementById('mr-detail-modal');
+  if(!m){
+    m = document.createElement('div'); m.id = 'mr-detail-modal'; m.className = 'mr-detail-modal';
+    m.setAttribute('data-lenis-prevent','');
+    m.addEventListener('click', e => { if(e.target === m) mrCloseDetail(); });
+    document.body.appendChild(m);
+  }
+  m.dataset.id = id;
+  m.innerHTML = `<div class="mr-detail-card">
+    <div class="sys-corner tl"></div><div class="sys-corner tr"></div><div class="sys-corner bl"></div><div class="sys-corner br"></div>
+    <div class="mr-detail-kicker">[ 晨间 · ${escH(i.t)} ]</div>
+    <div class="mr-detail-meta">${i.mins} 分钟</div>
+    <textarea class="mr-detail-text" placeholder="这一项具体怎么做、要点、提醒…（自动保存）" oninput="mrSaveDetail('${id}')">${escH(i.detail || '')}</textarea>
+    <button class="mr-detail-done" onclick="mrCloseDetail()">完成 →</button>
+  </div>`;
+  requestAnimationFrame(() => m.classList.add('open'));
+  if(typeof pageDepth === 'function') pageDepth(true);
+  if(window.Sfx) Sfx.tab();
+  setTimeout(() => { const ta = m.querySelector('.mr-detail-text'); if(ta) ta.focus(); }, 380);
+}
+function mrSaveDetail(id){
+  const m = document.getElementById('mr-detail-modal'); if(!m) return;
+  const ta = m.querySelector('.mr-detail-text'); if(!ta) return;
+  const i = S.mr.list.find(x => x.id === id); if(!i) return;
+  i.detail = ta.value;
+  clearTimeout(_mrDetailT); _mrDetailT = setTimeout(saveMR, 600);
+}
+function mrCloseDetail(){
+  const m = document.getElementById('mr-detail-modal'); if(!m || !m.classList.contains('open')) return;
+  m.classList.remove('open');
+  if(typeof pageDepth === 'function') pageDepth(false);
+  clearTimeout(_mrDetailT); saveMR();        // flush any pending edit
+  if(typeof rMR === 'function') rMR();        // refresh has-detail dot
+  if(window.Sfx) Sfx.close();
 }
 function toggleMR(id,event){
   const i=S.mr.list.find(i=>i.id===id);

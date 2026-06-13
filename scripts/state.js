@@ -25,9 +25,11 @@ function cleanMorning(){
     || !ids.includes('mr9')
     || S.mr.list.length !== MR_DEFAULT.length;
   if(legacy){
-    const doneById = {};
-    S.mr.list.forEach(i => { doneById[i.id] = i.d; });
-    S.mr.list = MR_DEFAULT.map(d => ({ ...d, d: !!doneById[d.id] }));
+    const metaById = {};
+    S.mr.list.forEach(i => { metaById[i.id] = { d: i.d, detail: i.detail }; });
+    S.mr.list = MR_DEFAULT.map(d => ({ ...d,
+      d: !!(metaById[d.id] && metaById[d.id].d),
+      detail: (metaById[d.id] && metaById[d.id].detail) || '' }));
     return true;
   }
   const before = S.mr.list.length;

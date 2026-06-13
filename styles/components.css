@@ -981,6 +981,38 @@ html:not([data-theme="sterile"]) .todo-row{
   .mr-ready.show .mr-ready-line-l, .mr-ready.show .mr-ready-line-r{ animation:none; transform:scaleX(1); }
 }
 
+/* v7.8 — Morning Ritual 项目详情 (per-step notes). ⌄ on a pill floats a card
+   to the center that unrolls like a blind (clip-path top→down); a textarea
+   inside takes free-form notes, auto-saved into the item's `detail`. */
+.mr-pill-name{ flex:1; }            /* push time + ⌄ to the right edge */
+.mr-pill-expand{ flex:0 0 auto; color:var(--ghost); cursor:pointer; font-size:14px; line-height:1; padding:0 2px;
+  transition:color var(--dur-fast) var(--ease-silk); }
+.mr-pill-expand:hover{ color:var(--brass); }
+.mr-pill.has-detail .mr-pill-expand{ color:var(--brass); }   /* this step has notes */
+
+.mr-detail-modal{ position:fixed; inset:0; z-index:1300; display:flex; align-items:center; justify-content:center;
+  padding:24px; opacity:0; pointer-events:none; transition:opacity .3s var(--ease-silk); }
+.mr-detail-modal.open{ opacity:1; pointer-events:auto; }
+.mr-detail-modal::before{ content:''; position:absolute; inset:0; background:rgba(8,7,5,.6);
+  -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
+.mr-detail-card{ position:relative; z-index:1; width:100%; max-width:460px; padding:22px;
+  background:var(--color-background-secondary); border:.5px solid var(--brass-ghost); border-radius:var(--border-radius-md);
+  box-shadow:0 24px 80px rgba(0,0,0,.5), inset 0 0 40px color-mix(in srgb, var(--brass) 4%, transparent);
+  clip-path:inset(0 0 100% 0); transform-origin:top center; transition:clip-path .55s var(--ease-press); }
+.mr-detail-modal.open .mr-detail-card{ clip-path:inset(0 0 0 0); }
+.mr-detail-kicker{ font-family:var(--mono); font-size:10px; letter-spacing:.18em; color:var(--brass-soft); margin-bottom:6px; }
+.mr-detail-meta{ font-family:var(--serif); font-size:13px; color:var(--mute); margin-bottom:14px; }
+.mr-detail-text{ width:100%; min-height:170px; resize:vertical; box-sizing:border-box;
+  font-family:var(--serif); font-size:13.5px; line-height:1.75; color:var(--ink);
+  background:var(--color-background-tertiary); border:.5px solid var(--hair); border-radius:6px; padding:12px 13px; }
+.mr-detail-text::placeholder{ color:var(--ghost); }
+.mr-detail-done{ display:block; width:100%; margin-top:14px; padding:10px; cursor:pointer;
+  font-family:var(--serif); font-size:13px; letter-spacing:.04em; color:var(--brass);
+  background:color-mix(in srgb, var(--brass) 10%, transparent); border:.5px solid var(--brass); border-radius:6px;
+  transition:background var(--dur-fast) var(--ease-silk), box-shadow var(--dur-fast) var(--ease-silk); }
+.mr-detail-done:hover{ background:color-mix(in srgb, var(--brass) 20%, transparent); box-shadow:0 0 16px var(--brass-glow); }
+@media (prefers-reduced-motion:reduce){ .mr-detail-card{ transition:opacity .3s; clip-path:none; } }
+
 #dateline{
   background:linear-gradient(115deg,
     var(--ink) 0%, var(--ink) 20%,
