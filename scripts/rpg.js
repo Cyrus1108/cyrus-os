@@ -257,7 +257,7 @@ function finNetWorthMYR(){
 /* ── achievements (tested against real data) ──
    id = persisted jsonb key (NEVER rename); cat = gallery category; tier drives
    EXP (RPG_TIER_EXP) + badge hue; hidden masks the card until unlocked.
-   38 total across 10 categories (see RPG_ACH_CATS for order + labels). */
+   47 total across 12 categories (see RPG_ACH_CATS for order + labels). */
 const RPG_ACHIEVEMENTS = [
   // 坚持 · STREAK
   { id:'streak3',  cat:'streak', tier:'bronze',   name:'三日不辍', desc:'The 90 连续达标 3 天', hidden:false, test:()=> (typeof computeThe90Streak==='function' && computeThe90Streak()>=3) },
@@ -311,6 +311,13 @@ const RPG_ACHIEVEMENTS = [
   { id:'cross1',  cat:'adversity', tier:'bronze',   name:'初渡', desc:'第一次穿越低谷日',  hidden:false, test:()=> (typeof adversityLedger==='function' && adversityLedger()>=1) },
   { id:'cross7',  cat:'adversity', tier:'gold',     name:'渡厄', desc:'穿越低谷日 7 次',  hidden:false, test:()=> (typeof adversityLedger==='function' && adversityLedger()>=7) },
   { id:'cross30', cat:'adversity', tier:'platinum', name:'渡劫', desc:'穿越低谷日 30 次', hidden:true,  test:()=> (typeof adversityLedger==='function' && adversityLedger()>=30) },
+  // 体魄 · FITNESS
+  { id:'fit_first',     cat:'fitness', tier:'bronze', name:'初次启程', desc:'完成第一次训练打卡',   hidden:false, test:()=> (typeof fitWorkoutCount==='function' && fitWorkoutCount()>=1) },
+  { id:'fit_streak7',   cat:'fitness', tier:'silver', name:'七日锻形', desc:'连续训练 7 天',        hidden:false, test:()=> (typeof fitComputeStreak==='function' && fitComputeStreak()>=7) },
+  { id:'fit_streak30',  cat:'fitness', tier:'gold',   name:'铁律之躯', desc:'连续训练 30 天',       hidden:false, test:()=> (typeof fitComputeStreak==='function' && fitComputeStreak()>=30) },
+  { id:'fit_vol1000',   cat:'fitness', tier:'silver', name:'千锤百炼', desc:'累计完成 1000 次',     hidden:false, test:()=> (typeof fitTotalReps==='function' && fitTotalReps()>=1000) },
+  { id:'fit_plan_week', cat:'fitness', tier:'gold',   name:'周而复始', desc:'完成一整周的训练计划', hidden:false, test:()=> (typeof fitPlanWeekComplete==='function' && fitPlanWeekComplete()) },
+  { id:'fit_body_log',  cat:'fitness', tier:'bronze', name:'丈量自身', desc:'首次记录体征数据',     hidden:true,  test:()=> (typeof fitBodyLogged==='function' && fitBodyLogged()>=1) },
 ];
 // gallery categories — fixed render order + labels (X/N count shown per section)
 const RPG_ACH_CATS = [
@@ -324,6 +331,7 @@ const RPG_ACH_CATS = [
   { key:'japanese',    label:'语学 · JAPANESE' },
   { key:'crossdomain', label:'修行 · DISCIPLINE' },
   { key:'finance',     label:'财富 · FINANCE' },
+  { key:'fitness',     label:'体魄 · FITNESS' },
   { key:'adversity',   label:'逆境 · ADVERSITY' },
 ];
 /* tier → EXP (flat: achievements are a recognition layer, not a shortcut — the
@@ -372,6 +380,9 @@ const RPG_ACH_PROG = {
   fin_nw_100k:  ()=>[Math.round(finNetWorthMYR()), 100000],
   cross1:       ()=>[(typeof adversityLedger==='function'?adversityLedger():0), 1],
   cross7:       ()=>[(typeof adversityLedger==='function'?adversityLedger():0), 7],
+  fit_streak7:  ()=>[(typeof fitComputeStreak==='function'?fitComputeStreak():0), 7],
+  fit_streak30: ()=>[(typeof fitComputeStreak==='function'?fitComputeStreak():0), 30],
+  fit_vol1000:  ()=>[(typeof fitTotalReps==='function'?fitTotalReps():0), 1000],
 };
 
 /* ── orchestration: recompute, fire level-ups + achievements, persist ── */

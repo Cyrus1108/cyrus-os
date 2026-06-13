@@ -222,6 +222,56 @@ async function pullPrinciplesDaily(){
   saveLSRaw('principles_daily', S.principles.daily);
 }
 
+/* ════════════ 健身 Fitness (v7.11) ════════════
+   exercises = replace-all list; plan = single row; log/body/diet = (user_id,date). */
+async function pullFitExercises(){
+  const { data } = await sb.from('fit_exercises').select('*')
+    .eq('user_id', currentUser.id).order('sort');
+  S.fit.exercises = (data || []).map(r => ({
+    id:r.id, name:r.name, kind:r.kind||'reps',
+    isPreset:!!r.is_preset, sort:r.sort||0, archived:!!r.archived,
+  }));
+  saveLSRaw('fit_exercises', S.fit.exercises);
+}
+async function pullFitPlan(){
+  const { data } = await sb.from('fit_plan').select('*')
+    .eq('user_id', currentUser.id).maybeSingle();
+  if(data) S.fit.plan = { week: data.week || {}, restDefault: data.rest_default || 90 };
+  saveLSRaw('fit_plan', S.fit.plan);
+}
+async function pullFitLog(){
+  const since = new Date(Date.now() - 95 * 86400000).toISOString().slice(0,10);
+  const { data } = await sb.from('fit_log').select('*')
+    .eq('user_id', currentUser.id).gte('date', since);
+  S.fit.log = {};
+  for(const row of (data || [])){
+    S.fit.log[row.date] = { entries: row.entries || [], done: !!row.done,
+      durationSec: row.duration_sec || 0, note: row.note || '' };
+  }
+  saveLSRaw('fit_log', S.fit.log);
+}
+async function pullFitBody(){
+  // body trends want a long history (weight/dimension lines)
+  const since = new Date(Date.now() - 400 * 86400000).toISOString().slice(0,10);
+  const { data } = await sb.from('fit_body').select('*')
+    .eq('user_id', currentUser.id).gte('date', since);
+  S.fit.body = {};
+  for(const row of (data || [])){
+    S.fit.body[row.date] = { weight: row.weight!=null?Number(row.weight):null, metrics: row.metrics || {} };
+  }
+  saveLSRaw('fit_body', S.fit.body);
+}
+async function pullFitDiet(){
+  const since = new Date(Date.now() - 95 * 86400000).toISOString().slice(0,10);
+  const { data } = await sb.from('fit_diet').select('*')
+    .eq('user_id', currentUser.id).gte('date', since);
+  S.fit.diet = {};
+  for(const row of (data || [])){
+    S.fit.diet[row.date] = { meals: row.meals || [] };
+  }
+  saveLSRaw('fit_diet', S.fit.diet);
+}
+
 /* ════════════ Finance (Phase 1) ════════════
    accounts + categories are small (replace-all on edit, like categories/todos).
    transactions can grow, so they use targeted single-row insert/update/delete
@@ -342,6 +392,7 @@ async function pullAll(force){
         pullJapanese(), pullTrading(), pullCategories(), pullTodos(),
         pullThe90Meta(), pullThe90Daily(), pullHermes(), pullMotiv(), pullRPG(),
         pullPrinciples(), pullPrinciplesDaily(),
+        pullFitExercises(), pullFitPlan(), pullFitLog(), pullFitBody(), pullFitDiet(),
         pullFinAccounts(), pullFinCategories(), pullFinTransactions(), pullFinBudgets(),
         pullFinGoals(), pullFinRecurring(), pullFinSnapshots(),
       ]);
@@ -569,6 +620,72 @@ async function syncPushPrinciplesDaily(){
   if(!res.error) dirty.principlesDaily = false;
 }
 
+/* ════════════ 健身 Fitness push ════════════ */
+async function syncPushFitExercises(){
+  if(!currentUser) return;
+  await waitForPull();
+  const ok = await replaceTable('fit_exercises', S.fit.exercises, e => ({
+    id:e.id, user_id:currentUser.id, name:e.name, kind:e.kind||'reps',
+    is_preset:!!e.isPreset, sort:e.sort||0, archived:!!e.archived,
+  }));
+  if(ok) dirty.fitExercises = false;
+}
+async function syncPushFitPlan(){
+  if(!currentUser) return;
+  await waitForPull();
+  const res = await sb.from('fit_plan').upsert({
+    user_id: currentUser.id,
+    week: S.fit.plan.week || {},
+    rest_default: S.fit.plan.restDefault || 90,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id' });
+  logIfError('push fit_plan', res);
+  if(!res.error) dirty.fitPlan = false;
+}
+async function syncPushFitLog(date){
+  if(!currentUser) return;
+  await waitForPull();
+  const d = date || TODAY;
+  const day = S.fit.log[d];
+  if(!day) return;
+  const res = await sb.from('fit_log').upsert({
+    user_id: currentUser.id, date: d,
+    entries: day.entries || [], done: !!day.done,
+    duration_sec: day.durationSec || 0, note: day.note || '',
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id,date' });
+  logIfError('push fit_log', res);
+  if(!res.error) dirty.fitLog = false;
+}
+async function syncPushFitBody(date){
+  if(!currentUser) return;
+  await waitForPull();
+  const d = date || TODAY;
+  const day = S.fit.body[d];
+  if(!day) return;
+  const res = await sb.from('fit_body').upsert({
+    user_id: currentUser.id, date: d,
+    weight: day.weight!=null?day.weight:null, metrics: day.metrics || {},
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id,date' });
+  logIfError('push fit_body', res);
+  if(!res.error) dirty.fitBody = false;
+}
+async function syncPushFitDiet(date){
+  if(!currentUser) return;
+  await waitForPull();
+  const d = date || TODAY;
+  const day = S.fit.diet[d];
+  if(!day) return;
+  const res = await sb.from('fit_diet').upsert({
+    user_id: currentUser.id, date: d,
+    meals: day.meals || [],
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id,date' });
+  logIfError('push fit_diet', res);
+  if(!res.error) dirty.fitDiet = false;
+}
+
 /* Hermes notices are read+dismiss only on the client — no full push.
    Dismiss stamps dismissed_at; the row stays for history but drops off the panel. */
 async function syncDismissHermes(id){
@@ -688,6 +805,16 @@ function subscribeRealtime(){
       () => rtCoalesce('fin_goals', async () => { await pullFinGoals(); if(typeof rFinance==='function') rFinance(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'fin_recurring', filter: `user_id=eq.${uid}` },
       () => rtCoalesce('fin_recurring', async () => { await pullFinRecurring(); if(typeof rFinance==='function') rFinance(); }))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'fit_exercises', filter: `user_id=eq.${uid}` },
+      () => rtCoalesce('fit_exercises', async () => { await pullFitExercises(); if(typeof rFitness==='function') rFitness(); }))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'fit_plan', filter: `user_id=eq.${uid}` },
+      () => rtCoalesce('fit_plan', async () => { await pullFitPlan(); if(typeof rFitness==='function') rFitness(); }))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'fit_log', filter: `user_id=eq.${uid}` },
+      () => rtCoalesce('fit_log', async () => { await pullFitLog(); if(typeof rFitness==='function') rFitness(); if(typeof rpgAfterChange==='function') rpgAfterChange(); }))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'fit_body', filter: `user_id=eq.${uid}` },
+      () => rtCoalesce('fit_body', async () => { await pullFitBody(); if(typeof rFitness==='function') rFitness(); }))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'fit_diet', filter: `user_id=eq.${uid}` },
+      () => rtCoalesce('fit_diet', async () => { await pullFitDiet(); if(typeof rFitness==='function') rFitness(); }))
     .subscribe((status, err) => {
       console.log('[realtime]', status);
       if(err) console.error('[realtime] error', err);
@@ -737,6 +864,11 @@ async function rehydrateOnFocus(){
     if(dirty.rpg) pushes.push(syncPushRPG());
     if(dirty.principles) pushes.push(syncPushPrinciples());
     if(dirty.principlesDaily) pushes.push(syncPushPrinciplesDaily());
+    if(dirty.fitExercises) pushes.push(syncPushFitExercises());
+    if(dirty.fitPlan) pushes.push(syncPushFitPlan());
+    if(dirty.fitLog) pushes.push(syncPushFitLog());
+    if(dirty.fitBody) pushes.push(syncPushFitBody());
+    if(dirty.fitDiet) pushes.push(syncPushFitDiet());
     try{ await Promise.all(pushes); }catch(e){ console.error('[sync] flush', e); }
   }
 

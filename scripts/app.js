@@ -398,9 +398,15 @@ async function init(){
   const rpgLS=loadLS('rpg',null);if(rpgLS&&typeof rpgLS==='object'&&!Array.isArray(rpgLS))S.rpg=Object.assign({},S.rpg,rpgLS);
   const prI=loadLS('principles',null);if(prI&&Array.isArray(prI))S.principles.items=prI;
   const prD=loadLS('principles_daily',null);if(prD&&typeof prD==='object'&&!Array.isArray(prD))S.principles.daily=prD;
+  const fitE=loadLS('fit_exercises',null);if(fitE&&Array.isArray(fitE))S.fit.exercises=fitE;
+  const fitP=loadLS('fit_plan',null);if(fitP&&typeof fitP==='object'&&!Array.isArray(fitP))S.fit.plan=Object.assign({week:{},restDefault:90},fitP);
+  const fitL=loadLS('fit_log',null);if(fitL&&typeof fitL==='object'&&!Array.isArray(fitL))S.fit.log=fitL;
+  const fitBd=loadLS('fit_body',null);if(fitBd&&typeof fitBd==='object'&&!Array.isArray(fitBd))S.fit.body=fitBd;
+  const fitD=loadLS('fit_diet',null);if(fitD&&typeof fitD==='object'&&!Array.isArray(fitD))S.fit.diet=fitD;
   showDone = loadLS('show_done', false);
   if(typeof initTheme === 'function') initTheme();
   if(typeof initFinance === 'function') initFinance();
+  if(typeof initFitness === 'function') initFitness();
   if(typeof initThe90Keys === 'function') initThe90Keys();
 
   // Hydrate The 90 state from localStorage cache (first paint before Supabase pull)

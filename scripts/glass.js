@@ -398,6 +398,20 @@ function glassInitFinanceHUD(){
   v.appendChild(bd); v.appendChild(win);
 }
 
+/* ── Fitness → same HUD shell as Finance/System (sys-window + backdrop). ── */
+function glassInitFitnessHUD(){
+  const v = document.getElementById('fitness-view');
+  if(!v || v.querySelector('.sys-window')) return;
+  const bd = document.createElement('div');
+  bd.className = 'sys-backdrop';
+  bd.addEventListener('click', () => { if(typeof closeFitness === 'function') closeFitness(); });
+  const win = document.createElement('div');
+  win.className = 'sys-window fit-hud';
+  win.innerHTML = '<div class="sys-corner tl"></div><div class="sys-corner tr"></div><div class="sys-corner bl"></div><div class="sys-corner br"></div>';
+  while(v.firstChild) win.appendChild(v.firstChild);
+  v.appendChild(bd); v.appendChild(win);
+}
+
 /* ── pointer tilt + light spot (JS lerp — no CSS transition fighting GSAP) ── */
 function glassInitTilt(){
   if(!(window.matchMedia && window.matchMedia('(hover:hover) and (pointer:fine)').matches)) return;
@@ -515,6 +529,7 @@ function initGlass(){
   glassInitLenis();
   glassInitFlip();       // restructure the trading panel before measuring
   glassInitFinanceHUD();
+  glassInitFitnessHUD();
   glassInitStacking();   // wrap sections first — triggers measure final layout
   glassInitScrollFX();
   glassInitFocus();

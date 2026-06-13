@@ -240,12 +240,14 @@ function finNavTab(dir){
   i = Math.max(0, Math.min(FIN_TABS.length-1, i+dir));
   if(FIN_TABS[i]!==finUI.tab) finSwitchTab(FIN_TABS[i]);
 }
+let _finCloseT = null;
 function finOnHash(){
   if(location.hash==='#finance'){ if(!finUI.open) openFinance(true); }
   else if(finUI.open){ closeFinance(true); }
 }
 function openFinance(fromHash){
   const v = document.getElementById('finance-view'); if(!v) return;
+  clearTimeout(_finCloseT); v.classList.remove('fin-closing');   // cancel an in-flight furl
   finUI.open = true;
   v.classList.add('open');
   v.setAttribute('aria-hidden','false');
@@ -264,21 +266,23 @@ function openFinance(fromHash){
 }
 function closeFinance(fromHash){
   const v = document.getElementById('finance-view'); if(!v) return;
-  // v7.4: furl the HUD scroll first (mirrors closeSystem), then tear down
-  if(v.classList.contains('open') && !v.classList.contains('fin-closing') && v.querySelector('.sys-window')){
-    v.classList.add('fin-closing');
-    setTimeout(()=>{ v.classList.remove('fin-closing'); _closeFinanceCore(v, fromHash); }, 480);
-    return;
-  }
-  _closeFinanceCore(v, fromHash);
-}
-function _closeFinanceCore(v, fromHash){
+  if(!finUI.open) return;                                   // already closing/closed
   finUI.open = false;
-  v.classList.remove('open');
   v.setAttribute('aria-hidden','true');
-  document.body.classList.remove('fin-locked');
   finCloseModal();
   if(!fromHash && location.hash==='#finance'){ history.replaceState(null,'',location.pathname+location.search); }
+  const hud = v.querySelector('.sys-window');
+  const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches;
+  if(reduce || !hud){
+    v.classList.remove('open'); v.classList.remove('fin-closing'); document.body.classList.remove('fin-locked');
+    return;
+  }
+  // v7.4: furl the HUD scroll first, then drop .open but KEEP .fin-closing — its
+  // both-fill holds the window furled/invisible, so dropping .open won't flash the
+  // full panel back during the view's fade-out. openFinance clears it. (mirrors closeSystem)
+  v.classList.add('fin-closing');
+  clearTimeout(_finCloseT);
+  _finCloseT = setTimeout(()=>{ v.classList.remove('open'); document.body.classList.remove('fin-locked'); }, 480);
 }
 function finSwitchTab(tab){
   if(finUI.tab==='analytics' && tab!=='analytics' && typeof finAnaDestroy==='function') finAnaDestroy();

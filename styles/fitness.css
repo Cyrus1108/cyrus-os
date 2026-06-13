@@ -1,0 +1,238 @@
+/* ════════════════════════════════════════════════════════════
+   Fitness module — v7.11
+   Calisthenics-first health HUD. Shell language mirrors finance.css
+   (sterile = full pane slide; default theme = fade + sys-window
+   scroll-unfurl). Reuses global tokens + .fin-modal / .fin-seg /
+   .fin-field / .sys-* classes so it reskins with the theme.
+   ════════════════════════════════════════════════════════════ */
+
+:root{
+  --fit-pos:#2E8B57;
+  --fit-rest:#C9A227;
+}
+@media (prefers-color-scheme:dark){ :root{ --fit-pos:#5FC88A; } }
+html[data-theme="sterile"]{ --fit-pos:#3FAE6B; }
+
+body.fit-locked{ overflow:hidden; }
+
+/* ── view shell (base = sterile full pane, slide up from bottom) ── */
+.fit-view{
+  position:fixed; inset:0; z-index:1200;
+  background:var(--color-background-primary);
+  display:flex; flex-direction:column;
+  transform:translateY(100%);
+  transition:transform .42s var(--ease-drawer);
+  visibility:hidden;
+}
+.fit-view.open{ transform:translateY(0); visibility:visible; }
+
+.fit-top{
+  display:flex; align-items:center; gap:12px;
+  padding:16px 18px 12px; border-bottom:.5px solid var(--hair);
+}
+.fit-back{
+  background:none; border:none; color:var(--mute); font-size:14px;
+  cursor:pointer; padding:6px 8px; border-radius:var(--border-radius-md);
+}
+.fit-back:hover{ color:var(--ink); background:var(--color-background-secondary); }
+.fit-title{ flex:1; font-family:var(--serif); font-size:20px; color:var(--ink); letter-spacing:.04em; }
+
+.fit-tabs{ display:flex; gap:2px; padding:8px 14px 0; border-bottom:.5px solid var(--hair); }
+.fit-tab{
+  flex:1; background:none; border:none; cursor:pointer;
+  padding:10px 4px 12px; font-size:13px; color:var(--ghost);
+  border-bottom:2px solid transparent;
+  transition:border-color var(--dur-base) var(--ease-silk),color var(--dur-base) var(--ease-silk);
+}
+.fit-tab.active{ color:var(--brass); border-bottom-color:var(--brass); font-weight:600; }
+
+.fit-body{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:16px 14px 24px; }
+
+/* inputs (extend finance's scoped rule to the fitness view) */
+.fit-view input[type="text"], .fit-view input[type="number"],
+.fit-view input[type="date"], .fit-view select{
+  width:100%; padding:10px 12px; font-size:14px;
+  background:var(--color-background-input); color:var(--ink);
+  border:.5px solid var(--hair-strong); border-radius:var(--border-radius-md);
+  font-family:var(--sans);
+}
+html[data-theme="sterile"] .fit-view input,
+html[data-theme="sterile"] .fit-view select{ border-radius:0; }
+
+/* ════════ default theme — 健身 HUD unified with the System window.
+   glass.js wraps #fitness-view into .sys-backdrop + .sys-window.fit-hud;
+   here .fit-view becomes a centering stage and the window reuses the
+   System scroll-unfurl keyframes. Fade in (never translateY — that drags
+   the half-transparent backdrop up from the bottom). ════════ */
+html:not([data-theme="sterile"]) .fit-view{
+  display:flex; align-items:center; justify-content:center; padding:16px;
+  background:transparent;
+  transform:none; opacity:0;
+  transition:opacity .4s var(--ease-silk), visibility .4s var(--ease-silk);
+}
+html:not([data-theme="sterile"]) .fit-view.open{ transform:none; opacity:1; }
+html:not([data-theme="sterile"]) .fit-view .sys-window.fit-hud{
+  width:100%; max-width:1080px; max-height:94vh;
+  overflow:auto; overscroll-behavior:contain;
+  display:flex; flex-direction:column;
+}
+html:not([data-theme="sterile"]) .fit-view.open .fit-hud{
+  animation:sysScrollOpen 1100ms linear both; transform-origin:center center;
+}
+html:not([data-theme="sterile"]) .fit-view.open .fit-hud::after{
+  animation:sysFold 1100ms linear both;
+}
+html:not([data-theme="sterile"]) .fit-view.fit-closing .fit-hud{
+  animation:sysScrollClose 480ms cubic-bezier(0.5,0,0.78,0.2) both; transform-origin:center center;
+}
+html:not([data-theme="sterile"]) .fit-view.fit-closing .fit-hud::after{
+  animation:sysFoldClose 480ms ease both;
+}
+html:not([data-theme="sterile"]) .fit-view.fit-closing .sys-backdrop{
+  animation:sysBackFade 480ms var(--ease-silk) both;
+}
+@media (prefers-reduced-motion:reduce){
+  html:not([data-theme="sterile"]) .fit-view.open .fit-hud,
+  html:not([data-theme="sterile"]) .fit-view.open .fit-hud::after{
+    animation:none !important; clip-path:none !important; opacity:1 !important;
+  }
+}
+
+/* ════════ shared bits ════════ */
+.fit-empty{ text-align:center; color:var(--ghost); font-size:13px; padding:40px 20px; line-height:1.8; }
+.fit-sec{ margin-bottom:22px; }
+.fit-sec-head{ font-size:13px; color:var(--brass); letter-spacing:.06em; margin-bottom:10px;
+  display:flex; align-items:center; justify-content:space-between; }
+.fit-btn{ background:var(--color-background-secondary); border:.5px solid var(--hair-strong);
+  color:var(--ink); border-radius:var(--border-radius-md); padding:9px 14px; font-size:13px; cursor:pointer; }
+.fit-btn:hover{ border-color:var(--brass); }
+.fit-btn.brass{ background:var(--brass); color:var(--color-background-primary); border-color:var(--brass); font-weight:600; }
+.fit-btn.mini{ padding:4px 10px; font-size:12px; }
+html[data-theme="sterile"] .fit-btn{ border-radius:0; }
+
+/* ════════ 今日 today ════════ */
+.fit-day-head{ display:flex; align-items:baseline; gap:10px; margin-bottom:16px; }
+.fit-day-wk{ font-family:var(--serif); font-size:26px; color:var(--ink); letter-spacing:.02em; }
+.fit-day-label{ font-size:13px; color:var(--brass); letter-spacing:.06em; }
+.fit-day-done{ margin-left:auto; font-size:12px; color:var(--fit-pos); border:.5px solid var(--fit-pos);
+  border-radius:999px; padding:3px 12px; }
+html[data-theme="sterile"] .fit-day-done{ border-radius:0; }
+
+.fit-rest-day{ text-align:center; padding:40px 18px; }
+.fit-rest-glyph{ font-size:34px; margin-bottom:12px; }
+.fit-rest-title{ font-size:16px; color:var(--ink); margin-bottom:6px; }
+.fit-rest-sub{ font-size:13px; color:var(--ghost); line-height:1.7; }
+
+.fit-ex{ background:var(--color-background-secondary); border:.5px solid var(--hair);
+  border-radius:var(--border-radius-lg); padding:14px 14px 12px; margin-bottom:12px; transition:border-color .25s var(--ease-silk); }
+html[data-theme="sterile"] .fit-ex{ border-radius:0; }
+.fit-ex.done{ border-color:var(--fit-pos); }
+.fit-ex-top{ display:flex; align-items:baseline; gap:10px; margin-bottom:12px; }
+.fit-ex-name{ font-size:16px; color:var(--ink); font-weight:600; }
+.fit-ex-target{ font-size:12px; color:var(--ghost); font-family:var(--mono); }
+.fit-ex-prog{ margin-left:auto; font-size:12px; color:var(--mute); font-family:var(--mono); }
+.fit-ex-done-ic{ margin-left:auto; color:var(--fit-pos); font-size:16px; }
+
+/* set pips — one per planned set; tap to complete (fills with actual reps) */
+.fit-sets{ display:flex; flex-wrap:wrap; gap:8px; }
+.fit-pip{ min-width:54px; height:46px; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:1px; background:var(--color-background-tertiary); border:.5px solid var(--hair-strong);
+  border-radius:var(--border-radius-md); cursor:pointer; color:var(--mute); padding:0 8px;
+  transition:background .2s var(--ease-silk),border-color .2s var(--ease-silk),color .2s var(--ease-silk); }
+html[data-theme="sterile"] .fit-pip{ border-radius:0; }
+.fit-pip:hover{ border-color:var(--brass); }
+.fit-pip-n{ font-size:16px; font-weight:600; font-family:var(--mono); line-height:1; }
+.fit-pip-l{ font-size:9px; letter-spacing:.04em; opacity:.7; }
+.fit-pip.done{ background:var(--brass); border-color:var(--brass); color:var(--color-background-primary); }
+.fit-pip.time .fit-pip-n{ font-size:13px; }
+
+/* completion check-in banner */
+.fit-checkin{ display:flex; align-items:center; gap:10px; background:var(--color-background-success,rgba(63,174,107,.12));
+  border:.5px solid var(--fit-pos); border-radius:var(--border-radius-lg); padding:14px 16px; margin-bottom:14px; }
+html[data-theme="sterile"] .fit-checkin{ border-radius:0; }
+.fit-checkin-ic{ font-size:20px; }
+.fit-checkin-tx{ font-size:14px; color:var(--ink); }
+.fit-checkin-tx b{ color:var(--fit-pos); }
+
+/* ════════ timers (two independent: stopwatch + countdown) ════════ */
+.fit-timers{ position:sticky; bottom:0; z-index:5; display:flex; gap:10px; margin-top:18px;
+  padding:12px 2px calc(8px + env(safe-area-inset-bottom));
+  background:linear-gradient(to top, var(--color-background-primary) 60%, transparent); }
+.fit-timer{ flex:1; background:var(--color-background-secondary); border:.5px solid var(--hair-strong);
+  border-radius:var(--border-radius-lg); padding:12px 12px 10px; text-align:center; }
+html[data-theme="sterile"] .fit-timer{ border-radius:0; }
+.fit-timer.down{ border-color:color-mix(in srgb, var(--fit-rest) 50%, var(--hair-strong)); }
+.fit-timer.ring{ animation:fitRing .5s ease 3; }
+@keyframes fitRing{ 0%,100%{ box-shadow:0 0 0 0 transparent; } 50%{ box-shadow:0 0 0 3px var(--fit-rest); } }
+.fit-timer-cap{ font-size:11px; color:var(--ghost); letter-spacing:.08em; margin-bottom:4px; }
+.fit-timer-disp{ font-size:30px; font-family:var(--mono); color:var(--ink); line-height:1.1; font-variant-numeric:tabular-nums; }
+.fit-timer.down .fit-timer-disp{ color:var(--fit-rest); }
+.fit-timer-btns{ display:flex; gap:6px; justify-content:center; margin-top:8px; }
+.fit-timer-btns button{ flex:1; padding:6px 4px; font-size:12px; background:var(--color-background-tertiary);
+  border:.5px solid var(--hair); border-radius:var(--border-radius-md); color:var(--mute); cursor:pointer; }
+.fit-timer-btns button:hover{ border-color:var(--brass); color:var(--ink); }
+html[data-theme="sterile"] .fit-timer-btns button{ border-radius:0; }
+.fit-timer-presets{ display:flex; gap:5px; justify-content:center; margin-top:7px; flex-wrap:wrap; }
+.fit-timer-presets button{ padding:3px 9px; font-size:11px; font-family:var(--mono);
+  background:none; border:.5px solid var(--hair); border-radius:999px; color:var(--ghost); cursor:pointer; }
+.fit-timer-presets button:hover{ border-color:var(--brass); color:var(--ink); }
+html[data-theme="sterile"] .fit-timer-presets button{ border-radius:0; }
+
+/* ════════ 计划 plan ════════ */
+.fit-pday{ background:var(--color-background-secondary); border:.5px solid var(--hair);
+  border-radius:var(--border-radius-lg); padding:12px 14px; margin-bottom:10px; }
+html[data-theme="sterile"] .fit-pday{ border-radius:0; }
+.fit-pday.rest{ opacity:.72; }
+.fit-pday-head{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.fit-pday-name{ font-size:15px; color:var(--ink); font-weight:600; }
+.fit-pday-today{ font-size:10px; color:var(--brass); border:.5px solid var(--brass); border-radius:999px; padding:1px 8px; }
+html[data-theme="sterile"] .fit-pday-today{ border-radius:0; }
+.fit-pday-tools{ margin-left:auto; display:flex; gap:6px; }
+.fit-slot{ display:flex; align-items:center; gap:8px; padding:7px 0; border-top:.5px solid var(--hair); font-size:14px; }
+.fit-slot-name{ flex:1; color:var(--ink); }
+.fit-slot-target{ font-size:12px; color:var(--ghost); font-family:var(--mono); }
+.fit-slot-x{ background:none; border:none; color:var(--ghost); cursor:pointer; font-size:16px; padding:2px 6px; }
+.fit-slot-x:hover{ color:var(--fit-neg,#C0392B); }
+.fit-pempty{ font-size:12px; color:var(--ghost); padding:6px 0; }
+
+/* exercise library rows */
+.fit-lib-row{ display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:.5px solid var(--hair); }
+.fit-lib-row.archived{ opacity:.45; }
+.fit-lib-name{ flex:1; font-size:14px; color:var(--ink); }
+.fit-lib-kind{ font-size:11px; color:var(--ghost); font-family:var(--mono); }
+.fit-lib-tools{ display:flex; gap:4px; }
+.fit-lib-tools button{ background:none; border:none; color:var(--ghost); cursor:pointer; font-size:14px; padding:3px 6px; }
+.fit-lib-tools button:hover{ color:var(--brass); }
+
+/* ════════ 趋势 trends ════════ */
+.fit-chart-card{ background:var(--color-background-secondary); border:.5px solid var(--hair);
+  border-radius:var(--border-radius-lg); padding:14px; margin-bottom:14px; }
+html[data-theme="sterile"] .fit-chart-card{ border-radius:0; }
+.fit-chart-title{ font-size:13px; color:var(--brass); letter-spacing:.06em; margin-bottom:10px;
+  display:flex; align-items:center; justify-content:space-between; }
+.fit-chart-wrap{ position:relative; height:200px; }
+.fit-stat-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px; }
+.fit-stat{ background:var(--color-background-secondary); border:.5px solid var(--hair);
+  border-radius:var(--border-radius-md); padding:12px 10px; text-align:center; }
+html[data-theme="sterile"] .fit-stat{ border-radius:0; }
+.fit-stat-n{ font-size:22px; font-family:var(--mono); color:var(--ink); line-height:1.1; }
+.fit-stat-l{ font-size:11px; color:var(--ghost); margin-top:4px; }
+.fit-dim-chips{ display:flex; gap:6px; flex-wrap:wrap; }
+.fit-dim-chip{ padding:3px 11px; font-size:12px; background:none; border:.5px solid var(--hair);
+  border-radius:999px; color:var(--ghost); cursor:pointer; }
+.fit-dim-chip.active{ border-color:var(--brass); color:var(--brass); }
+html[data-theme="sterile"] .fit-dim-chip{ border-radius:0; }
+
+/* ════════ 饮食 diet ════════ */
+.fit-diet-head{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.fit-diet-date{ font-family:var(--serif); font-size:18px; color:var(--ink); }
+.fit-diet-nav{ background:none; border:.5px solid var(--hair); border-radius:var(--border-radius-md);
+  color:var(--mute); cursor:pointer; padding:4px 10px; font-size:14px; }
+html[data-theme="sterile"] .fit-diet-nav{ border-radius:0; }
+.fit-meal{ display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:.5px solid var(--hair); }
+.fit-meal-time{ font-size:11px; color:var(--ghost); font-family:var(--mono); width:42px; flex:none; }
+.fit-meal-name{ flex:1; font-size:14px; color:var(--ink); }
+.fit-meal-kcal{ font-size:12px; color:var(--brass); font-family:var(--mono); }
+.fit-meal-x{ background:none; border:none; color:var(--ghost); cursor:pointer; font-size:15px; padding:2px 6px; }
+.fit-meal-x:hover{ color:var(--fit-neg,#C0392B); }
+.fit-diet-total{ text-align:right; font-size:13px; color:var(--mute); margin-top:10px; font-family:var(--mono); }

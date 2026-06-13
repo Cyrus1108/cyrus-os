@@ -1,6 +1,6 @@
 # CyrusOS · 活体架构地图（ARCHITECTURE.md）
 
-> **对齐版本：`cyrus-os-v7.10.1`**（= sw.js `CACHE_VERSION`，每次 bump 顺手更新此行——
+> **对齐版本：`cyrus-os-v7.11.1`**（= sw.js `CACHE_VERSION`，每次 bump 顺手更新此行——
 > 两者不一致即说明本文档已开始腐烂，修文档）。最后全面核对：2026-06-11。
 
 **这份文档的用途**：动工前读它，代替考古式读码。红线与部署纪律在
@@ -122,9 +122,10 @@ rMotivation → rMetrics → rpgAfterChange → attachRipples`
 | hermes.js | Hermes 通知列表；`_hermesSeen` id 差分 + `window._hermesPulled` 门 → 新通知才 `Sfx.notice()`；dismiss 幂等 |
 | finance.js | 记账全家桶：账户/分类/交易(插入式)/预算/目标/周期/隐私遮罩/CSV/主题日历与时间选择器；`finSubmitTx` 与 `finWizSave` 两条保存路径 |
 | finance-charts.js | Chart.js 分析图 |
+| fitness.js | 健身 HUD（克隆 finance 外壳）：今日/计划/趋势/饮食 4 tab；自重训练，计划驱动今日，`fitSettle` 完成全部计划组数→自动打卡（仿 jpSettle）；两个独立计时器（正计时 stopwatch + 组间/保持倒计时，time 动作点 pip 自动起倒计时）；`fitComputeStreak`（休息日不断签）；体征/饮食记录；暴露 `fitWorkoutCount/fitTotalReps/fitBodyLogged/fitPlanWeekComplete` 供成就软引用 |
 | motivation.js | 动机视频墙（YouTube unlisted） |
 | sound.js | `Sfx` 合成音效引擎：17 个 cue（tick/untick/tab/open/close/toast/quest/perfect/levelup/rankup/achievement/notice/save/lowday/cross/blocked/penalty）；程序化混响、噪声声部、手势门闸 `interacted`、`gate()` 节流、静音 LS 键 `cyrus_sfx_muted`（无前缀） |
-| rpg.js | RPG 系统层：属性=真实数据计算（多对多矩阵）、EXP/等级单调、**41 个成就**（RPG_ACHIEVEMENTS，tier→EXP）、每日挑战、庆祝弹窗（手动确认不自动关）、`rpgAfterChange` 全局结算钩子、`sysToast(msg,{silent})` |
+| rpg.js | RPG 系统层：属性=真实数据计算（多对多矩阵）、EXP/等级单调、**47 个成就**（RPG_ACHIEVEMENTS，tier→EXP；含 fitness 体魄类 6 个）、每日挑战、庆祝弹窗（手动确认不自动关）、`rpgAfterChange` 全局结算钩子、`sysToast(msg,{silent})` |
 | lowday.js | 低谷日断路器：`_amp/_low/_lowx/_trig` 命名空间键写进 the90_daily.scores；协议弹窗、战略面封锁 `lowdayBlocked`、渡 `lowdayCross`、`adversityLedger()` |
 | principles.js | 信条与原则弹窗三模式（宣读/核查/修订）；`principlesAutoShow`/`principlesEveningAutoShow`（标记列见 §3 settings）；修订被低谷锁；核查草稿 `prDraft` 保存才落库 |
 | applock.js | 应用锁（PIN/生物识别可选） |
@@ -178,6 +179,11 @@ background-gradient、todo/.row 行角标、定制 `.row-cb` 勾选框、`brassF
 | fin_transactions | **插入式** | 单行 insert/update/delete 函数，**永不整替、永不改史**（更正=冲销行） | fin_transactions | ✓ |
 | fin_budgets / fin_goals / fin_recurring | C | – | 各自键 | ✓ |
 | fin_asset_snapshots | D | pg_cron 夜间快照 | – | ✗ |
+| fit_exercises | C | 动作库 name/kind('reps'/'time')/sort/archived；首次开健身页注入预设 | fit_exercises | ✓ |
+| fit_plan | A | week jsonb{mon..sun:[{exId,sets,target}]}, rest_default（计划驱动今日） | fit_plan | ✓ |
+| fit_log | B | entries jsonb[{exId,sets,target,done:[reps...]}], done, duration_sec | fit_log | ✓ |
+| fit_body | B | weight, metrics jsonb(waist/chest/arm/thigh) | fit_body | ✓ |
+| fit_diet | B | meals jsonb[{name,kcal,time}] | fit_diet | ✓ |
 | system_push_log | D | worker 推送去重（slot 占位） | – | ✗ |
 
 pg_cron 服务端任务：周期交易生成、资产快照、已完成 todo 清理。
@@ -238,7 +244,7 @@ synced settings date 列 + SETTINGS_KEYS 镜像；**先写标记再弹**（backd
 - **RPG 单调律**：等级/EXP 永不回退；`achievements` jsonb append-only；
   `rpgAchExp()` 只读已存键，绝不实时重测；逆境账户(渡)计数只增
 - **rpg-stats.py ↔ rpg.js 镜像耦合**（改任何一边必须同步另一边 + EC2 重部署）：
-  `TIER_EXP{15/30/50/100}` · `ACH_TIER`（**断言 41 条**）· `ACTIVITY_ATTR` 多对多矩阵
+  `TIER_EXP{15/30/50/100}` · `ACH_TIER`（**断言 47 条**）· `ACTIVITY_ATTR` 多对多矩阵
   （睡眠喂全部 5 维）· `TARGET_LABEL{I睡眠 II冥想 III课业 IV健身 V性能量}` ·
   `ATTR_ORDER[STR,AGI,INT,WIS,VIT]` · `THE90_START=2026-05-11`
 - **finBalance 的 transfer 不对称**（toAmount vs amount）字节级保留；不就地 sort

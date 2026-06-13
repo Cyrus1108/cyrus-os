@@ -25,6 +25,7 @@
 <link rel="stylesheet" href="./styles/animations.css">
 <link rel="stylesheet" href="./styles/theme-sterile.css">
 <link rel="stylesheet" href="./styles/finance.css">
+<link rel="stylesheet" href="./styles/fitness.css">
 <link rel="stylesheet" href="./styles/motivation.css">
 <link rel="stylesheet" href="./styles/system.css">
 <link rel="stylesheet" href="./styles/lowday.css">
@@ -153,6 +154,7 @@
         <button id="sys-btn" class="theme-btn" onclick="openSystem()" title="系统 · 角色" style="margin-bottom:8px;margin-right:6px;">◆ 系统</button>
         <button id="motiv-btn" class="theme-btn" onclick="openMotivation()" title="动力中心" style="margin-bottom:8px;margin-right:6px;">◆ 动力</button>
         <button id="fin-btn" class="theme-btn" onclick="openFinance()" title="财务" style="margin-bottom:8px;margin-right:6px;">◆ 财务</button>
+        <button id="fit-btn" class="theme-btn" onclick="openFitness()" title="健身" style="margin-bottom:8px;margin-right:6px;">◆ 健身</button>
         <button id="theme-btn" class="theme-btn" onclick="toggleTheme()" title="切换主题" style="margin-bottom:8px;">◆ 终末</button>
         <div id="clock" class="clock"></div>
         <div id="clock-sub" class="clock-sub"></div>
@@ -543,6 +545,22 @@
   <div id="fin-modal" class="fin-modal"><div class="fin-modal-card" id="fin-modal-card"></div></div>
 </div>
 
+<!-- ════ Fitness module — full-screen view (v7.11) ════ -->
+<div id="fitness-view" class="fit-view" aria-hidden="true">
+  <div class="fit-top">
+    <button class="fit-back" onclick="closeFitness()">← 返回</button>
+    <div class="fit-title">健身 · Fitness</div>
+  </div>
+  <div class="fit-tabs">
+    <button class="fit-tab active" data-tab="today" onclick="fitSwitchTab('today')">今日</button>
+    <button class="fit-tab" data-tab="plan" onclick="fitSwitchTab('plan')">计划</button>
+    <button class="fit-tab" data-tab="trends" onclick="fitSwitchTab('trends')">趋势</button>
+    <button class="fit-tab" data-tab="diet" onclick="fitSwitchTab('diet')">饮食</button>
+  </div>
+  <div id="fit-body" class="fit-body"></div>
+  <div id="fit-modal" class="fin-modal"><div class="fin-modal-card" id="fit-modal-card"></div></div>
+</div>
+
 <!-- ════ Motivation Center — full-screen YouTube video grid ════ -->
 <div id="motivation-view" class="motiv-view" aria-hidden="true">
   <div class="motiv-top">
@@ -606,6 +624,7 @@
 <script src="./scripts/hermes.js"></script>
 <script src="./scripts/finance.js"></script>
 <script src="./scripts/finance-charts.js"></script>
+<script src="./scripts/fitness.js"></script>
 <script src="./scripts/motivation.js"></script>
 <script src="./scripts/sound.js"></script>
 <script src="./scripts/rpg.js"></script>

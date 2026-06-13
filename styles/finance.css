@@ -581,7 +581,6 @@ html:not([data-theme="sterile"]) .fin-view.open .fin-hud{
 html:not([data-theme="sterile"]) .fin-view.open .fin-hud::after{
   animation:sysFold 1100ms linear both;
 }
-html:not([data-theme="sterile"]) .fin-view.fin-closing{ opacity:1; visibility:visible; }
 html:not([data-theme="sterile"]) .fin-view.fin-closing .fin-hud{
   animation:sysScrollClose 480ms cubic-bezier(0.5,0,0.78,0.2) both; transform-origin:center center;
 }

@@ -84,6 +84,24 @@ const DEF_FIN_CATS = [
   {name:'其他收入',kind:'income',  icon:'🎁', color:'#AE9A3F'},
 ];
 
+/* ════════════ Fitness module (v7.11) ════════════
+   Calisthenics-first. Preset exercise library seeded on first open (like
+   DEF_FIN_CATS). kind: 'reps' (count) | 'time' (held seconds, e.g. plank). */
+const FIT_PRESET = [
+  {name:'引体向上',    kind:'reps'},
+  {name:'俯卧撑',      kind:'reps'},
+  {name:'双杠臂屈伸',  kind:'reps'},
+  {name:'深蹲',        kind:'reps'},
+  {name:'平板支撑',    kind:'time'},
+];
+/* weekday keys for fit.plan.week — Mon-first to match the planner UI */
+const FIT_WEEK_KEYS = ['mon','tue','wed','thu','fri','sat','sun'];
+function fitWeekdayKey(dateStr){
+  // getDay(): 0=Sun..6=Sat → map to Mon-first index
+  const d = new Date((dateStr||TODAY)+'T00:00:00');
+  return FIT_WEEK_KEYS[(d.getDay()+6)%7];
+}
+
 const CREED_VARIANTS = [
   {id:'anger',body:`如果你今天没有把时间花在这五件事的任何一件上 ——
     <div class="creed-pillars">睡眠 &nbsp;·&nbsp; 冥想 &nbsp;·&nbsp; 课业 &nbsp;·&nbsp; 健身 &nbsp;·&nbsp; 性能量</div>
@@ -150,6 +168,12 @@ let S={
   /* 信条与原则 — items: [{id, kind:'creed'|'principle', text, why, position, active}]
      daily: { 'YYYY-MM-DD': { checks:{itemId:'kept'|'broke'|'na'}, revise:{itemId:true}, note:'' } } */
   principles:{ items:[], daily:{} },
+  /* 健身 Fitness — exercises: library [{id,name,kind,isPreset,sort,archived}]
+     plan: { week:{mon:[{exId,sets,target}],...}, restDefault } (single row)
+     log:  { 'YYYY-MM-DD': { entries:[{exId,name,kind,target,sets,done:[reps...]}], done, durationSec, note } }
+     body: { 'YYYY-MM-DD': { weight, metrics:{waist,chest,arm,thigh,...} } }
+     diet: { 'YYYY-MM-DD': { meals:[{name,kcal,time,note}] } } */
+  fit:{ exercises:[], plan:{ week:{}, restDefault:90 }, log:{}, body:{}, diet:{} },
 };
 
 let editingAC=null, editingJP=null, editingTR=null, editingTD=null;
@@ -176,6 +200,7 @@ const dirty = {
   trading: false, categories: false, todos: false, settings: false,
   the90Meta: false, the90Daily: false, motiv: false, rpg: false,
   principles: false, principlesDaily: false,
+  fitExercises: false, fitPlan: false, fitLog: false, fitBody: false, fitDiet: false,
 };
 
 function saveMR(){saveLSRaw('mr',S.mr); dirty.morning=true; if(typeof syncPushMorning==='function') syncPushMorning();}
@@ -190,3 +215,9 @@ function saveMotiv(){saveLSRaw('motiv', S.motiv); dirty.motiv=true; if(typeof sy
 function saveRPG(){saveLSRaw('rpg', S.rpg); dirty.rpg=true; if(typeof syncPushRPG==='function') syncPushRPG();}
 function savePrinciples(){saveLSRaw('principles', S.principles.items); dirty.principles=true; if(typeof syncPushPrinciples==='function') syncPushPrinciples();}
 function savePrinciplesDaily(){saveLSRaw('principles_daily', S.principles.daily); dirty.principlesDaily=true; if(typeof syncPushPrinciplesDaily==='function') syncPushPrinciplesDaily();}
+/* Fitness — date-keyed saves take the date so the push upserts just that row. */
+function saveFitExercises(){saveLSRaw('fit_exercises', S.fit.exercises); dirty.fitExercises=true; if(typeof syncPushFitExercises==='function') syncPushFitExercises();}
+function saveFitPlan(){saveLSRaw('fit_plan', S.fit.plan); dirty.fitPlan=true; if(typeof syncPushFitPlan==='function') syncPushFitPlan();}
+function saveFitLog(date){saveLSRaw('fit_log', S.fit.log); dirty.fitLog=true; if(typeof syncPushFitLog==='function') syncPushFitLog(date||TODAY);}
+function saveFitBody(date){saveLSRaw('fit_body', S.fit.body); dirty.fitBody=true; if(typeof syncPushFitBody==='function') syncPushFitBody(date||TODAY);}
+function saveFitDiet(date){saveLSRaw('fit_diet', S.fit.diet); dirty.fitDiet=true; if(typeof syncPushFitDiet==='function') syncPushFitDiet(date||TODAY);}
