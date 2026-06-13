@@ -76,49 +76,100 @@ function onReorderMR(ids){
   saveMR();rMR();
 }
 
-/* 项目详情 — tap a pill's ⌄ to float a card to the center that unrolls like a
-   blind (clip-path top→down); a textarea inside holds free-form notes for that
-   step (how to do it / cues / reminders), auto-saved into the item's `detail`
-   (persisted in morning.list jsonb; daily reset only clears `d`, never detail). */
-let _mrDetailT = null;
-function mrExpand(id){
-  const i = S.mr.list.find(x => x.id === id); if(!i) return;
-  let m = document.getElementById('mr-detail-modal');
-  if(!m){
-    m = document.createElement('div'); m.id = 'mr-detail-modal'; m.className = 'mr-detail-modal';
-    m.setAttribute('data-lenis-prevent','');
-    m.addEventListener('click', e => { if(e.target === m) mrCloseDetail(); });
-    document.body.appendChild(m);
-  }
-  m.dataset.id = id;
-  m.innerHTML = `<div class="mr-detail-card">
-    <div class="sys-corner tl"></div><div class="sys-corner tr"></div><div class="sys-corner bl"></div><div class="sys-corner br"></div>
-    <div class="mr-detail-kicker">[ 晨间 · ${escH(i.t)} ]</div>
-    <div class="mr-detail-meta">${i.mins} 分钟</div>
-    <textarea class="mr-detail-text" placeholder="这一项具体怎么做、要点、提醒…（自动保存）" oninput="mrSaveDetail('${id}')">${escH(i.detail || '')}</textarea>
-    <button class="mr-detail-done" onclick="mrCloseDetail()">完成 →</button>
-  </div>`;
-  requestAnimationFrame(() => m.classList.add('open'));
-  if(typeof pageDepth === 'function') pageDepth(true);
-  if(window.Sfx) Sfx.tab();
-  setTimeout(() => { const ta = m.querySelector('.mr-detail-text'); if(ta) ta.focus(); }, 380);
+/* 项目详情 — tap ⌄ to LIFT the pill from its slot to the center (View
+   Transitions / FLIP, same language as the panel Focus Spaces), where it shows
+   this step's notes READ-ONLY (expand is usually just to look). Tap 编辑 to
+   write; exit via backdrop / Esc → it flies back to its slot. Notes persist in
+   the item's `detail` (morning.list jsonb; daily reset clears only `d`). */
+let _mrDetailId = null, _mrDetailPh = null, _mrDetailT = null;
+
+function mrDetailInner(i){
+  const has = i.detail && i.detail.trim();
+  return `<div class="mr-pill-detail-body">${has ? escH(i.detail) : '<span class="mr-pill-detail-empty">还没有备注</span>'}</div>
+    <button class="mr-pill-edit" onclick="event.stopPropagation();mrEditDetail()">${has ? '编辑' : '添加备注'}</button>`;
 }
-function mrSaveDetail(id){
-  const m = document.getElementById('mr-detail-modal'); if(!m) return;
-  const ta = m.querySelector('.mr-detail-text'); if(!ta) return;
+function mrExpand(id){
+  if(_mrDetailId) return;
   const i = S.mr.list.find(x => x.id === id); if(!i) return;
+  const pill = document.querySelector(`.mr-pill[data-id="${id}"]`); if(!pill) return;
+  _mrDetailId = id;
+  let bd = document.getElementById('mr-detail-bd');
+  if(!bd){ bd = document.createElement('div'); bd.id = 'mr-detail-bd'; bd.className = 'mr-detail-bd'; bd.addEventListener('click', mrCloseDetail); document.body.appendChild(bd); }
+  const ph = document.createElement('div'); ph.className = 'mr-pill-ph'; ph.style.height = pill.offsetHeight + 'px';
+  _mrDetailPh = ph;
+  const mutate = () => {
+    pill.parentNode.insertBefore(ph, pill);
+    document.body.appendChild(pill);
+    pill.classList.add('mr-pill-expanded');
+    pill.setAttribute('data-lenis-prevent', '');
+    pill.insertAdjacentHTML('beforeend', `<div class="mr-pill-detail">${mrDetailInner(i)}</div>`);
+    document.body.classList.add('mr-detail-open');
+    if(typeof pageDepth === 'function') pageDepth(true);
+  };
+  if(document.startViewTransition){
+    pill.style.viewTransitionName = 'mr-fly';
+    document.startViewTransition(mutate).finished.finally(() => { pill.style.viewTransitionName = ''; });
+  } else {
+    const first = pill.getBoundingClientRect();
+    mutate();
+    const last = pill.getBoundingClientRect();
+    if(window.gsap) gsap.fromTo(pill,
+      { x:first.left-last.left, y:first.top-last.top, scaleX:first.width/last.width, scaleY:first.height/last.height, transformOrigin:'0 0' },
+      { x:0, y:0, scaleX:1, scaleY:1, duration:0.6, ease:'power3.inOut', onComplete:()=>gsap.set(pill,{clearProps:'transform'}) });
+  }
+  if(window.Sfx) Sfx.tab();
+}
+function mrEditDetail(){
+  const pill = document.querySelector('.mr-pill-expanded'); if(!pill || !_mrDetailId) return;
+  const i = S.mr.list.find(x => x.id === _mrDetailId); if(!i) return;
+  const d = pill.querySelector('.mr-pill-detail'); if(!d) return;
+  d.innerHTML = `<textarea class="mr-detail-text" placeholder="这一项怎么做、要点、提醒…" oninput="mrSaveDetail()">${escH(i.detail || '')}</textarea>
+    <button class="mr-pill-edit" onclick="event.stopPropagation();mrDoneEdit()">完成</button>`;
+  const ta = d.querySelector('textarea'); if(ta){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+}
+function mrSaveDetail(){
+  const pill = document.querySelector('.mr-pill-expanded'); if(!pill) return;
+  const ta = pill.querySelector('.mr-detail-text'); if(!ta) return;
+  const i = S.mr.list.find(x => x.id === _mrDetailId); if(!i) return;
   i.detail = ta.value;
   clearTimeout(_mrDetailT); _mrDetailT = setTimeout(saveMR, 600);
 }
+function mrDoneEdit(){
+  const pill = document.querySelector('.mr-pill-expanded'); if(!pill || !_mrDetailId) return;
+  const i = S.mr.list.find(x => x.id === _mrDetailId); if(!i) return;
+  clearTimeout(_mrDetailT); saveMR();
+  const d = pill.querySelector('.mr-pill-detail'); if(d) d.innerHTML = mrDetailInner(i);
+}
 function mrCloseDetail(){
-  const m = document.getElementById('mr-detail-modal'); if(!m || !m.classList.contains('open')) return;
-  m.classList.remove('open');
-  if(typeof pageDepth === 'function') pageDepth(false);
-  clearTimeout(_mrDetailT); saveMR();        // flush any pending edit
-  if(typeof rMR === 'function') rMR();        // refresh has-detail dot
+  if(!_mrDetailId) return;
+  const pill = document.querySelector('.mr-pill-expanded');
+  const ph = _mrDetailPh;
+  clearTimeout(_mrDetailT); saveMR();
+  const finish = () => {
+    if(pill){
+      pill.classList.remove('mr-pill-expanded');
+      pill.removeAttribute('data-lenis-prevent');
+      const d = pill.querySelector('.mr-pill-detail'); if(d) d.remove();
+      if(ph && ph.parentNode){ ph.parentNode.insertBefore(pill, ph); ph.remove(); }
+    }
+    document.body.classList.remove('mr-detail-open');
+    _mrDetailId = null; _mrDetailPh = null;
+    if(typeof pageDepth === 'function') pageDepth(false);
+    if(typeof rMR === 'function') rMR();
+  };
+  if(document.startViewTransition && pill){
+    pill.style.viewTransitionName = 'mr-fly';
+    document.startViewTransition(finish).finished.finally(() => { if(pill) pill.style.viewTransitionName = ''; });
+  } else if(pill && window.gsap && ph){
+    const cur = pill.getBoundingClientRect(); const tgt = ph.getBoundingClientRect();
+    gsap.to(pill, { x:tgt.left-cur.left, y:tgt.top-cur.top, scaleX:tgt.width/cur.width, scaleY:tgt.height/cur.height, transformOrigin:'0 0', duration:0.55, ease:'power3.inOut', onComplete:()=>{ gsap.set(pill,{clearProps:'transform'}); finish(); } });
+  } else { finish(); }
   if(window.Sfx) Sfx.close();
 }
+document.addEventListener('keydown', e => { if(e.key === 'Escape' && _mrDetailId) mrCloseDetail(); });
+
 function toggleMR(id,event){
+  if(_mrDetailId) return;   // a pill is expanded — its taps aren't toggles
   const i=S.mr.list.find(i=>i.id===id);
   if(i){
     i.d=!i.d;
