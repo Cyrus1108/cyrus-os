@@ -564,7 +564,13 @@ html[data-theme="sterile"] .fin-fx-auto{ border-radius:0; }
 html:not([data-theme="sterile"]) .fin-view{
   display:flex; align-items:center; justify-content:center; padding:16px;
   background:transparent;
+  /* kill the Phase-1 translateY(100%) sheet slide — with a half-transparent
+     HUD backdrop it read as the background flying up from the bottom. Fade
+     instead; the window itself unfurls via sysScrollOpen. */
+  transform:none; opacity:0;
+  transition:opacity .4s var(--ease-silk), visibility .4s var(--ease-silk);
 }
+html:not([data-theme="sterile"]) .fin-view.open{ transform:none; opacity:1; }
 html:not([data-theme="sterile"]) .fin-view .sys-window.fin-hud{
   width:100%; max-width:1080px; max-height:94vh;
   overflow:auto; overscroll-behavior:contain;
