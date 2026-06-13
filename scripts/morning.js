@@ -82,11 +82,11 @@ function onReorderMR(ids){
    write; exit via backdrop / Esc → it flies back to its slot. Notes persist in
    the item's `detail` (morning.list jsonb; daily reset clears only `d`). */
 let _mrDetailId = null, _mrDetailPh = null, _mrDetailT = null;
+const MR_PEN_SVG = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
 
 function mrDetailInner(i){
   const has = i.detail && i.detail.trim();
-  return `<div class="mr-pill-detail-body">${has ? escH(i.detail) : '<span class="mr-pill-detail-empty">还没有备注</span>'}</div>
-    <button class="mr-pill-edit" onclick="event.stopPropagation();mrEditDetail()">${has ? '编辑' : '添加备注'}</button>`;
+  return `<div class="mr-pill-detail-body">${has ? escH(i.detail) : '<span class="mr-pill-detail-empty">还没有备注 · 点 ✎ 写</span>'}</div>`;
 }
 function mrExpand(id){
   if(_mrDetailId) return;
@@ -97,14 +97,16 @@ function mrExpand(id){
   if(!bd){ bd = document.createElement('div'); bd.id = 'mr-detail-bd'; bd.className = 'mr-detail-bd'; bd.addEventListener('click', mrCloseDetail); document.body.appendChild(bd); }
   const ph = document.createElement('div'); ph.className = 'mr-pill-ph'; ph.style.height = pill.offsetHeight + 'px';
   _mrDetailPh = ph;
+  // NO pageDepth here: the page-wrapper transform would skew the View
+  // Transitions slot measurement on close (the same hazard the panel Focus
+  // Spaces hits) — the backdrop already covers the page.
   const mutate = () => {
     pill.parentNode.insertBefore(ph, pill);
     document.body.appendChild(pill);
     pill.classList.add('mr-pill-expanded');
     pill.setAttribute('data-lenis-prevent', '');
-    pill.insertAdjacentHTML('beforeend', `<div class="mr-pill-detail">${mrDetailInner(i)}</div>`);
+    pill.insertAdjacentHTML('beforeend', `<button class="mr-pen" onclick="event.stopPropagation();mrEditDetail()" aria-label="编辑/查看">${MR_PEN_SVG}</button><div class="mr-pill-detail">${mrDetailInner(i)}</div>`);
     document.body.classList.add('mr-detail-open');
-    if(typeof pageDepth === 'function') pageDepth(true);
   };
   if(document.startViewTransition){
     pill.style.viewTransitionName = 'mr-fly';
@@ -119,13 +121,21 @@ function mrExpand(id){
   }
   if(window.Sfx) Sfx.tab();
 }
+/* the ✎ pen toggles edit ↔ read */
 function mrEditDetail(){
   const pill = document.querySelector('.mr-pill-expanded'); if(!pill || !_mrDetailId) return;
   const i = S.mr.list.find(x => x.id === _mrDetailId); if(!i) return;
   const d = pill.querySelector('.mr-pill-detail'); if(!d) return;
-  d.innerHTML = `<textarea class="mr-detail-text" placeholder="这一项怎么做、要点、提醒…" oninput="mrSaveDetail()">${escH(i.detail || '')}</textarea>
-    <button class="mr-pill-edit" onclick="event.stopPropagation();mrDoneEdit()">完成</button>`;
+  const pen = pill.querySelector('.mr-pen');
+  if(d.querySelector('.mr-detail-text')){           // editing → commit, back to read
+    clearTimeout(_mrDetailT); saveMR();
+    d.innerHTML = mrDetailInner(i);
+    if(pen) pen.classList.remove('active');
+    return;
+  }
+  d.innerHTML = `<textarea class="mr-detail-text" placeholder="这一项怎么做、要点、提醒…" oninput="mrSaveDetail()">${escH(i.detail || '')}</textarea>`;
   const ta = d.querySelector('textarea'); if(ta){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+  if(pen) pen.classList.add('active');
 }
 function mrSaveDetail(){
   const pill = document.querySelector('.mr-pill-expanded'); if(!pill) return;
@@ -134,28 +144,26 @@ function mrSaveDetail(){
   i.detail = ta.value;
   clearTimeout(_mrDetailT); _mrDetailT = setTimeout(saveMR, 600);
 }
-function mrDoneEdit(){
-  const pill = document.querySelector('.mr-pill-expanded'); if(!pill || !_mrDetailId) return;
-  const i = S.mr.list.find(x => x.id === _mrDetailId); if(!i) return;
-  clearTimeout(_mrDetailT); saveMR();
-  const d = pill.querySelector('.mr-pill-detail'); if(d) d.innerHTML = mrDetailInner(i);
-}
 function mrCloseDetail(){
   if(!_mrDetailId) return;
   const pill = document.querySelector('.mr-pill-expanded');
   const ph = _mrDetailPh;
+  const idCap = _mrDetailId;
   clearTimeout(_mrDetailT); saveMR();
+  // finish keeps the SAME pill element (no rMR rebuild — that destroyed the
+  // view-transition-name'd node and broke the pairing → the instant snap).
   const finish = () => {
     if(pill){
       pill.classList.remove('mr-pill-expanded');
       pill.removeAttribute('data-lenis-prevent');
+      const pen = pill.querySelector('.mr-pen'); if(pen) pen.remove();
       const d = pill.querySelector('.mr-pill-detail'); if(d) d.remove();
+      const it = S.mr.list.find(x => x.id === idCap);
+      pill.classList.toggle('has-detail', !!(it && it.detail && it.detail.trim()));
       if(ph && ph.parentNode){ ph.parentNode.insertBefore(pill, ph); ph.remove(); }
     }
     document.body.classList.remove('mr-detail-open');
     _mrDetailId = null; _mrDetailPh = null;
-    if(typeof pageDepth === 'function') pageDepth(false);
-    if(typeof rMR === 'function') rMR();
   };
   if(document.startViewTransition && pill){
     pill.style.viewTransitionName = 'mr-fly';

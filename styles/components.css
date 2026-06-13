@@ -1010,10 +1010,12 @@ body.mr-detail-open{ overflow:hidden; }
 .mr-pill-detail{ margin-top:14px; display:flex; flex-direction:column; gap:12px; }
 .mr-pill-detail-body{ font-family:var(--serif); font-size:14px; line-height:1.8; color:var(--mute); white-space:pre-wrap; min-height:28px; }
 .mr-pill-detail-empty{ color:var(--ghost); font-style:italic; }
-.mr-pill-edit{ align-self:flex-start; cursor:pointer; font-family:var(--mono); font-size:11px; letter-spacing:.1em; color:var(--brass);
-  background:color-mix(in srgb, var(--brass) 8%, transparent); border:.5px solid var(--brass-ghost); border-radius:5px; padding:5px 12px;
-  transition:border-color var(--dur-fast) var(--ease-silk), box-shadow var(--dur-fast) var(--ease-silk); }
-.mr-pill-edit:hover{ border-color:var(--brass); box-shadow:0 0 10px var(--brass-glow); }
+.mr-pen{ position:absolute; top:16px; right:16px; z-index:2; cursor:pointer;
+  width:32px; height:32px; display:grid; place-items:center; color:var(--ghost);
+  background:transparent; border:.5px solid transparent; border-radius:6px;
+  transition:color var(--dur-fast) var(--ease-silk), border-color var(--dur-fast) var(--ease-silk), box-shadow var(--dur-fast) var(--ease-silk); }
+.mr-pen:hover{ color:var(--brass); border-color:var(--brass-ghost); }
+.mr-pen.active{ color:var(--brass); border-color:var(--brass); box-shadow:0 0 10px var(--brass-glow); }
 .mr-detail-text{ width:100%; min-height:150px; resize:vertical; box-sizing:border-box;
   font-family:var(--serif); font-size:13.5px; line-height:1.75; color:var(--ink);
   background:var(--color-background-tertiary); border:.5px solid var(--hair); border-radius:6px; padding:12px 13px; }
