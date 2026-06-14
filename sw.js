@@ -5,12 +5,15 @@
    - TradingView widgets and external CDNs: stale-while-revalidate.
    Bump CACHE_VERSION on every shell change to force clients to drop the old cache. */
 
-const CACHE_VERSION = 'cyrus-os-v7.11.2';
+const CACHE_VERSION = 'cyrus-os-v7.12.0';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
   './icon.svg',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/icon-maskable.png',
   './styles/tokens.css',
   './styles/base.css',
   './styles/components.css',
@@ -49,6 +52,9 @@ const APP_SHELL = [
   './vendor/ScrollTrigger.min.js',
   './vendor/SplitText.min.js',
   './vendor/lenis.min.js',
+  './vendor/three.module.js',
+  './vendor/supabase.js',
+  './vendor/chart.umd.min.js',
   './scripts/applock.js',
   './scripts/theme.js',
   './scripts/ambient.js',
@@ -149,7 +155,11 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
       for (const c of clients) {
-        if ('focus' in c) return c.focus();
+        if ('focus' in c) {
+          // navigate the existing window to the payload URL before focusing
+          if ('navigate' in c && target) { return c.navigate(target).then((cl) => (cl || c).focus()).catch(() => c.focus()); }
+          return c.focus();
+        }
       }
       if (self.clients.openWindow) return self.clients.openWindow(target);
     })

@@ -324,8 +324,12 @@ function rDate(){
   const now=new Date();
   const enDays=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const enMonths=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  document.getElementById('dateline').textContent=enDays[now.getDay()];
-  document.getElementById('datemeta').textContent=`${enMonths[now.getMonth()]} ${now.getDate()} · ${now.getFullYear()}`;
+  // only rewrite when the value actually changed — a same-day re-render must not clobber
+  // the #dateline SplitText char spans that the hero flicker animates (orphans its tweens)
+  const _dl=document.getElementById('dateline'), _dStr=enDays[now.getDay()];
+  if(_dl && _dl.textContent!==_dStr) _dl.textContent=_dStr;
+  const _dm=document.getElementById('datemeta'), _mStr=`${enMonths[now.getMonth()]} ${now.getDate()} · ${now.getFullYear()}`;
+  if(_dm && _dm.textContent!==_mStr) _dm.textContent=_mStr;
   const h=now.getHours();
   const g=h<12?'Good morning':h<18?'Good afternoon':'Good evening';
   document.getElementById('greeting').textContent=`Cyrus — ${g}`;
@@ -383,7 +387,12 @@ async function init(){
     if(_jpChg)saveJP();
   }
   const tr=loadLS('tr',null);
-  if(tr){if(tr.date===TODAY)S.tr=tr;else{S.tr.bias='';S.tr.list=S.tr.list.map(i=>({...i,d:false}));}}
+  // carry the user's custom trading checklist across the day-rollover (mirror mr/jp).
+  // BUG was: the else branch mapped over the in-memory DEF_TR default, not tr.list.
+  if(tr){
+    if(tr.date===TODAY) S.tr=tr;
+    else { S.tr=tr; S.tr.date=TODAY; S.tr.bias=''; S.tr.list=(tr.list||[]).map(i=>({...i,d:false})); saveTR(); }
+  }
   const tds=loadLS('todos',null);if(tds)S.todos=tds;
   const cats=loadLS('cats',null);if(cats&&cats.length)S.cats=cats;
   const syms=loadLS('symbols',null);if(syms&&Array.isArray(syms)&&syms.length>0)S.symbols=syms;

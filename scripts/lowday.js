@@ -102,6 +102,10 @@ function lowdayShowProtocol(){
   if(window.Sfx && typeof Sfx.tab === 'function') Sfx.tab();
 }
 function lowdayCloseProtocol(){ const m = document.getElementById('lowday-modal'); if(m) m.classList.remove('open'); if(typeof pageDepth === 'function') pageDepth(false); }
+/* Escape closes the low-day protocol (consistent with other overlays) */
+document.addEventListener('keydown', e => {
+  if(e.key==='Escape' && document.getElementById('lowday-modal')?.classList.contains('open')){ e.preventDefault(); lowdayCloseProtocol(); }
+});
 function lowdayConfirmEnter(){
   if(isLowDayActive()){ lowdayCloseProtocol(); return; }   // double-click guard
   lowdayCloseProtocol();

@@ -47,7 +47,9 @@ function closeFitness(fromHash){
   if(!fitUI.open) return;                                   // already closing/closed
   fitUI.open = false;
   v.setAttribute('aria-hidden','true');
-  fitCloseModal(); fitStopTicker(); fitDestroyCharts();
+  fitCloseModal();
+  if(fitTimer.up.running) fitSaveDuration();   // flush the running stopwatch's elapsed before we stop the ticker
+  fitStopTicker(); fitDestroyCharts();
   if(!fromHash && location.hash==='#fitness'){ history.replaceState(null,'',location.pathname+location.search); }
   const hud = v.querySelector('.sys-window');
   const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches;
@@ -108,15 +110,21 @@ function fitEnsureLog(date){
   const day = S.fit.log[d];
   if(d===TODAY){
     const plan = (S.fit.plan.week[fitWeekdayKey(d)])||[];
-    const byEx = {}; (day.entries||[]).forEach(en=>{ byEx[en.exId]=en; });
+    // pool prev entries per exId so DUPLICATE slots of the same exercise each get
+    // their own carry-over (consumed in order) instead of all collapsing onto one.
+    const pool = {}; (day.entries||[]).forEach(en=>{ (pool[en.exId]=pool[en.exId]||[]).push(en); });
     day.entries = plan.map(slot=>{
       const ex = fitExById(slot.exId);
-      const prev = byEx[slot.exId];
-      const sets = slot.sets||1;
-      const done = []; for(let j=0;j<sets;j++){ done[j] = (prev && prev.done && prev.done[j]!=null) ? prev.done[j] : null; }
+      const prev = (pool[slot.exId]||[]).shift();
+      const prevDone = prev && Array.isArray(prev.done) ? prev.done : [];
+      const hasRec = prevDone.some(x=>x!=null);
+      // never silently drop already-logged sets if the plan's set count was lowered later
+      const sets = hasRec ? Math.max(slot.sets||1, prevDone.length) : (slot.sets||1);
+      const done = []; for(let j=0;j<sets;j++){ done[j] = prevDone[j]!=null ? prevDone[j] : null; }
       return { exId:slot.exId, name: ex?ex.name:(prev?prev.name:'—'), kind: ex?ex.kind:(prev?prev.kind:'reps'),
         sets, target: slot.target||0, done };
     });
+    fitSettle();   // keep day.done consistent with the reconciled entries (e.g. after a plan edit)
   }
   return day;
 }
@@ -209,7 +217,7 @@ function rFitToday(body){
     html += `<div class="fit-checkin"><span class="fit-checkin-ic">🔥</span>
       <span class="fit-checkin-tx">今日训练已完成 · 连续 <b>${fitComputeStreak()}</b> 天</span></div>`;
   }
-  day.entries.forEach(en=>{
+  day.entries.forEach((en,ei)=>{
     const complete = fitExComplete(en);
     const prog = (en.done||[]).filter(x=>x!=null).length;
     html += `<div class="fit-ex ${complete?'done':''}">
@@ -218,26 +226,26 @@ function rFitToday(body){
         <span class="fit-ex-target">${fitTargetLabel(en)}</span>
         ${complete?'<span class="fit-ex-done-ic">✓</span>':`<span class="fit-ex-prog">${prog}/${en.sets}</span>`}
       </div>
-      <div class="fit-sets">${fitPipsHtml(en)}</div>
-      <div style="text-align:right;margin-top:8px;"><button class="fit-btn mini" onclick="fitEditReps('${en.exId}')">✎ 记次数</button></div>
+      <div class="fit-sets">${fitPipsHtml(en,ei)}</div>
+      <div style="text-align:right;margin-top:8px;"><button class="fit-btn mini" onclick="fitEditReps(${ei})">✎ 记次数</button></div>
     </div>`;
   });
   html += fitTimersHtml();
   body.innerHTML = html;
 }
-function fitPipsHtml(en){
+function fitPipsHtml(en, ei){
   let s='';
   for(let j=0;j<en.sets;j++){
     const v=(en.done||[])[j]; const done=v!=null;
     const num = done ? (en.kind==='time'? v+'s' : v) : (en.kind==='time'? en.target+'s' : en.target);
-    s += `<button class="fit-pip ${done?'done':''} ${en.kind==='time'?'time':''}" onclick="fitToggleSet('${en.exId}',${j})">
+    s += `<button class="fit-pip ${done?'done':''} ${en.kind==='time'?'time':''}" onclick="fitToggleSet(${ei},${j})">
       <span class="fit-pip-n">${num}</span><span class="fit-pip-l">第${j+1}组</span></button>`;
   }
   return s;
 }
-function fitToggleSet(exId, j){
+function fitToggleSet(ei, j){
   const day = fitEnsureLog(TODAY);
-  const en = day.entries.find(e=>e.exId===exId); if(!en) return;
+  const en = day.entries[ei]; if(!en) return;
   if(!en.done) en.done=[];
   const undo = en.done[j]!=null;
   if(undo){ en.done[j]=null; }
@@ -247,9 +255,9 @@ function fitToggleSet(exId, j){
   }
   fitAfterChange(undo);
 }
-function fitEditReps(exId){
+function fitEditReps(ei){
   const day = fitEnsureLog(TODAY);
-  const en = day.entries.find(e=>e.exId===exId); if(!en) return;
+  const en = day.entries[ei]; if(!en) return;
   const unit = en.kind==='time'?'秒':'次';
   let rows='';
   for(let j=0;j<en.sets;j++){ const v=(en.done||[])[j];
@@ -257,11 +265,11 @@ function fitEditReps(exId){
       <input type="number" inputmode="numeric" id="fit-rep-${j}" value="${v!=null?v:''}" placeholder="${en.target||''}"></div>`; }
   fitModal(`<div class="fin-form-title">${fitEsc(en.name)} · 记次数</div>${rows}
     <div class="fin-form-btns"><button class="fit-btn" onclick="fitCloseModal()">取消</button>
-    <button class="fit-btn brass" onclick="fitSaveReps('${exId}')">保存</button></div>`);
+    <button class="fit-btn brass" onclick="fitSaveReps(${ei})">保存</button></div>`);
 }
-function fitSaveReps(exId){
+function fitSaveReps(ei){
   const day = fitEnsureLog(TODAY);
-  const en = day.entries.find(e=>e.exId===exId); if(!en) return;
+  const en = day.entries[ei]; if(!en) return;
   if(!en.done) en.done=[];
   for(let j=0;j<en.sets;j++){ const el=document.getElementById('fit-rep-'+j); const raw=el?el.value.trim():'';
     en.done[j] = raw==='' ? null : Math.max(0, parseInt(raw,10)||0); }
@@ -562,7 +570,8 @@ function fitMealModal(){
 }
 function fitSaveMeal(){
   const name=(document.getElementById('fit-meal-name').value||'').trim(); if(!name) return;
-  const time=(document.getElementById('fit-meal-time').value||'').trim();
+  let time=(document.getElementById('fit-meal-time').value||'').trim();
+  const _tm=/^(\d{1,2}):(\d{2})$/.exec(time); if(_tm) time=_tm[1].padStart(2,'0')+':'+_tm[2];   // zero-pad so the sort doesn't put 9:30 after 10:00
   const kcalRaw=(document.getElementById('fit-meal-kcal').value||'').trim();
   const d=fitUI.dietDate; if(!S.fit.diet[d]) S.fit.diet[d]={meals:[]};
   S.fit.diet[d].meals.push({ name, time, kcal: kcalRaw===''?null:Number(kcalRaw), note:'' });

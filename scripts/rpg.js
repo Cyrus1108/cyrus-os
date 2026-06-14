@@ -265,7 +265,7 @@ const RPG_ACHIEVEMENTS = [
   { id:'streak14', cat:'streak', tier:'silver',   name:'意志试炼', desc:'连续达标 14 天',       hidden:true,  test:()=> (typeof computeThe90Streak==='function' && computeThe90Streak()>=14) },
   { id:'streak30', cat:'streak', tier:'gold',     name:'而立之恒', desc:'连续达标 30 天',       hidden:false, test:()=> (typeof computeThe90Streak==='function' && computeThe90Streak()>=30) },
   { id:'streak60', cat:'streak', tier:'platinum', name:'炼狱不熄', desc:'连续达标 60 天',       hidden:false, test:()=> (typeof computeThe90Streak==='function' && computeThe90Streak()>=60) },
-  { id:'comeback', cat:'streak', tier:'silver',   name:'浴火重生', desc:'断档之后，重建 7 天连续达标', hidden:true, test:()=>{ if(typeof computeThe90Streak!=='function'||typeof the90Day!=='function'||typeof the90DateForDay!=='function'||typeof rpgMetOn!=='function') return false; const cur=computeThe90Streak(); if(cur<7) return false; const breakDay=the90Day()-cur; if(breakDay<1) return false; const bd=the90DateForDay(breakDay); if(bd>TODAY) return false; return rpgMetOn(bd)<3; } },
+  { id:'comeback', cat:'streak', tier:'silver',   name:'浴火重生', desc:'断档之后，重建 7 天连续达标', hidden:true, test:()=>{ if(typeof computeThe90Streak!=='function'||typeof the90Day!=='function'||typeof the90DateForDay!=='function'||typeof rpgMetOn!=='function') return false; const cur=computeThe90Streak(); if(cur<7) return false; /* anchor to the streak's last COUNTED day: today only counts if met/crossed, else the run ends yesterday (today is pending) */ const tBar=(typeof lowDayOn==='function'&&lowDayOn(TODAY))?1:3; const tDd=S.the90&&S.the90.daily&&S.the90.daily[TODAY]; const todayCounts=(rpgMetOn(TODAY)>=tBar)||!!(tDd&&tDd.scores&&tDd.scores._lowx); const lastCounted=the90Day()-(todayCounts?0:1); const breakDay=lastCounted-cur; if(breakDay<1) return false; const bd=the90DateForDay(breakDay); if(bd>TODAY) return false; return rpgMetOn(bd)<3; } },
   // 圆满 · MASTERY
   { id:'perfect',     cat:'perfect', tier:'bronze',   name:'圆满一日', desc:'单日五项目标全部达成', hidden:false, test:()=> rpgPerfectToday() },
   { id:'perfectwk',   cat:'perfect', tier:'gold',     name:'影之支配', desc:'连续 7 天五项全清',     hidden:true,  test:()=> rpgPerfectStreak()>=7 },
@@ -776,6 +776,19 @@ function rpgGrowthSVG(days){
 
 function rSysStatus(body){
   const rpg = computeRPG();
+  // display-only monotonic clamp: never SHOW a level/rank below the highest already
+  // reached (seenLevel). Unchecking today's targets lowers live EXP but must not
+  // visibly demote the character. The level-up detector calls computeRPG() itself,
+  // so this display clamp never suppresses a real level-up.
+  const _seen = (S.rpg && S.rpg.seenLevel) || 1;
+  if(rpg.level < _seen){
+    rpg.level = _seen;
+    rpg.rank = rpgRank(_seen);
+    rpg.title = RPG_TITLES[rpg.rank] || '';
+    const _cb = rpgExpForLevel(_seen);
+    rpg.expInLevel = Math.max(0, rpg.totalExp - _cb);
+    rpg.expForLevel = rpgExpForLevel(_seen+1) - _cb;
+  }
   const pct = rpg.expForLevel>0 ? Math.min(100, Math.round(rpg.expInLevel/rpg.expForLevel*100)) : 0;
   const debuff = rpgPenaltyActive() ? '<span class="sys-debuff" title="未完成的惩罚任务">⚠︎ 衰弱</span>' : '';
   const lowChip = (typeof isLowDayActive==='function' && isLowDayActive()) ? '<span class="sys-state-low" title="低谷日进行中 · 只做最小动作">低谷日</span>' : '';

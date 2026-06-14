@@ -184,8 +184,16 @@ function initThe90Keys(){
     // keyboard while open — route to them before anything else.
     if(typeof finCalOpen==='function' && finCalOpen()){ if(typeof finCalKey==='function') finCalKey(e); return; }
     if(typeof timePickerOpen==='function' && timePickerOpen()){ timePickerKey(e); return; }
-    // Finance overlay owns the keyboard while open — let finance.js handle 、 there
-    if(typeof finUI !== 'undefined' && finUI.open) return;
+    // Any full-screen overlay / modal owns the keyboard — don't let the main-page
+    // shortcuts (、 / 1–5) leak through to the dashboard hidden underneath it.
+    if((typeof finUI!=='undefined' && finUI.open) ||
+       (typeof fitUI!=='undefined' && fitUI.open) ||
+       (typeof sysUI!=='undefined' && sysUI.open) ||
+       (typeof motivUI!=='undefined' && motivUI.open) ||
+       document.body.classList.contains('has-focus') ||
+       document.getElementById('drawer')?.classList.contains('open') ||
+       document.getElementById('principles-modal')?.classList.contains('open') ||
+       document.getElementById('lowday-modal')?.classList.contains('open')) return;
     const tag = e.target.tagName;
     if(tag==='INPUT' || tag==='TEXTAREA' || tag==='SELECT') return;
     if(e.metaKey || e.ctrlKey || e.altKey) return;
@@ -416,7 +424,12 @@ function computeThe90Streak(){
     // Low Day drops the day's pass-bar to ONE minimal action (≥1 instead of ≥3) — the
     // mechanism behind 「底线永远留在最低」. A low day with 0 met still breaks the run.
     const bar = (typeof lowDayOn === 'function' && lowDayOn(date)) ? 1 : 3;
-    if(met >= bar) streak++;
+    // 渡: a crossed low day satisfies its own floor even with 0 targets scored — the
+    // protocol says do the one minimal action and DON'T grade it, so the crossing
+    // itself must hold the streak (「底线永远留在最低」). Else following the protocol
+    // literally (tap 渡, tick nothing) would silently break the run.
+    const crossed = !!(day && day.scores && day.scores._lowx);
+    if(met >= bar || crossed) streak++;
     else if(date === TODAY) continue;   // pending today — don't count, don't break
     else break;                         // a real past miss ends the run
   }

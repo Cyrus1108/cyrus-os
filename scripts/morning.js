@@ -17,6 +17,9 @@ function mrReadyPhrase(){
 }
 
 function rMR(){
+  // a detail pill is lifted out of #mr-list (FLIP); rebuilding the list now would
+  // orphan its placeholder and strand the pill. Skip until the detail closes.
+  if(_mrDetailId) return;
   if(typeof cleanMorning === 'function' && cleanMorning()) saveMR();   // normalize post-pull too
   const list=S.mr.list,done=list.filter(i=>i.d).length;
   const pct=Math.round(done/list.length*100);

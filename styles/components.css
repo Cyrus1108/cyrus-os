@@ -414,7 +414,10 @@ button.check-btn.done{border-color:var(--brass);color:var(--brass);}
 }
 .the90-std{
   display:flex;flex-direction:column;align-items:center;
-  background:rgba(0,0,0,.35);
+  /* theme-derived ground (was a hardcoded rgba(0,0,0,.35) that muddied light themes
+     to mid-grey under near-black 9.5px text). Fallback first for old engines. */
+  background:rgba(0,0,0,.06);
+  background:color-mix(in srgb, var(--ink) 8%, transparent);
   border:.5px solid var(--hair);
   border-radius:var(--border-radius-md);
   padding:5px 6px;min-height:24px;
@@ -422,7 +425,7 @@ button.check-btn.done{border-color:var(--brass);color:var(--brass);}
   transition:border-color .25s ease,background .25s ease;
 }
 .the90-std:hover{border-color:var(--brass);}
-.the90-std.open{background:rgba(0,0,0,.5);border-color:var(--brass);}
+.the90-std.open{background:rgba(0,0,0,.12);background:color-mix(in srgb, var(--ink) 14%, transparent);border-color:var(--brass);}
 .the90-std-arrow{
   font-size:12px;color:var(--mute);line-height:1;
   transition:color .25s ease, transform .3s ease;
@@ -748,6 +751,14 @@ html:not([data-theme="sterile"]) body::before{
   z-index:-1; pointer-events:none;
 }
 html[data-theme="sterile"] #glass-trails{ display:none; }
+/* perf: a full-screen HUD fully covers the page — stop animating the ambient field
+   and compositing the trail canvas behind it (wasted GPU + stacked-backdrop jank). */
+html:not([data-theme="sterile"]) body.fin-locked::before,
+html:not([data-theme="sterile"]) body.sys-locked::before,
+html:not([data-theme="sterile"]) body.fit-locked::before,
+html:not([data-theme="sterile"]) body.motiv-locked::before{ animation:none; }
+body.fin-locked #glass-trails, body.sys-locked #glass-trails,
+body.fit-locked #glass-trails, body.motiv-locked #glass-trails{ display:none; }
 
 /* the glass itself — translucent ground + blur; corner brackets (background-image
    layers from v6.47) sit on top of the glass ground untouched */
@@ -848,6 +859,9 @@ body.has-focus .focus-backdrop{ opacity:1; pointer-events:auto; }
   width:min(94vw, 880px); height:min(92svh, 980px);
   overflow:auto; overscroll-behavior:contain;
   cursor:default;
+  /* never inherit the .panel pointer-tilt transform — focus opens while the pointer
+     is over the card, so the tilt would otherwise freeze the fullscreen space skewed */
+  transform:none !important; --rx:0deg; --ry:0deg;
 }
 .in-flight{
   -webkit-backdrop-filter:none !important; backdrop-filter:none !important;

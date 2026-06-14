@@ -44,10 +44,10 @@
 <style>html.app-locked-boot .page-wrapper,html.app-locked-boot .drawer-tab-group,html.app-locked-boot #auth-overlay{visibility:hidden!important}html.app-locked .page-wrapper,html.app-locked .drawer-tab-group,html.app-locked #auth-overlay{visibility:hidden!important}</style>
 
 <!-- Three.js (ES module) for the life-tree — resolved on demand by lifetree.js -->
-<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }</script>
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script>
 
-<!-- Supabase JS SDK (UMD, exposes window.supabase) -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<!-- Supabase JS SDK (UMD, exposes window.supabase) — vendored for offline (precached in sw.js) -->
+<script src="./vendor/supabase.js"></script>
 </head>
 <body>
 <h2 class="sr-only">Cyrus 个人仪表板 v6.2</h2>
@@ -82,7 +82,7 @@
 </div>
 
 <div id="drawer-backdrop" class="drawer-backdrop" onclick="closeDrawer()"></div>
-<aside id="drawer" class="drawer" aria-hidden="true">
+<aside id="drawer" class="drawer" aria-hidden="true" inert>
   <div class="drawer-inner">
     <div class="drawer-head">
       <div>

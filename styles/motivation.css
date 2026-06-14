@@ -9,14 +9,16 @@ body.motiv-locked{ overflow:hidden; }
   background:var(--color-background-primary);
   display:flex; flex-direction:column;
   transform:translateY(100%);
-  transition:transform .42s var(--ease-drawer);
+  /* keep visible through the .42s slide on BOTH open and close (visibility flips only
+     AFTER the slide on close) — else closing pops away instantly with no slide-out */
+  transition:transform .42s var(--ease-drawer), visibility 0s linear .42s;
   visibility:hidden;
 }
-.motiv-view.open{ transform:translateY(0); visibility:visible; }
+.motiv-view.open{ transform:translateY(0); visibility:visible; transition:transform .42s var(--ease-drawer), visibility 0s; }
 
 .motiv-top{
   display:flex; align-items:center; gap:12px;
-  padding:16px 18px 12px; border-bottom:.5px solid var(--hair);
+  padding:calc(16px + env(safe-area-inset-top)) 18px 12px; border-bottom:.5px solid var(--hair);
 }
 .motiv-back{
   background:none; border:none; color:var(--mute); font-size:14px;

@@ -11,7 +11,7 @@ function ensureChartJs(){
   if(_chartjsPromise) return _chartjsPromise;
   _chartjsPromise = new Promise((res, rej)=>{
     const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
+    s.src = './vendor/chart.umd.min.js';   // vendored for offline (precached in sw.js)
     s.onload = ()=>res();
     s.onerror = ()=>rej(new Error('Chart.js load failed'));
     document.head.appendChild(s);

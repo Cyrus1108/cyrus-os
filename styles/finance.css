@@ -35,7 +35,7 @@ body.fin-locked{ overflow:hidden; }
 
 .fin-top{
   display:flex; align-items:center; gap:12px;
-  padding:16px 18px 12px; border-bottom:.5px solid var(--hair);
+  padding:calc(16px + env(safe-area-inset-top)) 18px 12px; border-bottom:.5px solid var(--hair);
 }
 .fin-back{
   background:none; border:none; color:var(--mute); font-size:14px;

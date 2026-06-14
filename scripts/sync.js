@@ -810,7 +810,7 @@ function subscribeRealtime(){
     .on('postgres_changes', { event: '*', schema: 'public', table: 'fit_plan', filter: `user_id=eq.${uid}` },
       () => rtCoalesce('fit_plan', async () => { await pullFitPlan(); if(typeof rFitness==='function') rFitness(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'fit_log', filter: `user_id=eq.${uid}` },
-      () => rtCoalesce('fit_log', async () => { await pullFitLog(); if(typeof rFitness==='function') rFitness(); if(typeof rpgAfterChange==='function') rpgAfterChange(); }))
+      () => rtCoalesce('fit_log', async () => { await pullFitLog(); if(typeof rFitness==='function') rFitness(); }))   // no rpgAfterChange here — the rpg_state realtime handler carries cross-device RPG state without re-firing celebrations
     .on('postgres_changes', { event: '*', schema: 'public', table: 'fit_body', filter: `user_id=eq.${uid}` },
       () => rtCoalesce('fit_body', async () => { await pullFitBody(); if(typeof rFitness==='function') rFitness(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'fit_diet', filter: `user_id=eq.${uid}` },
@@ -837,6 +837,10 @@ function unsubscribeRealtime(){
 async function rehydrateOnFocus(){
   if(document.visibilityState !== 'visible') return;
   if(!currentUser) return;
+  // The day rolled over while the tab sat open (TODAY is frozen at page load). Reload so
+  // the per-module daily reset re-runs against the new date — otherwise toggles/check-ins
+  // keep writing to yesterday's row and 'today' columns/streaks point at the wrong day.
+  if(new Date().toLocaleDateString('sv-SE') !== TODAY){ location.reload(); return; }
 
   const ch = realtimeChannel;
   const healthy = ch && (ch.state === 'joined' || ch.state === 'joining');

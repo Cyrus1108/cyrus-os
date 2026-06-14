@@ -43,6 +43,10 @@ function motivHashRoute(){
   else if(motivUI.open){ closeMotivation(true); }
 }
 window.addEventListener('hashchange', motivHashRoute);
+/* Escape closes the Motivation HUD (consistent with finance/system/fitness) */
+document.addEventListener('keydown', e => {
+  if(e.key==='Escape' && motivUI.open){ e.preventDefault(); closeMotivation(); }
+});
 
 /* ── render grid + add form (incremental: reuse card nodes keyed by video id, so a
    local add/delete OR a remote realtime change updates in place instead of

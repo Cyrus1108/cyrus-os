@@ -419,6 +419,9 @@ function glassInitTilt(){
   document.querySelectorAll('.panel').forEach(p => {
     let tx = 0, ty = 0, cx = 0, cy = 0, raf = 0, hovering = false;
     function tick(){
+      // a focused (fullscreen) panel must not tilt, and must not keep an rAF alive
+      // (focus opens on pointerup over the card, so pointerleave never fires)
+      if(p.classList.contains('panel-focused')){ hovering = false; tx = 0; ty = 0; }
       cx += (tx - cx) * 0.16; cy += (ty - cy) * 0.16;
       p.style.setProperty('--rx', cy.toFixed(3) + 'deg');
       p.style.setProperty('--ry', cx.toFixed(3) + 'deg');
@@ -525,11 +528,16 @@ function glassInitTrails(){
 
 /* called from app.js init() after the first renderAll — once per page load */
 function initGlass(){
-  if(glassSterile() || glassReducedMotion()) return;
-  glassInitLenis();
-  glassInitFlip();       // restructure the trading panel before measuring
+  if(glassSterile()) return;             // sterile keeps the old opaque panes — no glass HUD
+  // The HUD DOM restructure (wrap #finance-view / #fitness-view into a .sys-window)
+  // must run even under reduced-motion: the default-theme CSS styles .fin-view/.fit-view
+  // as a transparent centering stage that EXPECTS the wrapper to carry the window chrome.
+  // Only the unfurl ANIMATION is motion-gated, not the DOM structure.
   glassInitFinanceHUD();
   glassInitFitnessHUD();
+  if(glassReducedMotion()) return;
+  glassInitLenis();
+  glassInitFlip();       // restructure the trading panel before measuring
   glassInitStacking();   // wrap sections first — triggers measure final layout
   glassInitScrollFX();
   glassInitFocus();

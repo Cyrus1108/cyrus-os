@@ -178,7 +178,7 @@ function appLockSettingsHtml(){
   const on = !!c.enabled;
   return `<div class="fin-more-sec">
     <div class="fin-more-head">应用锁 <span class="fin-lock-status ${on?'on':''}">${on?'已启用':'未启用'}</span></div>
-    <div class="fin-fx-note" style="margin-bottom:10px;">打开 App、闲置 3 分钟、或从后台切回都会要求验证。${on&&c.credId?'已绑定生物识别。':''}</div>
+    <div class="fin-fx-note" style="margin-bottom:10px;">打开 App 或从后台切回都会要求验证。${on&&c.credId?'已绑定生物识别。':''}</div>
     ${on ? `<div class="fin-export-row">
         <button class="ghost fx-btn" onclick="lockChangePin()">更改 PIN</button>
         <button class="ghost fx-btn" onclick="lockToggleBio()">${c.credId?'移除':'绑定'}生物识别</button>

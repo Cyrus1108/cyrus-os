@@ -59,6 +59,13 @@ function principlesCloseModal(silent){
   if(typeof pageDepth === 'function') pageDepth(false);
   if(!silent && window.Sfx && typeof Sfx.close === 'function') Sfx.close();
 }
+/* Escape closes the protocol (consistent with every other overlay); low-day modal keeps priority */
+document.addEventListener('keydown', e => {
+  if(e.key !== 'Escape') return;
+  if(document.getElementById('lowday-modal')?.classList.contains('open')) return;
+  const m = document.getElementById('principles-modal');
+  if(m && m.classList.contains('open')){ e.preventDefault(); principlesCloseModal(); }
+});
 /* the daily oath — manual reads also count as today's 宣读 */
 function principlesOath(){
   saveLS('principles_last_shown', TODAY);

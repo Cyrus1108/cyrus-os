@@ -24,6 +24,9 @@ function finToBase(amt, c){
 function finNum(amt){
   return Math.abs(amt).toLocaleString('en-US',{minimumFractionDigits:0, maximumFractionDigits:2});
 }
+/* Escape a value for a single-quoted JS string inside a double-quoted HTML attribute
+   (onclick="fn('VALUE')"). escH alone leaves the apostrophe, which breaks/injects. */
+function escAttrJS(s){ return escH(String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'")); }
 /* Format a signed amount in its own currency, honoring the privacy toggle. */
 function finMoney(amt, currency, opts){
   opts=opts||{};
@@ -255,10 +258,15 @@ function openFinance(fromHash){
   // no pageDepth: the HUD backdrop already covers the page; receding it made
   // the half-transparent sys-backdrop look like the background was flying up
   if(!fromHash && location.hash!=='#finance'){ location.hash='finance'; }
-  // Seed default categories the first time (only once we know the DB is truly empty)
-  if(initialPullDone && S.fin.categories.length===0){
-    S.fin.categories = DEF_FIN_CATS.map((c,i)=>({ id:crypto.randomUUID(), ...c, archived:false, sort:i }));
-    if(typeof finSaveCategories==='function') finSaveCategories();
+  // Seed default categories ONCE ever (not every time the list is empty — a user
+  // who intentionally deletes all categories must not have them re-seeded).
+  if(initialPullDone){
+    if(S.fin.categories.length>0){ saveLSRaw('fin_cats_seeded', true); }
+    else if(!loadLS('fin_cats_seeded', false)){
+      S.fin.categories = DEF_FIN_CATS.map((c,i)=>({ id:crypto.randomUUID(), ...c, archived:false, sort:i }));
+      saveLSRaw('fin_cats_seeded', true);
+      if(typeof finSaveCategories==='function') finSaveCategories();
+    }
   }
   finUpdateEye();
   rFinance();
@@ -270,6 +278,7 @@ function closeFinance(fromHash){
   finUI.open = false;
   v.setAttribute('aria-hidden','true');
   finCloseModal();
+  if(typeof finAnaDestroy==='function') finAnaDestroy();    // tear down Chart.js if closing from the analytics tab
   if(!fromHash && location.hash==='#finance'){ history.replaceState(null,'',location.pathname+location.search); }
   const hud = v.querySelector('.sys-window');
   const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches;
@@ -481,7 +490,7 @@ function finRenderLedger(){
     h += `<div class="fin-day">
       <div class="fin-day-head">
         <span class="fin-day-date">${Number(date.slice(5,7))}月${Number(date.slice(8,10))}日 <span class="fin-day-wd">周${wd}</span></span>
-        <span class="fin-day-sums">${dInc?`<span class="fin-pos">+${finNum(dInc)}</span>`:''}${dExp?`<span class="fin-neg">−${finNum(dExp)}</span>`:''}</span>
+        <span class="fin-day-sums">${dInc?`<span class="fin-pos">+${finUI.privacy?'••':finNum(dInc)}</span>`:''}${dExp?`<span class="fin-neg">−${finUI.privacy?'••':finNum(dExp)}</span>`:''}</span>
       </div>`;
     for(const t of dayTxs){ h += finTxCard(t); }
     h += `</div>`;
@@ -970,9 +979,9 @@ function finRenderMore(){
     <div class="fin-more-head">标签</div>
     ${tags.length
       ? `<div class="fin-tag-list">${tags.map(tg=>`<span class="fin-tag-chip">
-          <span class="fin-tag-name" onclick="finSearchTag('${escH(tg)}')">#${escH(tg)} <i>${finTagCount(tg)}</i></span>
-          <button class="fin-tag-act" onclick="finRenameTag('${escH(tg)}')" title="重命名">✎</button>
-          <button class="fin-tag-act danger" onclick="finDeleteTag('${escH(tg)}')" title="删除">✕</button>
+          <span class="fin-tag-name" onclick="finSearchTag('${escAttrJS(tg)}')">#${escH(tg)} <i>${finTagCount(tg)}</i></span>
+          <button class="fin-tag-act" onclick="finRenameTag('${escAttrJS(tg)}')" title="重命名">✎</button>
+          <button class="fin-tag-act danger" onclick="finDeleteTag('${escAttrJS(tg)}')" title="删除">✕</button>
         </span>`).join('')}</div>`
       : '<div class="fin-empty sm">还没有标签。记账时在「标签」栏添加，比分类更细。</div>'}
   </div>`;
