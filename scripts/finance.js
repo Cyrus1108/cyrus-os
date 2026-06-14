@@ -211,6 +211,7 @@ function initFinance(){
       cur:()=>finUI.tab,
       guard:()=>finModalOpen() || finCalOpen() || finUI.acctMgr,
       go:(tab)=>{ if(finUI.tab==='analytics' && tab!=='analytics' && typeof finAnaDestroy==='function') finAnaDestroy(); finUI.tab=tab; finUI.acctMgr=false; rFinance(); },
+      peek:(el,tab)=>{ if(typeof finBalances==='function') finBalances(true); el.innerHTML = tab==='wallet'?finRenderWallet():tab==='ledger'?finRenderLedger():tab==='analytics'?finRenderAnalytics():finRenderMore(); },
     });
   }
 

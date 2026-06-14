@@ -624,6 +624,7 @@ if(typeof makeHudSwipe==='function'){
     cur:()=>sysUI.tab,
     guard:()=>{ const m=document.getElementById('sys-modal'); return !!(m && m.classList.contains('open')); },
     go:(tab)=>{ if(sysUI.tab===tab) return; sysUI.tab=tab; if(window.Sfx) Sfx.tab(); rSystem(); },
+    peek:(el,tab)=>{ if(tab==='quests')rSysQuests(el); else if(tab==='achievements')rSysAchievements(el); else rSysStatus(el); },
   });
 }
 

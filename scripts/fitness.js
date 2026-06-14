@@ -93,6 +93,7 @@ function initFitness(){
       cur:()=>fitUI.tab,
       guard:()=>fitModalOpen(),
       go:(tab)=>{ if(fitUI.tab==='trends' && tab!=='trends') fitDestroyCharts(); fitUI.tab=tab; rFitness(); },
+      peek:(el,tab)=>{ if(tab==='today')rFitToday(el); else if(tab==='plan')rFitPlan(el); else if(tab==='trends')rFitTrends(el); else rFitDiet(el); },
     });
   }
 }

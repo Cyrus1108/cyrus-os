@@ -1,96 +1,104 @@
 /* ════════════ 手机滑动切换 · swipe ════════════
-   Two follow-finger surfaces (用户钦定「跟手 + 上一页被推走」):
+   Two follow-finger surfaces (用户钦定「跟手 + 上一页被推走 + 拖时能看到下一页」):
 
-   1. makeHudSwipe(viewId, opts) — single-pane HUD tab pager (Finance/Fitness/System).
-      Drag the current body with the finger; on release past threshold the current
-      pane slides out in the drag direction and the next tab slides in (single-pane
-      track illusion — avoids re-rendering chart tabs mid-drag). Vertical gestures
-      fall through to native scroll. reduced-motion → instant tab switch on flick.
+   1. makeHudSwipe(viewId, opts) — HUD tab carousel (Finance/Fitness/System).
+      During the drag the current body translates with the finger AND the neighbor
+      tab is rendered into a fixed ghost overlay that peeks in from the entering edge
+      (true two-pane carousel). On release past threshold the neighbor finishes
+      sliding in and becomes the real tab; otherwise it springs back. The ghost is
+      id-stripped so it can never collide with the real DOM or trigger an id-based
+      async chart draw. Vertical gestures fall through to native scroll;
+      reduced-motion → instant tab switch on flick (no live peek).
+        opts = { bodyId, tabs:()=>[...], cur:()=>tab, go:(tab), peek:(el,tab), guard:()=>bool }
+          go(tab):  re-render the REAL body to `tab` (raw switch — no withViewTransition).
+          peek(el,tab): render `tab`'s content into the ghost element `el` (no side effects;
+                        ids are stripped by the pager afterwards).
 
-   2. initTriCarousel() — the main-page 三栏 (课业/日语/交易). On mobile the .tri-grid
-      becomes a native scroll-snap carousel (real two-pane peek for free); this only
-      wires the dot indicator + dot-to-panel scrolling. */
+   2. initTriCarousel() — main-page 三栏 (课业/日语/交易). CSS handles the scroll-snap
+      carousel (real two-pane peek for free); this only wires the dot indicator. */
 
 function makeHudSwipe(viewId, opts){
   const view = document.getElementById(viewId);
-  if(!view || typeof opts.go!=='function') return;
+  if(!view || typeof opts.go!=='function' || typeof opts.peek!=='function') return;
   const reduce = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches);
-  const SKIP = { INPUT:1, TEXTAREA:1, SELECT:1 };
-  let startX=0, startY=0, dx=0, dy=0, axis=null, body=null, width=0;
+  const SKIP = { INPUT:1, TEXTAREA:1, SELECT:1 };   // let native controls own their gesture; buttons/rows still swipe
+  let startX=0, startY=0, dx=0, axis=null, body=null, width=0, baseRect=null, gen=0;
+  let ghostC=null, ghostInner=null, ghostDir=0, ghostTab=null;
 
   const bodyEl = () => document.getElementById(opts.bodyId);
-  function targetTab(dir){
-    const tabs = opts.tabs(); const i = tabs.indexOf(opts.cur()) + dir;
-    return (i>=0 && i<tabs.length) ? tabs[i] : null;
-  }
-  function finishSlide(){ body.style.transition=''; body.style.transform=''; body.classList.remove('hud-swiping'); }
+  function targetFor(dir){ const tabs=opts.tabs(); const i=tabs.indexOf(opts.cur())+dir; return (i>=0 && i<tabs.length) ? tabs[i] : null; }
 
-  function settle(commitTab, dir){
-    if(!body){ return; }
-    if(commitTab){
-      body.style.transition='transform .17s ease';
-      body.style.transform = `translateX(${-dir*width}px)`;      // current exits in the drag direction
-      let done=false;
-      const onOut=()=>{
-        if(done) return; done=true;
-        body.removeEventListener('transitionend', onOut);
-        opts.go(commitTab);                                       // re-render content into the same #body element
-        body.style.transition='none';
-        body.style.transform = `translateX(${dir*width}px)`;      // new content starts on the opposite side
-        void body.offsetWidth;                                    // force reflow
-        body.style.transition='transform .2s ease';
-        body.style.transform='translateX(0)';
-        let din=false;
-        const onIn=()=>{ if(din) return; din=true; body.removeEventListener('transitionend', onIn); finishSlide(); };
-        body.addEventListener('transitionend', onIn);
-        setTimeout(onIn, 320);                                    // fallback if transitionend doesn't fire
-      };
-      body.addEventListener('transitionend', onOut);
-      setTimeout(onOut, 260);
-    } else {
-      body.style.transition='transform .2s ease';
-      body.style.transform='translateX(0)';
-      let bk=false;
-      const onBack=()=>{ if(bk) return; bk=true; body.removeEventListener('transitionend', onBack); finishSlide(); };
-      body.addEventListener('transitionend', onBack);
-      setTimeout(onBack, 320);
-    }
+  function destroyGhost(){ if(ghostC && ghostC.parentNode) ghostC.parentNode.removeChild(ghostC); ghostC=null; ghostInner=null; ghostTab=null; }
+  function buildGhost(dir){
+    destroyGhost(); ghostDir=dir;
+    const tab=targetFor(dir); if(!tab || !baseRect) return;   // end of range → rubber-band, no ghost
+    ghostC=document.createElement('div');
+    ghostC.style.cssText=`position:fixed;left:${baseRect.left}px;top:${baseRect.top}px;width:${baseRect.width}px;height:${baseRect.height}px;overflow:hidden;pointer-events:none;z-index:1300;`;
+    ghostInner=document.createElement('div');
+    ghostInner.className=body.className;                        // inherit body padding/typography
+    ghostInner.style.cssText='position:absolute;inset:0;overflow:hidden;will-change:transform;';
+    try{ opts.peek(ghostInner, tab); }catch(e){ destroyGhost(); return; }
+    ghostInner.querySelectorAll('[id]').forEach(e=>e.removeAttribute('id'));   // no dup ids / no id-based async draws into the throwaway ghost
+    ghostInner.style.transform=`translateX(${dir*width}px)`;   // park on the entering edge
+    ghostC.appendChild(ghostInner);
+    document.body.appendChild(ghostC);
+    ghostTab=tab;
   }
+
+  function resetBody(){ if(body){ body.style.transition=''; body.style.transform=''; body.style.willChange=''; } }
 
   view.addEventListener('touchstart', (e)=>{
     if(e.touches.length!==1 || (opts.guard && opts.guard()) || SKIP[(e.target.tagName||'').toUpperCase()]){ axis='lock'; return; }
-    const t=e.touches[0]; startX=t.clientX; startY=t.clientY; dx=0; dy=0; axis=null;
-    body=bodyEl(); width = body ? body.clientWidth : view.clientWidth;
+    gen++;                                  // new gesture — stale settles bail out
+    destroyGhost();
+    const t=e.touches[0]; startX=t.clientX; startY=t.clientY; dx=0; axis=null; ghostDir=0;
+    body=bodyEl();
+    if(body){ body.style.transition='none'; body.style.transform=''; baseRect=body.getBoundingClientRect(); width=baseRect.width||view.clientWidth; }
   }, {passive:true});
 
   view.addEventListener('touchmove', (e)=>{
     if(axis==='lock' || !body) return;
-    const t=e.touches[0]; dx=t.clientX-startX; dy=t.clientY-startY;
+    const t=e.touches[0]; dx=t.clientX-startX; const dy=t.clientY-startY;
     if(axis===null){
-      if(Math.abs(dx)<8 && Math.abs(dy)<8) return;                // wait for a clear intent
-      axis = (Math.abs(dx) > Math.abs(dy)) ? 'x' : 'y';
-      if(axis==='x' && !reduce()){ body.style.transition='none'; body.classList.add('hud-swiping'); }
+      if(Math.abs(dx)<8 && Math.abs(dy)<8) return;
+      axis=(Math.abs(dx)>Math.abs(dy))?'x':'y';
+      if(axis==='x' && !reduce()) body.style.willChange='transform';
     }
-    if(axis==='x'){
-      e.preventDefault();                                         // claim the horizontal gesture
-      if(reduce()) return;                                        // reduced-motion: no live drag, just flick on release
-      let d = dx;
-      if(!targetTab(d<0?1:-1)) d = d*0.32;                        // rubber-band at the ends
-      body.style.transform = `translateX(${d}px)`;
-    }
+    if(axis!=='x') return;
+    e.preventDefault();                     // claim the horizontal gesture
+    if(reduce()) return;                    // no live peek under reduced-motion
+    const dir = dx<0 ? 1 : -1;
+    if(dir!==ghostDir) buildGhost(dir);     // engage, or rebuild on direction reversal
+    let d = dx;
+    if(!targetFor(dir)) d = d*0.32;         // rubber-band at the ends
+    body.style.transform=`translateX(${d}px)`;
+    if(ghostInner) ghostInner.style.transform=`translateX(${ghostDir*width + d}px)`;
   }, {passive:false});
 
   view.addEventListener('touchend', ()=>{
     if(axis!=='x' || !body){ axis=null; return; }
     const dir = dx<0 ? 1 : -1;
-    const tgt = targetTab(dir);
-    if(tgt && Math.abs(dx)>60){
-      if(reduce()) opts.go(tgt); else settle(tgt, dir);
-    } else if(!reduce()){
-      settle(null, dir);
-    }
+    const tgt = targetFor(dir);
+    const myGen = gen;
+    if(reduce()){ if(tgt && Math.abs(dx)>60) opts.go(tgt); axis=null; return; }
+    const commit = !!tgt && Math.abs(dx)>60 && ghostInner && ghostTab===tgt;
+    body.style.transition='transform .2s ease';
+    body.style.transform = commit ? `translateX(${-dir*width}px)` : 'translateX(0)';
+    if(ghostInner){ ghostInner.style.transition='transform .2s ease'; ghostInner.style.transform = commit ? 'translateX(0)' : `translateX(${ghostDir*width}px)`; }
+    let done=false;
+    const finish=()=>{
+      if(done) return; done=true;
+      if(myGen!==gen) return;               // a newer gesture took over — leave its state alone
+      if(commit){ opts.go(tgt); }
+      resetBody();
+      destroyGhost();
+    };
+    (ghostInner || body).addEventListener('transitionend', finish, {once:true});
+    setTimeout(finish, 240);
     axis=null;
   }, {passive:true});
+
+  view.addEventListener('touchcancel', ()=>{ resetBody(); destroyGhost(); axis=null; }, {passive:true});
 }
 
 /* main-page 三栏 carousel dots (CSS does the scroll-snap; this only syncs the dots) */
