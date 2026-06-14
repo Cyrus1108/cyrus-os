@@ -140,6 +140,26 @@ function toggleThe90(targetId){
   if(typeof window.lifeTreePulse === 'function') window.lifeTreePulse();   // tree energy feedback on check-in
 }
 
+/* RPG v2: a real module (AI 产出 / 健身打卡) auto-marks its The 90 pillar met for today,
+   so the attribute engine (which reads the90 counts) reflects real activity instead of a
+   manual self-rating. Idempotent: sets met only when not already met, and NEVER un-sets
+   (won't fight a manual check or a stabilize step-down). */
+function the90AutoMet(targetId){
+  if(typeof ensureThe90Defaults === 'function') ensureThe90Defaults();
+  const tgts = (S.the90 && S.the90.meta && S.the90.meta.targets) || [];
+  if(!tgts.some(t => t.id === targetId)) return false;
+  const today = TODAY;
+  if(!S.the90.daily[today]) S.the90.daily[today] = { scores:{}, note:'' };
+  const phase = the90Phase(the90Day());
+  const cur = S.the90.daily[today].scores[targetId];
+  if(the90ScoreMet(cur, phase)) return false;
+  S.the90.daily[today].scores[targetId] = (phase === 'stabilize') ? 3 : true;
+  saveThe90Daily();
+  if(typeof rThe90 === 'function') rThe90();
+  if(typeof rpgAfterChange === 'function') rpgAfterChange();
+  return true;
+}
+
 function toggleThe90Drawer(id){
   const el = document.getElementById(id);
   if(el) el.classList.toggle('open');

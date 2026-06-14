@@ -233,6 +233,8 @@ function aiSaveOutput(){
   aiCloseModal();
   saveAiOutputs(); rAi();
   if(typeof rAiDot==='function') rAiDot();
+  // RPG v2: an output today marks the The 90 「AI Automation」(III) pillar met → feeds 智力/创造 + EXP
+  if(aiDatesSet().has(TODAY) && typeof the90AutoMet==='function') the90AutoMet('III');
   if(window.Sfx) Sfx.save();
 }
 function aiDelOutput(id){

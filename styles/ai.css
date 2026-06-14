@@ -115,13 +115,13 @@ html:not([data-theme="sterile"]) .ai-view .ai-top{ background:transparent; }
   text-shadow:0 0 9px var(--brass-glow,transparent); }
 .ai-wordmark span{ display:inline-block; opacity:0; }
 
-html:not([data-theme="sterile"]) .ai-view.open .ai-cover{ animation:aiCover 1500ms var(--ease-silk) both; }
+html:not([data-theme="sterile"]) .ai-view.open .ai-cover{ animation:aiCover 2600ms var(--ease-silk) both; }
 html:not([data-theme="sterile"]) .ai-view.open .ai-l-ring{ animation:aiSpin 9s linear infinite; }
 html:not([data-theme="sterile"]) .ai-view.open .ai-l-net { animation:aiSpin 6s linear infinite reverse; }
 html:not([data-theme="sterile"]) .ai-view.open .ai-wordmark span{ animation:aiFlicker 900ms steps(1,end) both; }
 html:not([data-theme="sterile"]) .ai-view.open .ai-wordmark span:nth-child(2){ animation-delay:.17s; }
 
-@keyframes aiCover  { 0%,62%{opacity:1;visibility:visible} 100%{opacity:0;visibility:hidden} }
+@keyframes aiCover  { 0%,80%{opacity:1;visibility:visible} 100%{opacity:0;visibility:hidden} }
 @keyframes aiSpin   { to{ transform:rotate(360deg) } }
 @keyframes aiFlicker{ 0%{opacity:0} 12%{opacity:1} 18%{opacity:.12} 28%{opacity:1} 37%{opacity:.4} 47%{opacity:1} 60%{opacity:.55} 72%{opacity:1} 100%{opacity:1} }
 @media(prefers-reduced-motion:reduce){ .ai-cover{ display:none; } }

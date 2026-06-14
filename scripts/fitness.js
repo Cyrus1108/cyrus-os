@@ -156,6 +156,8 @@ function fitAfterChange(undo){
   if(r.changed && r.all) fitSfx('quest');
   else fitSfx(undo ? 'untick' : 'tick');
   rFitness();
+  // RPG v2: completing today's training marks the The 90 「健身」(IV) pillar met → feeds 力量/敏捷 + EXP
+  if(r.all && typeof the90AutoMet==='function') the90AutoMet('IV');
   if(typeof rpgAfterChange==='function') rpgAfterChange();
 }
 

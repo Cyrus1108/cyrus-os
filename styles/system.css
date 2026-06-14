@@ -333,6 +333,7 @@ body.sys-locked{ overflow:hidden; }
 .sys-attr.sa-INT{ --ac:#cda63f; }  /* 智力 · 赤金 */
 .sys-attr.sa-WIS{ --ac:#d6c391; }  /* 智慧 · 暖白金 */
 .sys-attr.sa-VIT{ --ac:#9c6b3e; }  /* 体力 · 深铜 */
+.sys-attr.sa-CRE{ --ac:#5aa08b; }  /* 创造 · 铜绿（brass patina） */
 .sys-attr-icon{ color:var(--ac, var(--brass)); }
 .sys-attr-bar > i{ background:var(--ac, var(--brass)); }
 .sys-attr-val{ color:var(--ac, var(--brass)); }

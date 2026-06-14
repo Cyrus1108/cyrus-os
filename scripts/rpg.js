@@ -15,21 +15,22 @@ const RPG_ATTRS = [
   { key:'INT', name:'智力', icon:'✦︎' },
   { key:'WIS', name:'智慧', icon:'☯︎' },
   { key:'VIT', name:'体力', icon:'❀︎' },
+  { key:'CRE', name:'创造', icon:'⚙︎' },
 ];
-const RPG_ATTR_ORDER = ['STR','AGI','INT','WIS','VIT'];
-const RPG_ATTR_NAME = { STR:'力量', AGI:'敏捷', INT:'智力', WIS:'智慧', VIT:'体力' };
+const RPG_ATTR_ORDER = ['STR','AGI','INT','WIS','VIT','CRE'];
+const RPG_ATTR_NAME = { STR:'力量', AGI:'敏捷', INT:'智力', WIS:'智慧', VIT:'体力', CRE:'创造' };
 // activity (the90 target id) → attribute weights. Sleep (I) is the foundation →
 // full weight to all five; the others feed only their directly-related attributes.
 const RPG_ACTIVITY_ATTR = {
-  I:   { STR:1, AGI:1, INT:1, WIS:1, VIT:1 },   // 睡眠
-  II:  { INT:1, WIS:1 },                         // 冥想
-  III: { INT:1 },                               // AI Automation
-  IV:  { STR:1, AGI:1 },                         // 健身
-  V:   { VIT:1, WIS:1, INT:1 },                  // 性能量管理
+  I:   { STR:1, AGI:1, INT:1, WIS:1, VIT:1, CRE:1 },   // 睡眠 — foundation, feeds all six
+  II:  { INT:1, WIS:1 },                                // 冥想
+  III: { INT:1, CRE:1 },                               // AI Automation — feeds 智力 + 创造
+  IV:  { STR:1, AGI:1 },                               // 健身
+  V:   { VIT:1, WIS:1, INT:1 },                         // 性能量管理
 };
 const RPG_TITLES = { E:'觉醒者', D:'挑战者', C:'攀登者', B:'破限者', A:'支配者', S:'君主' };
 // per-attr hues — MUST mirror the .sa-* colours in system.css (used for SVG fills)
-const RPG_ATTR_COLOR = { STR:'#c66a45', AGI:'#94a05c', INT:'#cda63f', WIS:'#d6c391', VIT:'#9c6b3e' };
+const RPG_ATTR_COLOR = { STR:'#c66a45', AGI:'#94a05c', INT:'#cda63f', WIS:'#d6c391', VIT:'#9c6b3e', CRE:'#5aa08b' };
 
 /* ── pure helpers ── */
 function rpgTargets(){
