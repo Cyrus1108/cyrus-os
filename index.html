@@ -27,6 +27,7 @@
 <link rel="stylesheet" href="./styles/finance.css">
 <link rel="stylesheet" href="./styles/fitness.css">
 <link rel="stylesheet" href="./styles/calendar.css">
+<link rel="stylesheet" href="./styles/ai.css">
 <link rel="stylesheet" href="./styles/motivation.css">
 <link rel="stylesheet" href="./styles/system.css">
 <link rel="stylesheet" href="./styles/lowday.css">
@@ -157,6 +158,7 @@
         <button id="fin-btn" class="theme-btn" onclick="openFinance()" title="财务" style="margin-bottom:8px;margin-right:6px;">◆ 财务</button>
         <button id="fit-btn" class="theme-btn" onclick="openFitness()" title="健身" style="margin-bottom:8px;margin-right:6px;">◆ 健身</button>
         <button id="cal-btn" class="theme-btn" onclick="openCalendar()" title="日历" style="margin-bottom:8px;margin-right:6px;">◆ 日历</button>
+        <button id="ai-btn" class="theme-btn" onclick="openAi()" title="AI Automation" style="margin-bottom:8px;margin-right:6px;">◆ AI</button>
         <button id="theme-btn" class="theme-btn" onclick="toggleTheme()" title="切换主题" style="margin-bottom:8px;">◆ 终末</button>
         <div id="clock" class="clock"></div>
         <div id="clock-sub" class="clock-sub"></div>
@@ -581,6 +583,20 @@
   <div id="cal-modal" class="cal-modal"></div>
 </div>
 
+<!-- ════ AI Automation module — full-screen view (RPG v2 Phase 1) ════ -->
+<div id="ai-view" class="ai-view" aria-hidden="true">
+  <div class="ai-top">
+    <button class="ai-back" onclick="closeAi()">← 返回</button>
+    <div class="ai-title">AI Automation</div>
+  </div>
+  <div class="ai-tabs">
+    <button class="ai-tab active" data-tab="log" onclick="aiSwitchTab('log')">记录</button>
+    <button class="ai-tab" data-tab="trends" onclick="aiSwitchTab('trends')">趋势</button>
+  </div>
+  <div id="ai-body" class="ai-body"></div>
+  <div id="ai-modal" class="ai-modal"></div>
+</div>
+
 <!-- ════ Motivation Center — full-screen YouTube video grid ════ -->
 <div id="motivation-view" class="motiv-view" aria-hidden="true">
   <div class="motiv-top">
@@ -647,6 +663,7 @@
 <script src="./scripts/finance-charts.js"></script>
 <script src="./scripts/fitness.js"></script>
 <script src="./scripts/calendar.js"></script>
+<script src="./scripts/ai.js"></script>
 <script src="./scripts/motivation.js"></script>
 <script src="./scripts/sound.js"></script>
 <script src="./scripts/rpg.js"></script>

@@ -1,6 +1,6 @@
 # CyrusOS · 活体架构地图（ARCHITECTURE.md）
 
-> **对齐版本：`cyrus-os-v7.13.2`**（v7.13.2 = The 90 柱 III 课业→AI Automation（暑假重心；信条五柱句 + 服务端战报 rpg-stats.py TARGET_LABEL 同步 + cleanThe90Targets 数据自愈迁移；III→INT 映射不变）；v7.13.1 = HUD tab 真·跟手轮播（拖动时相邻 tab 从边缘实时露出，固定定位幽灵层+id剥离）；v7.13.0 = 专属日历 HUD（新表 cal_events，聚合现有带日期项 + 可增删行程）+ Todo 过期不顺延自动归档（todos +no_carry/archived/archived_at）+ 手机滑动切换（主页三栏 scroll-snap + 各 HUD tab follow-finger pager，新 swipe.js）+ 交易盘前封条（trading +sealed/sealed_at/broke，偏向自动勾 t6）。v7.12.0 = 多代理审计后 35 项 bug/UX 修复：交易日翻篇保留、隐私日合计遮罩、标签 onclick 转义、晨间详情守卫、低谷渡保连续、reduced-motion HUD 外壳、安全区内距、移动端断点、SDK/Chart/three 本地化离线、各 overlay Esc、抽屉 inert 等。SDK 现已 vendored 到 vendor/。）（= sw.js `CACHE_VERSION`，每次 bump 顺手更新此行——
+> **对齐版本：`cyrus-os-v7.14.0`**（v7.14.0 = RPG v2 Phase 1：AI Automation 产出日志 HUD（新表 ai_outputs，独立模块=信号源；记录 构建/学会/交付，派生 streak/活跃天/总数；**本期不接经验/属性/成就**，留 Phase 2/3）；v7.13.2 = The 90 柱 III 课业→AI Automation（暑假重心；信条五柱句 + 服务端战报 rpg-stats.py TARGET_LABEL 同步 + cleanThe90Targets 数据自愈迁移；III→INT 映射不变）；v7.13.1 = HUD tab 真·跟手轮播（拖动时相邻 tab 从边缘实时露出，固定定位幽灵层+id剥离）；v7.13.0 = 专属日历 HUD（新表 cal_events，聚合现有带日期项 + 可增删行程）+ Todo 过期不顺延自动归档（todos +no_carry/archived/archived_at）+ 手机滑动切换（主页三栏 scroll-snap + 各 HUD tab follow-finger pager，新 swipe.js）+ 交易盘前封条（trading +sealed/sealed_at/broke，偏向自动勾 t6）。v7.12.0 = 多代理审计后 35 项 bug/UX 修复：交易日翻篇保留、隐私日合计遮罩、标签 onclick 转义、晨间详情守卫、低谷渡保连续、reduced-motion HUD 外壳、安全区内距、移动端断点、SDK/Chart/three 本地化离线、各 overlay Esc、抽屉 inert 等。SDK 现已 vendored 到 vendor/。）（= sw.js `CACHE_VERSION`，每次 bump 顺手更新此行——
 > 两者不一致即说明本文档已开始腐烂，修文档）。最后全面核对：2026-06-11。
 
 **这份文档的用途**：动工前读它，代替考古式读码。红线与部署纪律在
@@ -56,7 +56,7 @@ Permission denied）；SSM 以非 ubuntu 用户跑会触发 git `safe.directory`
        │ supabase-js (anon key, RLS)        ┌─ Cloudflare Worker (每分钟 cron)
        ▼                                    │   提醒推送 + RPG 早晚推送 (Web Push,
   Supabase Postgres ◄───────────────────────┘   VAPID + aes128gcm; service key)
-   24 张表 · RLS=auth.uid() · Realtime · pg_cron(周期交易/资产快照/已完成清理)
+   25 张表 · RLS=auth.uid() · Realtime · pg_cron(周期交易/资产快照/已完成清理)
        ▲ REST (service key, 只读为主 + hermes_notices/fin_transactions 写)
        │
 ┌─ EC2 ~/.hermes (systemd: hermes.service) ────────────────────────────┐
@@ -123,6 +123,7 @@ rMotivation → rMetrics → rpgAfterChange → attachRipples`
 | finance.js | 记账全家桶：账户/分类/交易(插入式)/预算/目标/周期/隐私遮罩/CSV/主题日历与时间选择器；`finSubmitTx` 与 `finWizSave` 两条保存路径 |
 | finance-charts.js | Chart.js 分析图 |
 | fitness.js | 健身 HUD（克隆 finance 外壳）：今日/计划/趋势/饮食 4 tab；自重训练，计划驱动今日，`fitSettle` 完成全部计划组数→自动打卡（仿 jpSettle）；两个独立计时器（正计时 stopwatch + 组间/保持倒计时，time 动作点 pip 自动起倒计时）；`fitComputeStreak`（休息日不断签）；体征/饮食记录；暴露 `fitWorkoutCount/fitTotalReps/fitBodyLogged/fitPlanWeekComplete` 供成就软引用 |
+| ai.js | AI Automation HUD（克隆 finance 外壳，RPG v2 Phase 1）：产出/交付日志(构建/学会/交付)+streak/活跃天/总数+趋势(Chart.js 近12周)+滑动 tab；暴露 `aiStreak/aiActiveDays30/aiTotalOutputs` 供 Phase 2/3 软引用；**独立、暂不接经验/属性/成就** |
 | calendar.js | 专属日历 HUD（克隆 finance 外壳）：月历格（改编 finCalHtml，有项日显点）+ 选中日详情；**当日事项**=聚合 `S.todos`(未归档)+`S.ac` 同日只读（点击 `calJumpTo` 关闭并滚回原面板），**行程**=`S.cal`(cal_events) 可增删（复用 `finOpenCal` 选日 + 原生 time）；`openCalendar/closeCalendar` 逐字克隆 finance；`rCalDot` 主页按钮今日有项点亮 |
 | motivation.js | 动机视频墙（YouTube unlisted） |
 | sound.js | `Sfx` 合成音效引擎：17 个 cue（tick/untick/tab/open/close/toast/quest/perfect/levelup/rankup/achievement/notice/save/lowday/cross/blocked/penalty）；程序化混响、噪声声部、手势门闸 `interacted`、`gate()` 节流、静音 LS 键 `cyrus_sfx_muted`（无前缀） |
@@ -187,6 +188,7 @@ background-gradient、todo/.row 行角标、定制 `.row-cb` 勾选框、`brassF
 | fit_body | B | weight, metrics jsonb(waist/chest/arm/thigh) | fit_body | ✓ |
 | fit_diet | B | meals jsonb[{name,kcal,time}] | fit_diet | ✓ |
 | cal_events | C | 行程 title/date/start_time/end_time/location/notes/position（当日事项=渲染时聚合 todos+academics 只读，不入此表） | cal_events | ✓ |
+| ai_outputs | C | AI Automation 产出日志 title/date/kind(built/learned/shipped)/notes/link/position（RPG v2 信号源；streak/活跃天/总数 派生；Phase 1 暂不喂进度） | ai_outputs | ✓ |
 | system_push_log | D | worker 推送去重（slot 占位） | – | ✗ |
 
 pg_cron 服务端任务：周期交易生成、资产快照、已完成 todo 清理。

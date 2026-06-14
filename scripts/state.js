@@ -186,6 +186,10 @@ let S={
      {id, title, date:'YYYY-MM-DD', start:'HH:MM'|'', end:'HH:MM'|'', loc, notes, position}
      当日事项 (todos/academics by date) are aggregated read-only at render time, not stored here. */
   cal:[],
+  /* AI Automation — 产出/交付日志 (archetype C replace-all list). Each:
+     {id, date:'YYYY-MM-DD', title, kind:'built'|'learned'|'shipped', notes, link, position}
+     Phase 1: standalone signal source (streak/active-days/total); wired into RPG in Phase 2. */
+  ai:[],
 };
 
 let editingAC=null, editingJP=null, editingTR=null, editingTD=null;
@@ -213,7 +217,7 @@ const dirty = {
   the90Meta: false, the90Daily: false, motiv: false, rpg: false,
   principles: false, principlesDaily: false,
   fitExercises: false, fitPlan: false, fitLog: false, fitBody: false, fitDiet: false,
-  calEvents: false,
+  calEvents: false, aiOutputs: false,
 };
 
 function saveMR(){saveLSRaw('mr',S.mr); dirty.morning=true; if(typeof syncPushMorning==='function') syncPushMorning();}
@@ -235,3 +239,4 @@ function saveFitLog(date){saveLSRaw('fit_log', S.fit.log); dirty.fitLog=true; if
 function saveFitBody(date){saveLSRaw('fit_body', S.fit.body); dirty.fitBody=true; if(typeof syncPushFitBody==='function') syncPushFitBody(date||TODAY);}
 function saveFitDiet(date){saveLSRaw('fit_diet', S.fit.diet); dirty.fitDiet=true; if(typeof syncPushFitDiet==='function') syncPushFitDiet(date||TODAY);}
 function saveCalEvents(){saveLSRaw('cal_events', S.cal); dirty.calEvents=true; if(typeof syncPushCalEvents==='function') syncPushCalEvents();}
+function saveAiOutputs(){saveLSRaw('ai_outputs', S.ai); dirty.aiOutputs=true; if(typeof syncPushAiOutputs==='function') syncPushAiOutputs();}

@@ -1,0 +1,102 @@
+/* ════════════════════════════════════════════════════════════
+   AI Automation HUD — clones the Calendar/Finance shell language.
+   All colors via global theme tokens so it reskins automatically.
+   Default theme: glass .sys-window.ai-hud (built by glass.js) + scroll-unfurl.
+   Sterile: no wrapper — .ai-view self-styles as a full-screen pane.
+   ════════════════════════════════════════════════════════════ */
+
+body.ai-locked{ overflow:hidden; }
+
+/* ── view shell (base = sterile / fallback: opaque sheet) ── */
+.ai-view{
+  position:fixed; inset:0; z-index:1200;
+  background:var(--color-background-primary);
+  display:flex; flex-direction:column;
+  transform:translateY(100%);
+  transition:transform .42s var(--ease-drawer);
+  visibility:hidden;
+}
+.ai-view.open{ transform:translateY(0); visibility:visible; }
+
+.ai-top{
+  display:flex; align-items:center; gap:12px;
+  padding:calc(16px + env(safe-area-inset-top)) 18px 10px;
+  border-bottom:.5px solid var(--hair);
+  position:sticky; top:0; z-index:3; background:var(--color-background-primary);
+}
+.ai-back{ background:none; border:none; color:var(--mute); font-size:14px; cursor:pointer; padding:6px 8px; border-radius:var(--border-radius-md); }
+.ai-back:hover{ color:var(--ink); background:var(--color-background-secondary); }
+.ai-title{ flex:1; font-family:var(--serif); font-size:20px; color:var(--ink); letter-spacing:.04em; }
+
+.ai-tabs{ display:flex; gap:14px; padding:8px 18px 0; }
+.ai-tab{ background:none; border:none; color:var(--mute); font-size:14px; padding:8px 2px; cursor:pointer; border-bottom:2px solid transparent; }
+.ai-tab.active{ color:var(--ink); border-bottom-color:var(--brass); }
+
+.ai-body{ flex:1; overflow-y:auto; padding:14px 16px 40px; }
+
+/* ── stats bar ── */
+.ai-stat-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
+.ai-stat{ text-align:center; padding:12px 6px; background:var(--color-background-secondary); border:.5px solid var(--hair); border-radius:var(--border-radius-md); }
+.ai-stat-n{ font-family:var(--serif); font-size:24px; color:var(--brass); line-height:1; }
+.ai-stat-l{ font-size:11px; color:var(--ghost); margin-top:5px; }
+
+.ai-add-btn{ width:100%; background:none; border:.5px dashed var(--hair); color:var(--mute); padding:10px; border-radius:var(--border-radius-md); cursor:pointer; font-size:13px; margin-bottom:16px; }
+.ai-add-btn:hover{ border-color:var(--brass); color:var(--brass); }
+
+/* ── log ── */
+.ai-date-head{ font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ghost); margin:14px 0 6px; }
+.ai-row{ display:flex; gap:10px; align-items:flex-start; padding:9px 0; border-bottom:.5px solid var(--hair); }
+.ai-kind{ flex-shrink:0; font-size:10px; padding:3px 8px; border-radius:9px; line-height:1.3; }
+.ai-kind-built{ color:var(--brass); background:color-mix(in srgb, var(--brass) 14%, transparent); }
+.ai-kind-learned{ color:#4B89E5; background:color-mix(in srgb,#4B89E5 14%, transparent); }
+.ai-kind-shipped{ color:#3FAE6B; background:color-mix(in srgb,#3FAE6B 16%, transparent); }
+.ai-row-body{ flex:1; min-width:0; }
+.ai-row-title{ color:var(--ink); font-size:14px; }
+.ai-row-notes{ color:var(--mute); font-size:12px; margin-top:2px; white-space:pre-wrap; }
+.ai-row-link{ display:inline-block; margin-top:3px; font-size:12px; color:var(--brass); text-decoration:none; }
+.ai-row-link:hover{ text-decoration:underline; }
+.ai-row-actions{ display:flex; gap:2px; flex-shrink:0; }
+.ai-empty{ color:var(--ghost); font-size:14px; text-align:center; padding:36px 0; line-height:1.8; }
+.ai-empty span{ font-size:12px; opacity:.8; }
+
+/* ── trends ── */
+.ai-chart-card{ background:var(--color-background-secondary); border:.5px solid var(--hair); border-radius:var(--border-radius-md); padding:14px; margin-bottom:12px; }
+.ai-chart-title{ font-size:13px; color:var(--ink); margin-bottom:10px; }
+.ai-chart-wrap{ position:relative; height:200px; }
+.ai-kind-legend{ display:flex; gap:6px; align-items:center; justify-content:center; font-size:11px; color:var(--ghost); flex-wrap:wrap; }
+
+/* ── modal ── */
+.ai-modal{ position:absolute; inset:0; z-index:1230; display:none; align-items:center; justify-content:center; padding:16px; background:color-mix(in srgb, var(--color-background-primary) 55%, transparent); }
+.ai-modal.open{ display:flex; }
+.ai-modal-card{ width:100%; max-width:380px; background:var(--color-background-primary); border:.5px solid var(--hair); border-radius:var(--border-radius-lg,14px); padding:18px; display:flex; flex-direction:column; gap:10px; box-shadow:0 18px 50px rgba(0,0,0,0.3); }
+.ai-modal-title{ font-family:var(--serif); font-size:17px; color:var(--ink); margin-bottom:2px; }
+
+/* header button dot — lit when today has an output */
+#ai-btn{ position:relative; }
+#ai-btn.has-today::after{ content:""; position:absolute; top:4px; right:4px; width:6px; height:6px; border-radius:50%; background:var(--brass); box-shadow:0 0 6px var(--brass-glow); }
+
+/* ════ default theme (cappa): glass .sys-window.ai-hud + scroll-unfurl ════ */
+html:not([data-theme="sterile"]) .ai-view{
+  display:flex; align-items:center; justify-content:center; padding:16px;
+  background:transparent;
+  transform:none; opacity:0;
+  transition:opacity .4s var(--ease-silk), visibility .4s var(--ease-silk);
+}
+html:not([data-theme="sterile"]) .ai-view.open{ transform:none; opacity:1; }
+html:not([data-theme="sterile"]) .ai-view .sys-window.ai-hud{
+  width:100%; max-width:600px; max-height:94vh;
+  overflow:auto; overscroll-behavior:contain;
+}
+html:not([data-theme="sterile"]) .ai-view.open .ai-hud{ animation:sysScrollOpen 1100ms linear both; transform-origin:center center; }
+html:not([data-theme="sterile"]) .ai-view.open .ai-hud::after{ animation:sysFold 1100ms linear both; }
+html:not([data-theme="sterile"]) .ai-view.ai-closing .ai-hud{ animation:sysScrollClose 480ms cubic-bezier(0.5,0,0.78,0.2) both; transform-origin:center center; }
+html:not([data-theme="sterile"]) .ai-view.ai-closing .ai-hud::after{ animation:sysFoldClose 480ms ease both; }
+html:not([data-theme="sterile"]) .ai-view.ai-closing .sys-backdrop{ animation:sysBackFade 480ms var(--ease-silk) both; }
+html:not([data-theme="sterile"]) .ai-view .ai-top{ background:transparent; }
+@media (prefers-reduced-motion:reduce){
+  html:not([data-theme="sterile"]) .ai-view.open .ai-hud,
+  html:not([data-theme="sterile"]) .ai-view.open .ai-hud::after{ animation:none !important; clip-path:none !important; opacity:1 !important; }
+}
+@media(max-width:559px){
+  html:not([data-theme="sterile"]) .ai-view .sys-window.ai-hud{ max-height:96vh; }
+}

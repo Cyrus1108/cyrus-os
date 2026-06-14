@@ -187,6 +187,21 @@ async function pullCalEvents(){
   saveLSRaw('cal_events', S.cal);   // mirror to the fast-boot LS cache
 }
 
+async function pullAiOutputs(){
+  const { data } = await sb.from('ai_outputs').select('*')
+    .eq('user_id', currentUser.id);
+  S.ai = (data || []).map(r => ({
+    id: r.id,
+    date: r.date,
+    title: r.title || '',
+    kind: r.kind || 'built',
+    notes: r.notes || '',
+    link: r.link || '',
+    position: r.position || 0,
+  }));
+  saveLSRaw('ai_outputs', S.ai);
+}
+
 async function pullHermes(){
   // Only un-dismissed notices; cap to a sane number, newest first.
   const { data } = await sb.from('hermes_notices').select('*')
@@ -417,7 +432,7 @@ async function pullAll(force){
         pullFitExercises(), pullFitPlan(), pullFitLog(), pullFitBody(), pullFitDiet(),
         pullFinAccounts(), pullFinCategories(), pullFinTransactions(), pullFinBudgets(),
         pullFinGoals(), pullFinRecurring(), pullFinSnapshots(),
-        pullCalEvents(),
+        pullCalEvents(), pullAiOutputs(),
       ]);
       initialPullDone = true;
       console.log('[sync] initial pull complete');
@@ -610,6 +625,21 @@ async function syncPushCalEvents(){
     position: e.position || 0,
   }));
   if(ok) dirty.calEvents = false;
+}
+
+async function syncPushAiOutputs(){
+  if(!currentUser) return;
+  await waitForPull();
+  const ok = await replaceTable('ai_outputs', S.ai, o => ({
+    id: o.id, user_id: currentUser.id,
+    date: o.date,
+    title: o.title || '',
+    kind: o.kind || 'built',
+    notes: o.notes || null,
+    link: o.link || null,
+    position: o.position || 0,
+  }));
+  if(ok) dirty.aiOutputs = false;
 }
 
 async function syncPushMotiv(){
@@ -862,6 +892,8 @@ function subscribeRealtime(){
       () => rtCoalesce('fit_diet', async () => { await pullFitDiet(); if(typeof rFitness==='function') rFitness(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'cal_events', filter: `user_id=eq.${uid}` },
       () => rtCoalesce('cal_events', async () => { await pullCalEvents(); if(typeof calUI!=='undefined' && calUI.open && typeof rCalendar==='function') rCalendar(); if(typeof rCalDot==='function') rCalDot(); }))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'ai_outputs', filter: `user_id=eq.${uid}` },
+      () => rtCoalesce('ai_outputs', async () => { await pullAiOutputs(); if(typeof aiUI!=='undefined' && aiUI.open && typeof rAi==='function') rAi(); if(typeof rAiDot==='function') rAiDot(); }))
     .subscribe((status, err) => {
       console.log('[realtime]', status);
       if(err) console.error('[realtime] error', err);
@@ -921,6 +953,7 @@ async function rehydrateOnFocus(){
     if(dirty.fitBody) pushes.push(syncPushFitBody());
     if(dirty.fitDiet) pushes.push(syncPushFitDiet());
     if(dirty.calEvents) pushes.push(syncPushCalEvents());
+    if(dirty.aiOutputs) pushes.push(syncPushAiOutputs());
     try{ await Promise.all(pushes); }catch(e){ console.error('[sync] flush', e); }
   }
 

@@ -22,7 +22,7 @@ let _lenis = null;
 function glassInitLenis(){
   if(typeof Lenis === 'undefined') return;
   // inner scrollers must keep native behavior
-  ['drawer','finance-view','system-view','sys-modal','calendar-view'].forEach(id => {
+  ['drawer','finance-view','system-view','sys-modal','calendar-view','ai-view'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.setAttribute('data-lenis-prevent','');
   });
@@ -426,6 +426,20 @@ function glassInitCalendarHUD(){
   v.appendChild(bd); v.appendChild(win);
 }
 
+/* ── AI Automation → same HUD shell (sys-window + backdrop). ── */
+function glassInitAiHUD(){
+  const v = document.getElementById('ai-view');
+  if(!v || v.querySelector('.sys-window')) return;
+  const bd = document.createElement('div');
+  bd.className = 'sys-backdrop';
+  bd.addEventListener('click', () => { if(typeof closeAi === 'function') closeAi(); });
+  const win = document.createElement('div');
+  win.className = 'sys-window ai-hud';
+  win.innerHTML = '<div class="sys-corner tl"></div><div class="sys-corner tr"></div><div class="sys-corner bl"></div><div class="sys-corner br"></div>';
+  while(v.firstChild) win.appendChild(v.firstChild);
+  v.appendChild(bd); v.appendChild(win);
+}
+
 /* ── pointer tilt + light spot (JS lerp — no CSS transition fighting GSAP) ── */
 function glassInitTilt(){
   if(!(window.matchMedia && window.matchMedia('(hover:hover) and (pointer:fine)').matches)) return;
@@ -550,6 +564,7 @@ function initGlass(){
   glassInitFinanceHUD();
   glassInitFitnessHUD();
   glassInitCalendarHUD();
+  glassInitAiHUD();
   if(glassReducedMotion()) return;
   glassInitLenis();
   glassInitFlip();       // restructure the trading panel before measuring
