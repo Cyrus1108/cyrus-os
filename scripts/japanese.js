@@ -64,7 +64,8 @@ function rJP(){
   // toward today's auto check-in, against the CURRENT list length
   const doneN=S.jp.list.filter(i=>i.d).length,totalN=S.jp.list.length;
   const ci=S.jp.log[TODAY],btn=document.getElementById('ci-btn');
-  btn.textContent=ci?'— 今日已完成 —':`今日练习 ${doneN}/${totalN} · 全清自动打卡`;
+  btn.textContent = ci ? '— 今日已完成 —'
+    : (totalN===0 ? '还没有练习 · 点「添加」建立你的清单' : `今日练习 ${doneN}/${totalN} · 全清自动打卡`);
   btn.classList.toggle('done',!!ci);
   document.getElementById('jp-checklist').innerHTML=S.jp.list.map(i=>{
     if(editingJP===i.id){

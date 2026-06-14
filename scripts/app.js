@@ -375,9 +375,12 @@ async function init(){
   const jp=loadLS('jp',null);
   if(jp){
     S.jp=jp;
+    let _jpChg=false;
     // daily reset (mirrors mr/tr): yesterday's checks don't carry into today —
     // the log keeps history, the list flags belong to ONE day only
-    if(jp.date!==TODAY){S.jp.date=TODAY;S.jp.list=(jp.list||[]).map(i=>({...i,d:false}));saveJP();}
+    if(jp.date!==TODAY){S.jp.date=TODAY;S.jp.list=(jp.list||[]).map(i=>({...i,d:false}));_jpChg=true;}
+    if(typeof cleanJapanese==='function' && cleanJapanese())_jpChg=true;   // retire legacy presets (j1–j4)
+    if(_jpChg)saveJP();
   }
   const tr=loadLS('tr',null);
   if(tr){if(tr.date===TODAY)S.tr=tr;else{S.tr.bias='';S.tr.list=S.tr.list.map(i=>({...i,d:false}));}}
@@ -439,6 +442,9 @@ async function init(){
      then subscribe to Realtime for cross-device updates. */
   if(typeof pullAll === 'function'){
     await pullAll();
+    // pull is authoritative: strip any legacy N2 presets that arrived from the DB
+    // (e.g. an older device re-pushed them) and write the cleaned list back.
+    if(typeof cleanJapanese==='function' && cleanJapanese()){ saveJP(); if(typeof rJP==='function') rJP(); }
     renderAll();
     // 晨间宣读 / 晚间核查 auto-show — once per day, only after the synced
     // markers arrived (runs exactly once per page load; rehydrate never re-enters init)

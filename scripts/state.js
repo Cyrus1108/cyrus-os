@@ -37,12 +37,20 @@ function cleanMorning(){
   S.mr.list = S.mr.list.filter(i => { if(seen.has(i.id)) return false; seen.add(i.id); return true; });
   return S.mr.list.length !== before;
 }
-const DEF_JP=[
-  {id:'j1',t:'Anki 词汇 20张',d:false},
-  {id:'j2',t:'语法练习 1课',d:false},
-  {id:'j3',t:'听力 1段',d:false},
-  {id:'j4',t:'汉字 10个',d:false},
-];
+/* N2 practice list — user-owned (like todos/trading). No imposed presets: the
+   list starts empty and the user adds their own items. The old Anki/语法/听力/汉字
+   seed (ids j1–j4) is retired on load by cleanJapanese(). */
+const DEF_JP=[];
+/* one-time migration: drop the legacy seeded N2 presets the user doesn't use.
+   Removes an item ONLY if BOTH its id and text still match the original seed,
+   so a preset the user renamed/repurposed is preserved. Idempotent. */
+const JP_LEGACY_DEFAULTS = { j1:'Anki 词汇 20张', j2:'语法练习 1课', j3:'听力 1段', j4:'汉字 10个' };
+function cleanJapanese(){
+  if(!S.jp || !Array.isArray(S.jp.list)) return false;
+  const before = S.jp.list.length;
+  S.jp.list = S.jp.list.filter(i => !(JP_LEGACY_DEFAULTS[i.id] && i.t === JP_LEGACY_DEFAULTS[i.id]));
+  return S.jp.list.length !== before;
+}
 const DEF_TR=[
   {id:'t1',t:'宏观背景确认(油/金/BTC联动)',d:false},
   {id:'t2',t:'BTC 日线市场结构',d:false},
