@@ -434,6 +434,8 @@ async function init(){
     const dailyCache = loadLS('the90_daily', null);
     if(dailyCache) S.the90.daily = dailyCache;
   }
+  // 暑假重心: rename The 90 柱 III 课业→AI Automation (self-healing, idempotent)
+  if(typeof cleanThe90Targets==='function' && cleanThe90Targets()) saveThe90Meta();
 
   // v6.50: the THE CREED row now opens the 信条与原则 protocol modal
   // (the old inline variant rotation retired; CREED_VARIANTS stays for the login card)
@@ -461,6 +463,8 @@ async function init(){
     if(typeof cleanJapanese==='function' && cleanJapanese()){ saveJP(); if(typeof rJP==='function') rJP(); }
     // pull is authoritative: re-run the expiry sweep against synced todos
     if(typeof sweepExpiredTodos==='function' && sweepExpiredTodos() && typeof rTodos==='function') rTodos();
+    // pull is authoritative: heal the renamed The 90 柱 III against synced meta
+    if(typeof cleanThe90Targets==='function' && cleanThe90Targets()){ saveThe90Meta(); if(typeof rThe90==='function') rThe90(); }
     renderAll();
     // 晨间宣读 / 晚间核查 auto-show — once per day, only after the synced
     // markers arrived (runs exactly once per page load; rehydrate never re-enters init)

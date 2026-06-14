@@ -1,6 +1,6 @@
 # CyrusOS · 活体架构地图（ARCHITECTURE.md）
 
-> **对齐版本：`cyrus-os-v7.13.0`**（v7.13.0 = 专属日历 HUD（新表 cal_events，聚合现有带日期项 + 可增删行程）+ Todo 过期不顺延自动归档（todos +no_carry/archived/archived_at）+ 手机滑动切换（主页三栏 scroll-snap + 各 HUD tab follow-finger pager，新 swipe.js）+ 交易盘前封条（trading +sealed/sealed_at/broke，偏向自动勾 t6）。v7.12.0 = 多代理审计后 35 项 bug/UX 修复：交易日翻篇保留、隐私日合计遮罩、标签 onclick 转义、晨间详情守卫、低谷渡保连续、reduced-motion HUD 外壳、安全区内距、移动端断点、SDK/Chart/three 本地化离线、各 overlay Esc、抽屉 inert 等。SDK 现已 vendored 到 vendor/。）（= sw.js `CACHE_VERSION`，每次 bump 顺手更新此行——
+> **对齐版本：`cyrus-os-v7.13.2`**（v7.13.2 = The 90 柱 III 课业→AI Automation（暑假重心；信条五柱句 + 服务端战报 rpg-stats.py TARGET_LABEL 同步 + cleanThe90Targets 数据自愈迁移；III→INT 映射不变）；v7.13.1 = HUD tab 真·跟手轮播（拖动时相邻 tab 从边缘实时露出，固定定位幽灵层+id剥离）；v7.13.0 = 专属日历 HUD（新表 cal_events，聚合现有带日期项 + 可增删行程）+ Todo 过期不顺延自动归档（todos +no_carry/archived/archived_at）+ 手机滑动切换（主页三栏 scroll-snap + 各 HUD tab follow-finger pager，新 swipe.js）+ 交易盘前封条（trading +sealed/sealed_at/broke，偏向自动勾 t6）。v7.12.0 = 多代理审计后 35 项 bug/UX 修复：交易日翻篇保留、隐私日合计遮罩、标签 onclick 转义、晨间详情守卫、低谷渡保连续、reduced-motion HUD 外壳、安全区内距、移动端断点、SDK/Chart/three 本地化离线、各 overlay Esc、抽屉 inert 等。SDK 现已 vendored 到 vendor/。）（= sw.js `CACHE_VERSION`，每次 bump 顺手更新此行——
 > 两者不一致即说明本文档已开始腐烂，修文档）。最后全面核对：2026-06-11。
 
 **这份文档的用途**：动工前读它，代替考古式读码。红线与部署纪律在
@@ -248,7 +248,7 @@ synced settings date 列 + SETTINGS_KEYS 镜像；**先写标记再弹**（backd
   `rpgAchExp()` 只读已存键，绝不实时重测；逆境账户(渡)计数只增
 - **rpg-stats.py ↔ rpg.js 镜像耦合**（改任何一边必须同步另一边 + EC2 重部署）：
   `TIER_EXP{15/30/50/100}` · `ACH_TIER`（**断言 47 条**）· `ACTIVITY_ATTR` 多对多矩阵
-  （睡眠喂全部 5 维）· `TARGET_LABEL{I睡眠 II冥想 III课业 IV健身 V性能量}` ·
+  （睡眠喂全部 5 维）· `TARGET_LABEL{I睡眠 II冥想 III AI Automation IV健身 V性能量}`（III 暑假由「课业」重命名，v7.13.2；rpg.js 无 TARGET_LABEL，前端柱名走 the90_meta.targets） ·
   `ATTR_ORDER[STR,AGI,INT,WIS,VIT]` · `THE90_START=2026-05-11`
 - **finBalance 的 transfer 不对称**（toAmount vs amount）字节级保留；不就地 sort
   `S.fin.transactions`
@@ -289,7 +289,7 @@ hermes-cyrus/
 ## §7 已知技术债（修掉就从这里删）
 
 1. **cloudflare/worker.js 旧映射**（`SYS_TARGETS` ~301 行：II=篮球/III=赚钱/IV=日语
-   ——应为 II=冥想/III=课业/IV=健身/V=性能量 per §5 TARGET_LABEL）：早晚 RPG 推送
+   ——应为 II=冥想/III=AI Automation/IV=健身/V=性能量 per §5 TARGET_LABEL）：早晚 RPG 推送
    会报错误的目标名。属性计算本身正确，仅文案错。待决定：更新 or 删除该推送功能
 2. **README.md 模块/数据表清单停在 v6.2**（已替换为指向本文档的摘要——若再见到
    旧清单复活即为腐烂）

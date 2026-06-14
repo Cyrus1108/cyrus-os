@@ -1,6 +1,6 @@
 /* v7.0 — 五柱黄铜立方 (hero pillar cube), the nirnor-style floating object.
    A real Three.js cube: six canvas-textured faces — the five pillars' Roman
-   numerals (Ⅰ睡眠 Ⅱ冥想 Ⅲ课业 Ⅳ健身 Ⅴ性能量) plus the ◆ sigil — slowly
+   numerals (Ⅰ睡眠 Ⅱ冥想 Ⅲ AI Automation Ⅳ健身 Ⅴ性能量) plus the ◆ sigil — slowly
    tumbling in fixed space behind the glass. Scroll velocity spins it harder
    (Lenis animates native scroll, so window.scrollY is already damped);
    the pointer pulls its orientation gently. ES module (importmap: three). */

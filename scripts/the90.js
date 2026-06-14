@@ -16,10 +16,26 @@ const THE_90_END = '2026-08-09';
 const THE_90_TARGETS_DEFAULT = [
   { id: 'I',   label: '21:30 上床',   twoMin: '把手机放到客厅充电器',   badDay: '21:30 灯关 + 闭眼躺平',  standard: '21:30 上床、灯关无手机，实际睡满 7 小时' },
   { id: 'II',  label: '10 分钟冥想',  twoMin: '坐到瑜伽垫 + 打开计时器', badDay: '1 分钟深呼吸 × 3 次',    standard: '完整 10 分钟、不中断的专注冥想' },
-  { id: 'III', label: '课业全 A',     twoMin: '打开课本翻到当前页',     badDay: '看课程笔记 5 分钟',      standard: '当天所有课业任务按时完成，质量达 A 水平' },
+  { id: 'III', label: 'AI Automation', twoMin: '打开编辑器或教程，写下今天要推进的一步', badDay: '读 5 分钟 AI 文档 / 教程',  standard: '当天对 AI Automation 有实质投入（学习或构建，有可见产出 / 进展）' },
   { id: 'IV',  label: '每周健身 5 天', twoMin: '换上健身服',            badDay: '10 俯卧撑 + 10 深蹲',    standard: '完成当日训练（力量/有氧 ≥30 分钟），本周累计 ≥5 天' },
   { id: 'V',   label: '性能量管理',   twoMin: '冲动时去阳台站 30 秒',   badDay: '冲动时做 10 俯卧撑代替', standard: '早上绝对不释放；12:30–13:00 后才视情况，非必要或忙碌则保留' },
 ];
+
+/* 暑假重心转向 AI Automation：柱 III 由「课业全 A」重命名。用户数据自愈（仿
+   cleanJapanese）——仅当 III 仍是旧默认标签时整组替换，保留任何未来自定义。幂等。 */
+function cleanThe90Targets(){
+  const meta = S.the90 && S.the90.meta;
+  if(!meta || !Array.isArray(meta.targets)) return false;
+  const t = meta.targets.find(x => x.id === 'III');
+  if(t && t.label === '课业全 A'){
+    t.label    = 'AI Automation';
+    t.twoMin   = '打开编辑器或教程，写下今天要推进的一步';
+    t.badDay   = '读 5 分钟 AI 文档 / 教程';
+    t.standard = '当天对 AI Automation 有实质投入（学习或构建，有可见产出 / 进展）';
+    return true;
+  }
+  return false;
+}
 
 const THE_90_IDENTITIES = [
   '我是一个掌控自己睡眠的人',

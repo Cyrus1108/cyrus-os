@@ -23,7 +23,7 @@ const RPG_ATTR_NAME = { STR:'力量', AGI:'敏捷', INT:'智力', WIS:'智慧', 
 const RPG_ACTIVITY_ATTR = {
   I:   { STR:1, AGI:1, INT:1, WIS:1, VIT:1 },   // 睡眠
   II:  { INT:1, WIS:1 },                         // 冥想
-  III: { INT:1 },                               // 课业
+  III: { INT:1 },                               // AI Automation
   IV:  { STR:1, AGI:1 },                         // 健身
   V:   { VIT:1, WIS:1, INT:1 },                  // 性能量管理
 };
@@ -233,7 +233,7 @@ const RPG_SKILLS = [
   // 修行 · 五道 — the five The 90 activities, auto-active from real check-ins
   { id:'sk_sleep',   name:'养元', desc:'近 30 天「21:30 上床」≥ '+RPG_SKILL_REQ+' 天 · 睡眠养体力', test:(a,r)=> ((r.counts&&r.counts.I)||0)   >= RPG_SKILL_REQ },
   { id:'sk_zen',     name:'止水', desc:'近 30 天「10 分钟冥想」≥ '+RPG_SKILL_REQ+' 天 · 心神澄明',   test:(a,r)=> ((r.counts&&r.counts.II)||0)  >= RPG_SKILL_REQ },
-  { id:'sk_study',   name:'精进', desc:'近 30 天「课业全 A」≥ '+RPG_SKILL_REQ+' 天 · 学问不辍',     test:(a,r)=> ((r.counts&&r.counts.III)||0) >= RPG_SKILL_REQ },
+  { id:'sk_study',   name:'精进', desc:'近 30 天「AI Automation」≥ '+RPG_SKILL_REQ+' 天 · 学问不辍',     test:(a,r)=> ((r.counts&&r.counts.III)||0) >= RPG_SKILL_REQ },
   { id:'sk_iron',    name:'淬体', desc:'近 30 天「健身」≥ '+RPG_SKILL_REQ+' 天 · 钢筋铁骨',         test:(a,r)=> ((r.counts&&r.counts.IV)||0)  >= RPG_SKILL_REQ },
   { id:'sk_essence', name:'固本', desc:'近 30 天「性能量管理」≥ '+RPG_SKILL_REQ+' 天 · 炼精化气',   test:(a,r)=> ((r.counts&&r.counts.V)||0)   >= RPG_SKILL_REQ },
   // 外功 — reach into the other modules
