@@ -102,7 +102,7 @@ html:not([data-theme="sterile"]) .ai-view .ai-top{ background:transparent; }
 }
 
 /* ════ AI logo 开场动效（仿系统 HUD sys-cover；卷轴展开时播，淡出露内容）════ */
-.ai-cover{ position:absolute; inset:0; z-index:8; display:flex; align-items:center; justify-content:center;
+.ai-cover{ position:absolute; inset:0; z-index:8; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;
   background:var(--color-background-primary); opacity:0; visibility:hidden; pointer-events:none; }
 .ai-logo-wrap{ position:relative; width:128px; height:128px; }
 .ai-logo{ width:128px; height:128px; }
@@ -115,7 +115,7 @@ html:not([data-theme="sterile"]) .ai-view .ai-top{ background:transparent; }
   text-shadow:0 0 9px var(--brass-glow,transparent); }
 .ai-wordmark span{ display:inline-block; opacity:0; }
 
-html:not([data-theme="sterile"]) .ai-view.open .ai-cover{ animation:aiCover 1200ms var(--ease-silk) both; }
+html:not([data-theme="sterile"]) .ai-view.open .ai-cover{ animation:aiCover 1500ms var(--ease-silk) both; }
 html:not([data-theme="sterile"]) .ai-view.open .ai-l-ring{ animation:aiSpin 9s linear infinite; }
 html:not([data-theme="sterile"]) .ai-view.open .ai-l-net { animation:aiSpin 6s linear infinite reverse; }
 html:not([data-theme="sterile"]) .ai-view.open .ai-wordmark span{ animation:aiFlicker 900ms steps(1,end) both; }
@@ -125,3 +125,19 @@ html:not([data-theme="sterile"]) .ai-view.open .ai-wordmark span:nth-child(2){ a
 @keyframes aiSpin   { to{ transform:rotate(360deg) } }
 @keyframes aiFlicker{ 0%{opacity:0} 12%{opacity:1} 18%{opacity:.12} 28%{opacity:1} 37%{opacity:.4} 47%{opacity:1} 60%{opacity:.55} 72%{opacity:1} 100%{opacity:1} }
 @media(prefers-reduced-motion:reduce){ .ai-cover{ display:none; } }
+
+/* 副标 "AUTOMATION" — 信号灯式逐字闪入，在 "AI" 之后点亮（复用 aiFlicker） */
+.ai-tagline{ display:flex; gap:.34em; font-family:var(--mono); font-size:11px; letter-spacing:.12em;
+  color:var(--brass-ghost,var(--brass)); }
+.ai-tagline span{ display:inline-block; opacity:0; }
+html:not([data-theme="sterile"]) .ai-view.open .ai-tagline span{ animation:aiFlicker 900ms steps(1,end) both; }
+html:not([data-theme="sterile"]) .ai-view.open .ai-tagline span:nth-child(1){ animation-delay:.28s; }
+html:not([data-theme="sterile"]) .ai-view.open .ai-tagline span:nth-child(2){ animation-delay:.33s; }
+html:not([data-theme="sterile"]) .ai-view.open .ai-tagline span:nth-child(3){ animation-delay:.37s; }
+html:not([data-theme="sterile"]) .ai-view.open .ai-tagline span:nth-child(4){ animation-delay:.42s; }
+html:not([data-theme="sterile"]) .ai-view.open .ai-tagline span:nth-child(5){ animation-delay:.46s; }
+html:not([data-theme="sterile"]) .ai-view.open .ai-tagline span:nth-child(6){ animation-delay:.51s; }
+html:not([data-theme="sterile"]) .ai-view.open .ai-tagline span:nth-child(7){ animation-delay:.55s; }
+html:not([data-theme="sterile"]) .ai-view.open .ai-tagline span:nth-child(8){ animation-delay:.60s; }
+html:not([data-theme="sterile"]) .ai-view.open .ai-tagline span:nth-child(9){ animation-delay:.64s; }
+html:not([data-theme="sterile"]) .ai-view.open .ai-tagline span:nth-child(10){ animation-delay:.69s; }
