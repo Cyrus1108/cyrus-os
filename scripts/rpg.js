@@ -277,7 +277,8 @@ const RPG_ACHIEVEMENTS = [
   { id:'day90', cat:'journey', tier:'gold',   name:'登顶',     desc:'完成 90 天的旅程',     hidden:false, test:()=> (typeof the90Day==='function' && the90Day()>=90) },
   // 属性 · ATTRIBUTE
   { id:'attr_int35',    cat:'attribute', tier:'gold',     name:'通明之巅', desc:'智力 INT 达到 35',          hidden:false, test:(r)=> r.attrs.INT>=35 },
-  { id:'attr_balanced', cat:'attribute', tier:'platinum', name:'五维调和', desc:'五项属性全部 ≥ 30 · 无短板', hidden:false, test:(r)=> RPG_ATTR_ORDER.every(k=> r.attrs[k]>=30) },
+  { id:'attr_cre35',    cat:'attribute', tier:'gold',     name:'造物之巅', desc:'创造 CRE 达到 35',          hidden:false, test:(r)=> r.attrs.CRE>=35 },
+  { id:'attr_balanced', cat:'attribute', tier:'platinum', name:'六维调和', desc:'六项属性全部 ≥ 30 · 无短板', hidden:false, test:(r)=> RPG_ATTR_ORDER.every(k=> r.attrs[k]>=30) },
   // 战力 · POWER
   { id:'power150', cat:'power', tier:'gold',     name:'破百五十', desc:'战力达到 150', hidden:false, test:(r)=> RPG_ATTR_ORDER.reduce((s,k)=> s+r.attrs[k], 0)>=150 },
   { id:'power180', cat:'power', tier:'platinum', name:'君临战力', desc:'战力达到 180', hidden:true,  test:(r)=> RPG_ATTR_ORDER.reduce((s,k)=> s+r.attrs[k], 0)>=180 },
@@ -319,6 +320,14 @@ const RPG_ACHIEVEMENTS = [
   { id:'fit_vol1000',   cat:'fitness', tier:'silver', name:'千锤百炼', desc:'累计完成 1000 次',     hidden:false, test:()=> (typeof fitTotalReps==='function' && fitTotalReps()>=1000) },
   { id:'fit_plan_week', cat:'fitness', tier:'gold',   name:'周而复始', desc:'完成一整周的训练计划', hidden:false, test:()=> (typeof fitPlanWeekComplete==='function' && fitPlanWeekComplete()) },
   { id:'fit_body_log',  cat:'fitness', tier:'bronze', name:'丈量自身', desc:'首次记录体征数据',     hidden:true,  test:()=> (typeof fitBodyLogged==='function' && fitBodyLogged()>=1) },
+  // 自动化 · AUTOMATION — AI Automation 产出日志（v7.16）
+  { id:'ai_first',    cat:'ai', tier:'bronze',   name:'第一次造物', desc:'记录第一条 AI Automation 产出', hidden:false, test:()=> (typeof aiTotalOutputs==='function' && aiTotalOutputs()>=1) },
+  { id:'ai_vol10',    cat:'ai', tier:'bronze',   name:'十件成器',   desc:'累计 10 条产出',               hidden:false, test:()=> (typeof aiTotalOutputs==='function' && aiTotalOutputs()>=10) },
+  { id:'ai_vol50',    cat:'ai', tier:'silver',   name:'匠人之路',   desc:'累计 50 条产出',               hidden:false, test:()=> (typeof aiTotalOutputs==='function' && aiTotalOutputs()>=50) },
+  { id:'ai_vol200',   cat:'ai', tier:'platinum', name:'造物主',     desc:'累计 200 条产出',              hidden:true,  test:()=> (typeof aiTotalOutputs==='function' && aiTotalOutputs()>=200) },
+  { id:'ai_streak7',  cat:'ai', tier:'silver',   name:'七日不辍',   desc:'连续 7 天有产出',              hidden:false, test:()=> (typeof aiStreak==='function' && aiStreak()>=7) },
+  { id:'ai_streak30', cat:'ai', tier:'gold',     name:'自动化之魂', desc:'连续 30 天有产出',             hidden:false, test:()=> (typeof aiStreak==='function' && aiStreak()>=30) },
+  { id:'ai_ship10',   cat:'ai', tier:'gold',     name:'交付者',     desc:'累计交付 10 件（shipped）',     hidden:false, test:()=> ((S.ai||[]).filter(o=>o.kind==='shipped').length>=10) },
 ];
 // gallery categories — fixed render order + labels (X/N count shown per section)
 const RPG_ACH_CATS = [
@@ -333,6 +342,7 @@ const RPG_ACH_CATS = [
   { key:'crossdomain', label:'修行 · DISCIPLINE' },
   { key:'finance',     label:'财富 · FINANCE' },
   { key:'fitness',     label:'体魄 · FITNESS' },
+  { key:'ai',          label:'自动化 · AUTOMATION' },
   { key:'adversity',   label:'逆境 · ADVERSITY' },
 ];
 /* tier → EXP (flat: achievements are a recognition layer, not a shortcut — the
@@ -384,6 +394,12 @@ const RPG_ACH_PROG = {
   fit_streak7:  ()=>[(typeof fitComputeStreak==='function'?fitComputeStreak():0), 7],
   fit_streak30: ()=>[(typeof fitComputeStreak==='function'?fitComputeStreak():0), 30],
   fit_vol1000:  ()=>[(typeof fitTotalReps==='function'?fitTotalReps():0), 1000],
+  ai_vol10:     ()=>[(typeof aiTotalOutputs==='function'?aiTotalOutputs():0), 10],
+  ai_vol50:     ()=>[(typeof aiTotalOutputs==='function'?aiTotalOutputs():0), 50],
+  ai_streak7:   ()=>[(typeof aiStreak==='function'?aiStreak():0), 7],
+  ai_streak30:  ()=>[(typeof aiStreak==='function'?aiStreak():0), 30],
+  ai_ship10:    ()=>[((S.ai||[]).filter(o=>o.kind==='shipped').length), 10],
+  attr_cre35:   (r)=>[r.attrs.CRE, 35],
 };
 
 /* ── orchestration: recompute, fire level-ups + achievements, persist ── */
