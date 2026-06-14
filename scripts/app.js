@@ -351,11 +351,11 @@ function rMetrics(){
   document.getElementById('m-ac').textContent=S.ac.filter(t=>!t.done).length;
   const d=S.tr.list.filter(i=>i.d).length,t=S.tr.list.length;
   document.getElementById('m-tr').innerHTML=`${d}<span style="color:var(--brass-ghost);"> / ${t}</span>`;
-  document.getElementById('m-td').textContent=S.todos.filter(t=>!t.done).length;
+  document.getElementById('m-td').textContent=S.todos.filter(t=>!t.done && !t.archived).length;
   updateShowDoneBtn();
 }
 
-function renderAll(){rDate();rMR();rAC();rJP();rTR();rCats();rTodos();if(typeof rThe90==='function') rThe90();if(typeof rLowDay==='function') rLowDay();if(typeof rHermes==='function') rHermes();if(typeof rMotivation==='function') rMotivation();rMetrics();if(typeof rpgAfterChange==='function') rpgAfterChange();attachRipples();}
+function renderAll(){rDate();rMR();rAC();rJP();rTR();rCats();rTodos();if(typeof rThe90==='function') rThe90();if(typeof rLowDay==='function') rLowDay();if(typeof rHermes==='function') rHermes();if(typeof rMotivation==='function') rMotivation();rMetrics();if(typeof rpgAfterChange==='function') rpgAfterChange();if(typeof rCalDot==='function') rCalDot();attachRipples();}
 
 function onAuthReady(){
   /* Called by auth.js once a Supabase session is established.
@@ -391,7 +391,7 @@ async function init(){
   // BUG was: the else branch mapped over the in-memory DEF_TR default, not tr.list.
   if(tr){
     if(tr.date===TODAY) S.tr=tr;
-    else { S.tr=tr; S.tr.date=TODAY; S.tr.bias=''; S.tr.list=(tr.list||[]).map(i=>({...i,d:false})); saveTR(); }
+    else { S.tr=tr; S.tr.date=TODAY; S.tr.bias=''; S.tr.list=(tr.list||[]).map(i=>({...i,d:false})); S.tr.sealed=false; S.tr.sealedAt=null; S.tr.broke=false; saveTR(); }
   }
   const tds=loadLS('todos',null);if(tds)S.todos=tds;
   const cats=loadLS('cats',null);if(cats&&cats.length)S.cats=cats;
@@ -415,10 +415,15 @@ async function init(){
   const fitL=loadLS('fit_log',null);if(fitL&&typeof fitL==='object'&&!Array.isArray(fitL))S.fit.log=fitL;
   const fitBd=loadLS('fit_body',null);if(fitBd&&typeof fitBd==='object'&&!Array.isArray(fitBd))S.fit.body=fitBd;
   const fitD=loadLS('fit_diet',null);if(fitD&&typeof fitD==='object'&&!Array.isArray(fitD))S.fit.diet=fitD;
+  const calE=loadLS('cal_events',null);if(calE&&Array.isArray(calE))S.cal=calE;
+  // expire & archive overdue 'no-carry' todos so they don't keep nagging day after day
+  if(typeof sweepExpiredTodos==='function') sweepExpiredTodos();
   showDone = loadLS('show_done', false);
   if(typeof initTheme === 'function') initTheme();
   if(typeof initFinance === 'function') initFinance();
   if(typeof initFitness === 'function') initFitness();
+  if(typeof initCalendar === 'function') initCalendar();
+  if(typeof initTriCarousel === 'function') initTriCarousel();
   if(typeof initThe90Keys === 'function') initThe90Keys();
 
   // Hydrate The 90 state from localStorage cache (first paint before Supabase pull)
@@ -454,6 +459,8 @@ async function init(){
     // pull is authoritative: strip any legacy N2 presets that arrived from the DB
     // (e.g. an older device re-pushed them) and write the cleaned list back.
     if(typeof cleanJapanese==='function' && cleanJapanese()){ saveJP(); if(typeof rJP==='function') rJP(); }
+    // pull is authoritative: re-run the expiry sweep against synced todos
+    if(typeof sweepExpiredTodos==='function' && sweepExpiredTodos() && typeof rTodos==='function') rTodos();
     renderAll();
     // 晨间宣读 / 晚间核查 auto-show — once per day, only after the synced
     // markers arrived (runs exactly once per page load; rehydrate never re-enters init)

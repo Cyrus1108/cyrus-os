@@ -297,7 +297,7 @@ const RPG_ACHIEVEMENTS = [
   // 修行 · DISCIPLINE
   { id:'ac_alldone',  cat:'crossdomain', tier:'bronze', name:'学海无波', desc:'学业待办全部完成',   hidden:false, test:()=> (S.ac && S.ac.length>0 && S.ac.every(t=>t.done)) },
   { id:'ac_volume10', cat:'crossdomain', tier:'silver', name:'课业不辍', desc:'累计完成 10 项学业', hidden:false, test:()=> (S.ac && S.ac.filter(t=>t.done).length>=10) },
-  { id:'cleardesk',   cat:'crossdomain', tier:'bronze', name:'万事清零', desc:'把待办全部清空',     hidden:true,  test:()=> (S.todos && S.todos.length>0 && S.todos.every(t=>t.done)) },
+  { id:'cleardesk',   cat:'crossdomain', tier:'bronze', name:'万事清零', desc:'把待办全部清空',     hidden:true,  test:()=> { const a=(S.todos||[]).filter(t=>!t.archived); return a.length>0 && a.every(t=>t.done); } },
   { id:'td_burst5',   cat:'crossdomain', tier:'silver', name:'雷厉风行', desc:'单日完成 5 项待办',   hidden:false, test:()=> { const todos=S.todos||[]; return todos.filter(t=> t.done && t.doneAt && new Date(t.doneAt).toLocaleDateString('sv-SE')===TODAY).length>=5; } },
   { id:'td_volume50', cat:'crossdomain', tier:'gold',   name:'积少成多', desc:'累计完成 50 项待办',   hidden:false, test:()=> (S.todos && S.todos.filter(t=>t.done).length>=50) },
   // 财富 · FINANCE
@@ -616,6 +616,17 @@ document.addEventListener('keydown', (e)=>{
   }
 });
 
+// follow-finger swipe between System tabs (raw switch — no withViewTransition doubling)
+if(typeof makeHudSwipe==='function'){
+  makeHudSwipe('system-view', {
+    bodyId:'sys-body',
+    tabs:()=>SYS_TABS,
+    cur:()=>sysUI.tab,
+    guard:()=>{ const m=document.getElementById('sys-modal'); return !!(m && m.classList.contains('open')); },
+    go:(tab)=>{ if(sysUI.tab===tab) return; sysUI.tab=tab; if(window.Sfx) Sfx.tab(); rSystem(); },
+  });
+}
+
 function sysSwitchTab(tab){
   if(sysUI.tab === tab) return;   // re-clicking the active tab: no re-render, no sound
   sysUI.tab = tab;
@@ -898,7 +909,7 @@ function rSysQuests(body){
     </div>` : '';
 
   const acPending = (S.ac||[]).filter(t=>!t.done).slice(0,6);
-  const tdPending = (S.todos||[]).filter(t=>!t.done && t.date)
+  const tdPending = (S.todos||[]).filter(t=>!t.done && !t.archived && t.date)
     .sort((a,b)=>String(a.date).localeCompare(String(b.date))).slice(0,6);
   const sideCards = [
     ...acPending.map(t=>`<div class="sys-q-side"><span class="sys-q-side-tag">学业</span><span class="sys-q-side-name">${escH((t.sub?t.sub+' · ':'')+t.name)}</span><span class="sys-q-side-due">${t.date?escH(String(t.date).slice(5)):''}</span></div>`),

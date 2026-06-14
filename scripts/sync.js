@@ -99,11 +99,13 @@ async function pullTrading(){
   const { data } = await sb.from('trading').select('*')
     .eq('user_id', currentUser.id).eq('date', TODAY).maybeSingle();
   if(data){
-    S.tr = { date: data.date, bias: data.bias || '', list: data.list };
+    S.tr = { date: data.date, bias: data.bias || '', list: data.list,
+             sealed: !!data.sealed, sealedAt: data.sealed_at ? new Date(data.sealed_at).getTime() : null, broke: !!data.broke };
   } else {
     S.tr.list = S.tr.list.map(i=>({...i, d:false}));
     S.tr.date = TODAY;
     S.tr.bias = '';
+    S.tr.sealed = false; S.tr.sealedAt = null; S.tr.broke = false;
   }
 }
 
@@ -162,7 +164,27 @@ async function pullTodos(){
     doneAt: r.done_at ? new Date(r.done_at).getTime() : null,
     created: r.created_at ? r.created_at.slice(0,10) : TODAY,
     position: r.position || 0,
+    noCarry: !!r.no_carry,
+    archived: !!r.archived,
+    archivedAt: r.archived_at ? new Date(r.archived_at).getTime() : null,
   }));
+}
+
+async function pullCalEvents(){
+  const { data } = await sb.from('cal_events').select('*')
+    .eq('user_id', currentUser.id);
+  S.cal = (data || []).map(r => ({
+    id: r.id,
+    title: r.title || '',
+    date: r.date,
+    // Postgres time → 'HH:MM' for the native <input type="time"> the form uses
+    start: r.start_time ? r.start_time.slice(0,5) : '',
+    end: r.end_time ? r.end_time.slice(0,5) : '',
+    loc: r.location || '',
+    notes: r.notes || '',
+    position: r.position || 0,
+  }));
+  saveLSRaw('cal_events', S.cal);   // mirror to the fast-boot LS cache
 }
 
 async function pullHermes(){
@@ -395,6 +417,7 @@ async function pullAll(force){
         pullFitExercises(), pullFitPlan(), pullFitLog(), pullFitBody(), pullFitDiet(),
         pullFinAccounts(), pullFinCategories(), pullFinTransactions(), pullFinBudgets(),
         pullFinGoals(), pullFinRecurring(), pullFinSnapshots(),
+        pullCalEvents(),
       ]);
       initialPullDone = true;
       console.log('[sync] initial pull complete');
@@ -470,6 +493,9 @@ async function syncPushTrading(){
     date: S.tr.date || TODAY,
     bias: S.tr.bias || '',
     list: S.tr.list,
+    sealed: !!S.tr.sealed,
+    sealed_at: S.tr.sealedAt ? new Date(S.tr.sealedAt).toISOString() : null,
+    broke: !!S.tr.broke,
   }, { onConflict: 'user_id,date' });
   logIfError('push trading', res);
   if(!res.error) dirty.trading = false;
@@ -563,8 +589,27 @@ async function syncPushTodos(){
     done: t.done,
     done_at: t.doneAt ? new Date(t.doneAt).toISOString() : null,
     position: t.position || 0,
+    no_carry: t.noCarry || false,
+    archived: t.archived || false,
+    archived_at: t.archivedAt ? new Date(t.archivedAt).toISOString() : null,
   }));
   if(ok) dirty.todos = false;
+}
+
+async function syncPushCalEvents(){
+  if(!currentUser) return;
+  await waitForPull();
+  const ok = await replaceTable('cal_events', S.cal, e => ({
+    id: e.id, user_id: currentUser.id,
+    title: e.title || '',
+    date: e.date,
+    start_time: e.start || null,
+    end_time: e.end || null,
+    location: e.loc || null,
+    notes: e.notes || null,
+    position: e.position || 0,
+  }));
+  if(ok) dirty.calEvents = false;
 }
 
 async function syncPushMotiv(){
@@ -815,6 +860,8 @@ function subscribeRealtime(){
       () => rtCoalesce('fit_body', async () => { await pullFitBody(); if(typeof rFitness==='function') rFitness(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'fit_diet', filter: `user_id=eq.${uid}` },
       () => rtCoalesce('fit_diet', async () => { await pullFitDiet(); if(typeof rFitness==='function') rFitness(); }))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'cal_events', filter: `user_id=eq.${uid}` },
+      () => rtCoalesce('cal_events', async () => { await pullCalEvents(); if(typeof calUI!=='undefined' && calUI.open && typeof rCalendar==='function') rCalendar(); if(typeof rCalDot==='function') rCalDot(); }))
     .subscribe((status, err) => {
       console.log('[realtime]', status);
       if(err) console.error('[realtime] error', err);
@@ -873,6 +920,7 @@ async function rehydrateOnFocus(){
     if(dirty.fitLog) pushes.push(syncPushFitLog());
     if(dirty.fitBody) pushes.push(syncPushFitBody());
     if(dirty.fitDiet) pushes.push(syncPushFitDiet());
+    if(dirty.calEvents) pushes.push(syncPushCalEvents());
     try{ await Promise.all(pushes); }catch(e){ console.error('[sync] flush', e); }
   }
 

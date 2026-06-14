@@ -26,6 +26,7 @@
 <link rel="stylesheet" href="./styles/theme-sterile.css">
 <link rel="stylesheet" href="./styles/finance.css">
 <link rel="stylesheet" href="./styles/fitness.css">
+<link rel="stylesheet" href="./styles/calendar.css">
 <link rel="stylesheet" href="./styles/motivation.css">
 <link rel="stylesheet" href="./styles/system.css">
 <link rel="stylesheet" href="./styles/lowday.css">
@@ -155,6 +156,7 @@
         <button id="motiv-btn" class="theme-btn" onclick="openMotivation()" title="动力中心" style="margin-bottom:8px;margin-right:6px;">◆ 动力</button>
         <button id="fin-btn" class="theme-btn" onclick="openFinance()" title="财务" style="margin-bottom:8px;margin-right:6px;">◆ 财务</button>
         <button id="fit-btn" class="theme-btn" onclick="openFitness()" title="健身" style="margin-bottom:8px;margin-right:6px;">◆ 健身</button>
+        <button id="cal-btn" class="theme-btn" onclick="openCalendar()" title="日历" style="margin-bottom:8px;margin-right:6px;">◆ 日历</button>
         <button id="theme-btn" class="theme-btn" onclick="toggleTheme()" title="切换主题" style="margin-bottom:8px;">◆ 终末</button>
         <div id="clock" class="clock"></div>
         <div id="clock-sub" class="clock-sub"></div>
@@ -285,7 +287,7 @@
     <div id="mr-ready" class="mr-ready" onclick="mrDismissReady()"></div>
   </div>
 
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;">
+  <div class="tri-grid">
 
     <!-- Academics -->
     <div class="panel">
@@ -415,7 +417,7 @@
       <div class="brass-rule"></div>
       <div class="sub-head">
         <div class="sub-label" style="margin-bottom:0;">今日清单</div>
-        <button class="row-btn" onclick="toggleTRForm()">+ 添加</button>
+        <button class="row-btn" id="tr-add-btn" onclick="toggleTRForm()">+ 添加</button>
       </div>
       <div id="tr-new-form" style="display:none;margin-bottom:8px;">
         <div class="edit-box" style="flex-direction:row;padding:6px;align-items:center;">
@@ -427,9 +429,11 @@
       <div class="brass-rule"></div>
       <div class="sub-label">今日偏向</div>
       <textarea id="t-bias" class="bias-input" oninput="onBias()" placeholder="BTC / Gold / Oil 今日结构偏向…" style="width:100%;height:56px;resize:none;"></textarea>
+      <div id="tr-seal-bar" class="tr-seal-bar"></div>
     </div>
 
   </div>
+  <div id="tri-dots" class="tri-dots" aria-hidden="true"></div>
 
   <!-- V · General Todos (full width) -->
   <div class="panel" style="margin-top:14px;">
@@ -457,7 +461,10 @@
     </div>
 
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:6px;">
-      <button class="ghost fx-btn" onclick="toggleShowDone()" id="show-done-btn"></button>
+      <div style="display:flex;gap:6px;">
+        <button class="ghost fx-btn" onclick="toggleShowDone()" id="show-done-btn"></button>
+        <button class="ghost fx-btn" onclick="toggleArchived()" id="td-archived-btn" style="display:none;"></button>
+      </div>
       <button class="ghost fx-btn" onclick="toggleTdForm()">+ 新增</button>
     </div>
 
@@ -511,6 +518,7 @@
           <option value="custom_days">自定义天数…</option>
         </select>
         <input id="td-repeat-custom" type="number" min="1" max="365" placeholder="每隔几天重复" style="width:100%;display:none;">
+        <label class="td-nocarry-row"><input type="checkbox" id="td-nocarry"> 过期不顺延 · 当天结束后自动归档</label>
         <div style="display:flex;gap:6px;">
           <button class="primary fx-btn" onclick="addTodo()" style="flex:1;">确认</button>
           <button class="ghost fx-btn" onclick="toggleTdForm()" style="flex:1;">取消</button>
@@ -519,6 +527,7 @@
     </div>
 
     <div id="td-list"></div>
+    <div id="td-archived"></div>
   </div>
 
   <div style="text-align:center;margin-top:2rem;padding-top:1.5rem;border-top:.5px solid var(--brass-ghost);">
@@ -559,6 +568,17 @@
   </div>
   <div id="fit-body" class="fit-body"></div>
   <div id="fit-modal" class="fin-modal"><div class="fin-modal-card" id="fit-modal-card"></div></div>
+</div>
+
+<!-- ════ Calendar module — full-screen view (v7.13) ════ -->
+<div id="calendar-view" class="cal-view" aria-hidden="true">
+  <div class="cal-top">
+    <button class="cal-back" onclick="closeCalendar()">← 返回</button>
+    <div class="cal-title">日历 · Calendar</div>
+  </div>
+  <div id="cal-month" class="cal-month"></div>
+  <div id="cal-day" class="cal-day"></div>
+  <div id="cal-modal" class="cal-modal"></div>
 </div>
 
 <!-- ════ Motivation Center — full-screen YouTube video grid ════ -->
@@ -611,6 +631,7 @@
 <script src="./scripts/supabase.js"></script>
 <script src="./scripts/state.js"></script>
 <script src="./scripts/dragsort.js"></script>
+<script src="./scripts/swipe.js"></script>
 <script src="./scripts/notifications.js"></script>
 <script src="./scripts/creed.js"></script>
 <script src="./scripts/drawer.js"></script>
@@ -625,6 +646,7 @@
 <script src="./scripts/finance.js"></script>
 <script src="./scripts/finance-charts.js"></script>
 <script src="./scripts/fitness.js"></script>
+<script src="./scripts/calendar.js"></script>
 <script src="./scripts/motivation.js"></script>
 <script src="./scripts/sound.js"></script>
 <script src="./scripts/rpg.js"></script>

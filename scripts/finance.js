@@ -202,17 +202,16 @@ function initFinance(){
     else if(e.key==='ArrowLeft'){ e.preventDefault(); finNavTab(-1); }
   });
 
-  // Touch: horizontal swipe switches tabs (mobile)
-  const v = document.getElementById('finance-view');
-  if(v){
-    v.addEventListener('touchstart', (e)=>{ const t=e.changedTouches[0]; _finTouchX=t.clientX; _finTouchY=t.clientY; }, {passive:true});
-    v.addEventListener('touchend', (e)=>{
-      if(_finTouchX==null) return;
-      const t=e.changedTouches[0], dx=t.clientX-_finTouchX, dy=t.clientY-_finTouchY;
-      _finTouchX=null;
-      if(finModalOpen() || finCalOpen() || finUI.acctMgr) return;
-      if(Math.abs(dx)>60 && Math.abs(dx)>Math.abs(dy)*1.6) finNavTab(dx<0?1:-1);  // swipe left → next tab
-    }, {passive:true});
+  // Touch: follow-finger horizontal swipe switches tabs (mobile). Raw switch (no
+  // withViewTransition) so the manual slide isn't doubled by a view-transition crossfade.
+  if(typeof makeHudSwipe==='function'){
+    makeHudSwipe('finance-view', {
+      bodyId:'fin-body',
+      tabs:()=>FIN_TABS,
+      cur:()=>finUI.tab,
+      guard:()=>finModalOpen() || finCalOpen() || finUI.acctMgr,
+      go:(tab)=>{ if(finUI.tab==='analytics' && tab!=='analytics' && typeof finAnaDestroy==='function') finAnaDestroy(); finUI.tab=tab; finUI.acctMgr=false; rFinance(); },
+    });
   }
 
   // FAB gestures (mobile mirror of the keyboard shortcuts):

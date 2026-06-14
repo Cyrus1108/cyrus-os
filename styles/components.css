@@ -937,6 +937,78 @@ html:not([data-theme="sterile"]) .todo-row{
   }
 }
 
+/* ════════ 手机滑动切换 · swipe (v7.13) ════════ */
+/* main-page 三栏: desktop grid → mobile scroll-snap carousel (跟手 + 上一页被推走) */
+.tri-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; }
+.tri-dots{ display:none; }
+@media(max-width:559px){
+  .tri-grid{
+    display:flex; gap:10px; margin:0 -1.25rem; padding:2px 1.25rem 4px;   /* bleed to the screen edges */
+    overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+  }
+  .tri-grid::-webkit-scrollbar{ display:none; }
+  .tri-grid > .panel{ flex:0 0 88%; scroll-snap-align:center; }
+  .tri-dots{ display:flex; justify-content:center; gap:7px; margin:10px 0 2px; }
+  .tri-dot{
+    width:7px; height:7px; border-radius:50%; padding:0; cursor:pointer;
+    background:var(--hair-strong,var(--hair)); border:none; transition:background .2s, transform .2s;
+  }
+  .tri-dot.active{ background:var(--brass); transform:scale(1.25); }
+}
+/* HUD tab pager — the body follows the finger during a horizontal drag */
+.hud-swiping{ will-change:transform; }
+
+/* ════════ todo 过期不顺延 + 已过期抽屉 (v7.13) ════════ */
+.td-nocarry-row{
+  display:flex; align-items:center; gap:8px; font-size:12px; color:var(--mute);
+  cursor:pointer; padding:2px 0;
+}
+.td-nocarry-row input{ width:auto; margin:0; cursor:pointer; flex:0 0 auto; }
+.td-archived-head{
+  font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ghost);
+  margin:14px 0 6px; padding-top:10px; border-top:.5px solid var(--hair);
+}
+
+/* ════════ 交易盘前封条 (v7.13) ════════ */
+.tr-seal-bar{ margin-top:10px; }
+.tr-seal-btn{
+  width:100%; background:none; border:.5px solid var(--brass-ghost); color:var(--brass);
+  padding:10px; border-radius:var(--border-radius-md); cursor:pointer; font-size:13px; letter-spacing:.04em;
+  transition:background .2s, border-color .2s;
+}
+.tr-seal-btn:hover{ background:color-mix(in srgb, var(--brass) 10%, transparent); border-color:var(--brass); }
+.tr-broke-badge{ display:inline-block; margin-top:8px; font-size:11px; color:var(--ghost); border:.5px solid var(--hair); border-radius:9px; padding:2px 9px; }
+.tr-seal{
+  display:flex; align-items:center; gap:12px; padding:12px;
+  border:.5px solid var(--brass-ghost); border-radius:var(--border-radius-md);
+  background:color-mix(in srgb, var(--brass) 7%, transparent);
+}
+.tr-seal-stamp{
+  flex-shrink:0; width:42px; height:42px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--serif); font-size:20px; color:#fff;
+  background:var(--fin-neg,#C0392B);
+  border:2px solid color-mix(in srgb,#C0392B 55%, #fff);
+  box-shadow:0 2px 10px color-mix(in srgb,#C0392B 40%,transparent);
+  transform:rotate(-12deg);
+  animation:trStamp .5s cubic-bezier(.2,1.6,.4,1) both;
+}
+@keyframes trStamp{
+  0%{ transform:rotate(-12deg) scale(2.4); opacity:0; }
+  60%{ transform:rotate(-12deg) scale(.86); opacity:1; }
+  100%{ transform:rotate(-12deg) scale(1); opacity:1; }
+}
+@media (prefers-reduced-motion:reduce){ .tr-seal-stamp{ animation:none; } }
+.tr-seal-meta{ flex:1; min-width:0; }
+.tr-seal-title{ color:var(--ink); font-size:14px; }
+.tr-seal-sub{ color:var(--mute); font-size:12px; margin-top:2px; }
+.tr-break-btn{
+  flex-shrink:0; background:none; border:.5px solid var(--hair); color:var(--mute);
+  padding:6px 12px; border-radius:var(--border-radius-md); cursor:pointer; font-size:12px;
+}
+.tr-break-btn:hover{ border-color:var(--fin-neg,#C0392B); color:var(--fin-neg,#C0392B); }
+
 /* ── 黄铜流光 (molten brass) — a multi-tone gradient WANDERS through the
    text continuously, like slow liquid metal: the position drifts along a
    non-linear path (X and Y) and never stops, never "flashes past".

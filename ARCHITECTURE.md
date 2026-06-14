@@ -1,6 +1,6 @@
 # CyrusOS · 活体架构地图（ARCHITECTURE.md）
 
-> **对齐版本：`cyrus-os-v7.12.0`**（v7.12.0 = 多代理审计后 35 项 bug/UX 修复：交易日翻篇保留、隐私日合计遮罩、标签 onclick 转义、晨间详情守卫、低谷渡保连续、reduced-motion HUD 外壳、安全区内距、移动端断点、SDK/Chart/three 本地化离线、各 overlay Esc、抽屉 inert 等。SDK 现已 vendored 到 vendor/。）（= sw.js `CACHE_VERSION`，每次 bump 顺手更新此行——
+> **对齐版本：`cyrus-os-v7.13.0`**（v7.13.0 = 专属日历 HUD（新表 cal_events，聚合现有带日期项 + 可增删行程）+ Todo 过期不顺延自动归档（todos +no_carry/archived/archived_at）+ 手机滑动切换（主页三栏 scroll-snap + 各 HUD tab follow-finger pager，新 swipe.js）+ 交易盘前封条（trading +sealed/sealed_at/broke，偏向自动勾 t6）。v7.12.0 = 多代理审计后 35 项 bug/UX 修复：交易日翻篇保留、隐私日合计遮罩、标签 onclick 转义、晨间详情守卫、低谷渡保连续、reduced-motion HUD 外壳、安全区内距、移动端断点、SDK/Chart/three 本地化离线、各 overlay Esc、抽屉 inert 等。SDK 现已 vendored 到 vendor/。）（= sw.js `CACHE_VERSION`，每次 bump 顺手更新此行——
 > 两者不一致即说明本文档已开始腐烂，修文档）。最后全面核对：2026-06-11。
 
 **这份文档的用途**：动工前读它，代替考古式读码。红线与部署纪律在
@@ -56,7 +56,7 @@ Permission denied）；SSM 以非 ubuntu 用户跑会触发 git `safe.directory`
        │ supabase-js (anon key, RLS)        ┌─ Cloudflare Worker (每分钟 cron)
        ▼                                    │   提醒推送 + RPG 早晚推送 (Web Push,
   Supabase Postgres ◄───────────────────────┘   VAPID + aes128gcm; service key)
-   23 张表 · RLS=auth.uid() · Realtime · pg_cron(周期交易/资产快照/已完成清理)
+   24 张表 · RLS=auth.uid() · Realtime · pg_cron(周期交易/资产快照/已完成清理)
        ▲ REST (service key, 只读为主 + hermes_notices/fin_transactions 写)
        │
 ┌─ EC2 ~/.hermes (systemd: hermes.service) ────────────────────────────┐
@@ -123,6 +123,7 @@ rMotivation → rMetrics → rpgAfterChange → attachRipples`
 | finance.js | 记账全家桶：账户/分类/交易(插入式)/预算/目标/周期/隐私遮罩/CSV/主题日历与时间选择器；`finSubmitTx` 与 `finWizSave` 两条保存路径 |
 | finance-charts.js | Chart.js 分析图 |
 | fitness.js | 健身 HUD（克隆 finance 外壳）：今日/计划/趋势/饮食 4 tab；自重训练，计划驱动今日，`fitSettle` 完成全部计划组数→自动打卡（仿 jpSettle）；两个独立计时器（正计时 stopwatch + 组间/保持倒计时，time 动作点 pip 自动起倒计时）；`fitComputeStreak`（休息日不断签）；体征/饮食记录；暴露 `fitWorkoutCount/fitTotalReps/fitBodyLogged/fitPlanWeekComplete` 供成就软引用 |
+| calendar.js | 专属日历 HUD（克隆 finance 外壳）：月历格（改编 finCalHtml，有项日显点）+ 选中日详情；**当日事项**=聚合 `S.todos`(未归档)+`S.ac` 同日只读（点击 `calJumpTo` 关闭并滚回原面板），**行程**=`S.cal`(cal_events) 可增删（复用 `finOpenCal` 选日 + 原生 time）；`openCalendar/closeCalendar` 逐字克隆 finance；`rCalDot` 主页按钮今日有项点亮 |
 | motivation.js | 动机视频墙（YouTube unlisted） |
 | sound.js | `Sfx` 合成音效引擎：17 个 cue（tick/untick/tab/open/close/toast/quest/perfect/levelup/rankup/achievement/notice/save/lowday/cross/blocked/penalty）；程序化混响、噪声声部、手势门闸 `interacted`、`gate()` 节流、静音 LS 键 `cyrus_sfx_muted`（无前缀） |
 | rpg.js | RPG 系统层：属性=真实数据计算（多对多矩阵）、EXP/等级单调、**47 个成就**（RPG_ACHIEVEMENTS，tier→EXP；含 fitness 体魄类 6 个）、每日挑战、庆祝弹窗（手动确认不自动关）、`rpgAfterChange` 全局结算钩子、`sysToast(msg,{silent})` |
@@ -133,6 +134,7 @@ rMotivation → rMetrics → rpgAfterChange → attachRipples`
 | ambient.js | sterile 主题环境音 |
 | lifetree.js | Three.js 粒子生命树（The 90 进度驱动生长；不可见自动暂停）；动态 import 加载，但**仍列在 APP_SHELL**（SW 缓存它，离线 sterile 才能用——别"清理"掉） |
 | dragsort.js | 通用拖拽排序 `makeSortable`（jp/tr/todos/principles 等共用） |
+| swipe.js | 手机滑动切换：`makeHudSwipe(viewId,opts)` 单窗格 follow-finger pager（财务/健身/系统 HUD 的 tab——拖当前 body 跟手、过阈滑出+滑入，raw switch 不走 withViewTransition 防双动画，reduced-motion 退化即时切，竖向手势放行原生滚动）；`initTriCarousel` 主页三栏（CSS scroll-snap）的圆点指示器 |
 | glass.js | v7.1 黄铜玻璃 maximalist 交互层（GSAP 栈）：Lenis 平滑滚动（内部滚动容器**必须**带 `data-lenis-prevent`）；文字一律**闪烁显形**（glassFlicker——信号灯式逐字符随机眨亮，无位移，用户钦定；英雄字符 revert 归还 brassFlow，标题滚动可逆熄灭/复燃）；**粘性堆叠卡**（glassInitStacking 用 JS 把四个顶层段落包进 .stack-card：sticky 钉顶+DOM 序覆盖+scrub 缩暗被埋卡——包装层不碰面板内部，renderAll 无感知）；指针 tilt（JS lerp ±3.2°，CSS transition 不得含 transform）+ 光斑；素描墨线 v2（15 走线、指针吸引）；sterile 与 reduced-motion 全跳过。v7.2 增：**高卡钉底**（卡比视口高→负 top 钉底边，内容先看完再被盖；refreshInit 时重算）、**3D 卡片翻转**（glassInitFlip，交易面板 front=清单/back=市场时段，子节点连 id 整体搬进面、tick() 无感知；扩展到其他面板照此模式）、**pageDepth(on)** 景深后退（信条/低谷/系统弹层打开时 .page-wrapper 退后——新全屏层记得调它）。v7.4 改：**Focus Spaces 无按钮版**——点卡任意空白即聚焦（10px/600ms 触摸阈值防滚动误触 + FOCUS_INTERACTIVE 选择器豁免交互元素）；退出只有背板/Esc/系统返回。v7.5 改：**聚焦飞行 = View Transitions API 优先**（合成器线程对快照做 FLIP——起飞帧再贵也吞不掉动画；view-transition-name 开飞前挂、finished 后摘，否则退化成中央淡入；CSS `::view-transition-group(focus-card)` 配速）；GSAP 手动 FLIP 仅作老浏览器回退（lagSmoothing(100,16) + 背板/景深推迟 90ms 出起飞帧）；`.in-flight` 飞行中停玻璃滤镜（顺滑关键）；粗指针设备玻璃降至 blur(13px)。**财务 HUD 统一**：glassInitFinanceHUD 把 #finance-view 包成 .sys-backdrop+.sys-window.fin-hud，复用系统卷轴开合 keyframes（finance.css 末段）；closeFinance 拆出 _closeFinanceCore 以播收卷动画；全局无 ×（.sys-back关闭/.fin-back 均隐藏）。"空间内细化功能"逐板块待填。**坑：改 glass.js 后预览必须 bump CACHE_VERSION 或清 caches——SW 缓存优先会喂旧文件** |
 | herocube.js | v7.0 五柱黄铜立方（ES module，importmap three）：六面 canvas 纹理（Ⅰ–Ⅴ+◆，HUD 角标边框），固定定位 z:-1 翻滚，滚动速度加转、指针拉拽、浮沉；sterile/reduced-motion 跳过 |
 
@@ -163,9 +165,9 @@ background-gradient、todo/.row 行角标、定制 `.row-cb` 勾选框、`brassF
 | morning | B | list jsonb | mr | ✓ |
 | academics | C | 任务行 | ac | ✓ |
 | japanese | A | **date**(清单归属日，跨设备重置), streak(派生), last_date, log jsonb(打卡史), note, list | jp | ✓ |
-| trading | B | bias, list | tr | ✓ |
+| trading | B | bias, list, **sealed/sealed_at/broke**(盘前封条) | tr | ✓ |
 | categories | C | name | cats | ✓ |
-| todos | C | text/cat/date/time/pri/remind/repeat/done… | todos | ✓ |
+| todos | C | text/cat/date/time/pri/remind/repeat/done…, **no_carry/archived/archived_at**(过期不顺延→跨日 sweepExpiredTodos 自动归档) | todos | ✓ |
 | push_subscriptions | – | 每设备一行（notifications.js 写） | – | ✗ |
 | the90_meta | A | targets jsonb（含 standard/twoMin/badDay）, start_date, current_phase | the90_meta | ✓ |
 | the90_daily | B | **scores jsonb：目标键 I–V + 命名空间键 `_amp`(振幅1-5) `_low`(低谷日) `_lowx`(已渡) `_trig`(诱因)**, note | the90_daily | ✓ |
@@ -184,6 +186,7 @@ background-gradient、todo/.row 行角标、定制 `.row-cb` 勾选框、`brassF
 | fit_log | B | entries jsonb[{exId,sets,target,done:[reps...]}], done, duration_sec | fit_log | ✓ |
 | fit_body | B | weight, metrics jsonb(waist/chest/arm/thigh) | fit_body | ✓ |
 | fit_diet | B | meals jsonb[{name,kcal,time}] | fit_diet | ✓ |
+| cal_events | C | 行程 title/date/start_time/end_time/location/notes/position（当日事项=渲染时聚合 todos+academics 只读，不入此表） | cal_events | ✓ |
 | system_push_log | D | worker 推送去重（slot 占位） | – | ✗ |
 
 pg_cron 服务端任务：周期交易生成、资产快照、已完成 todo 清理。

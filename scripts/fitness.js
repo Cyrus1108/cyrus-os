@@ -85,6 +85,16 @@ function initFitness(){
     if(e.key==='ArrowLeft') fitNavTab(-1);
     else if(e.key==='ArrowRight') fitNavTab(1);
   });
+  // follow-finger swipe between tabs (raw switch — no withViewTransition doubling)
+  if(typeof makeHudSwipe==='function'){
+    makeHudSwipe('fitness-view', {
+      bodyId:'fit-body',
+      tabs:()=>FIT_TABS,
+      cur:()=>fitUI.tab,
+      guard:()=>fitModalOpen(),
+      go:(tab)=>{ if(fitUI.tab==='trends' && tab!=='trends') fitDestroyCharts(); fitUI.tab=tab; rFitness(); },
+    });
+  }
 }
 
 /* ════════════ modal (reuses .fin-modal styles) ════════════ */

@@ -155,7 +155,7 @@ let S={
   mr:{date:TODAY,list:JSON.parse(JSON.stringify(MR_DEFAULT))},
   ac:[],
   jp:{date:TODAY,streak:0,last:null,log:{},note:'',list:JSON.parse(JSON.stringify(DEF_JP))},
-  tr:{date:TODAY,bias:'',list:JSON.parse(JSON.stringify(DEF_TR))},
+  tr:{date:TODAY,bias:'',list:JSON.parse(JSON.stringify(DEF_TR)),sealed:false,sealedAt:null,broke:false},
   todos:[],
   hermes:[],   /* Hermes notices — read/dismiss only; written server-side by the assistant */
   cats:JSON.parse(JSON.stringify(DEFAULT_CATS)),
@@ -182,6 +182,10 @@ let S={
      body: { 'YYYY-MM-DD': { weight, metrics:{waist,chest,arm,thigh,...} } }
      diet: { 'YYYY-MM-DD': { meals:[{name,kcal,time,note}] } } */
   fit:{ exercises:[], plan:{ week:{}, restDefault:90 }, log:{}, body:{}, diet:{} },
+  /* 专属日历 — 行程 events (archetype C replace-all list). Each:
+     {id, title, date:'YYYY-MM-DD', start:'HH:MM'|'', end:'HH:MM'|'', loc, notes, position}
+     当日事项 (todos/academics by date) are aggregated read-only at render time, not stored here. */
+  cal:[],
 };
 
 let editingAC=null, editingJP=null, editingTR=null, editingTD=null;
@@ -209,6 +213,7 @@ const dirty = {
   the90Meta: false, the90Daily: false, motiv: false, rpg: false,
   principles: false, principlesDaily: false,
   fitExercises: false, fitPlan: false, fitLog: false, fitBody: false, fitDiet: false,
+  calEvents: false,
 };
 
 function saveMR(){saveLSRaw('mr',S.mr); dirty.morning=true; if(typeof syncPushMorning==='function') syncPushMorning();}
@@ -229,3 +234,4 @@ function saveFitPlan(){saveLSRaw('fit_plan', S.fit.plan); dirty.fitPlan=true; if
 function saveFitLog(date){saveLSRaw('fit_log', S.fit.log); dirty.fitLog=true; if(typeof syncPushFitLog==='function') syncPushFitLog(date||TODAY);}
 function saveFitBody(date){saveLSRaw('fit_body', S.fit.body); dirty.fitBody=true; if(typeof syncPushFitBody==='function') syncPushFitBody(date||TODAY);}
 function saveFitDiet(date){saveLSRaw('fit_diet', S.fit.diet); dirty.fitDiet=true; if(typeof syncPushFitDiet==='function') syncPushFitDiet(date||TODAY);}
+function saveCalEvents(){saveLSRaw('cal_events', S.cal); dirty.calEvents=true; if(typeof syncPushCalEvents==='function') syncPushCalEvents();}

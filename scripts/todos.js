@@ -50,6 +50,7 @@ function toggleTdForm(){
     setTimeField('td-time', '');
     segSet('td-pri', 'mid');
     segSet('td-remind', '15', 'onRemindSeg');
+    const nc=document.getElementById('td-nocarry'); if(nc) nc.checked=false;
     rCats();
     // Open form navigator so ↑↓/Enter keyboard flow works immediately
     requestAnimationFrame(()=>openFormNav(document.getElementById('td-form')));
@@ -66,11 +67,13 @@ function addTodo(){
   const remind = readRemind('td-remind', 'td-rc-num', 'td-rc-unit');
   const repeat = document.getElementById('td-repeat').value;
   const customDays = parseInt(document.getElementById('td-repeat-custom').value) || 0;
+  const noCarry = document.getElementById('td-nocarry')?.checked || false;
   if(!text) return;
   const maxPos = S.todos.reduce((m,t)=>Math.max(m, t.position||0), 0);
   S.todos.push({
     id:crypto.randomUUID(),
     text,cat,date,time,pri,remind,repeat,customDays,done:false,doneAt:null,
+    noCarry, archived:false, archivedAt:null,
     position: maxPos+1,
     created:TODAY
   });
@@ -104,7 +107,10 @@ function updateShowDoneBtn(){
 
 function rTodos(){
   const el = document.getElementById('td-list');
+  updateArchivedBtn();
+  rTodosArchived();
   let list = S.todos.slice();
+  list = list.filter(t=>!t.archived);                          // archived (expired & swept) live in their own drawer
   if(S.activeCat !== 'all') list = list.filter(t=>t.cat===S.activeCat);
   if(!showDone) list = list.filter(t=>!t.done);
   list.sort((a,b)=>{
@@ -147,6 +153,7 @@ function rTodos(){
             <option value="custom_days" ${t.repeat==='custom_days'?'selected':''}>自定义天数…</option>
           </select>
           <input id="etd-custom" type="number" min="1" max="365" value="${t.customDays||''}" placeholder="每隔几天重复" style="width:100%;${t.repeat==='custom_days'?'':'display:none;'}">
+          <label class="td-nocarry-row"><input type="checkbox" id="etd-nocarry" ${t.noCarry?'checked':''}> 过期不顺延 · 当天结束后自动归档</label>
           <div style="display:flex;gap:6px;">
             <button class="primary fx-btn" onclick="saveTdEdit('${t.id}')" style="flex:1;">保存</button>
             <button class="ghost fx-btn" onclick="cancelTdEdit()" style="flex:1;">取消</button>
@@ -277,6 +284,7 @@ function saveTdEdit(id){
   t.remind = readRemind('etd-remind', 'etd-rc-num', 'etd-rc-unit');
   t.repeat = document.getElementById('etd-repeat').value;
   t.customDays = parseInt(document.getElementById('etd-custom').value) || 0;
+  t.noCarry = document.getElementById('etd-nocarry')?.checked || false;
   closeFormNav();editingTD=null;saveTodos();rTodos();rMetrics();
 }
 function toggleEtdCustom(){
@@ -288,4 +296,61 @@ function toggleTdCustom(){
   const sel = document.getElementById('td-repeat');
   const inp = document.getElementById('td-repeat-custom');
   if(sel && inp){inp.style.display = sel.value==='custom_days' ? 'block' : 'none';}
+}
+
+/* ════════ 过期不顺延 · 自动归档 ════════
+   A task flagged noCarry that's past its due date and still undone gets archived
+   on day-rollover (init + after pull + midnight reload) so it stops nagging.
+   Archived ≠ done: excluded from active list, counts, and RPG; kept in a drawer
+   for restore/delete. Idempotent — only touches overdue+noCarry+undone+unarchived. */
+let showArchived = false;
+function sweepExpiredTodos(){
+  let changed = false;
+  S.todos.forEach(t=>{
+    if(t.noCarry && !t.done && !t.archived && t.date && t.date < TODAY){
+      t.archived = true; t.archivedAt = Date.now(); changed = true;
+    }
+  });
+  if(changed) saveTodos();
+  return changed;
+}
+function archivedTodos(){ return S.todos.filter(t=>t.archived).sort((a,b)=>(b.archivedAt||0)-(a.archivedAt||0)); }
+function updateArchivedBtn(){
+  const btn = document.getElementById('td-archived-btn'); if(!btn) return;
+  const n = S.todos.filter(t=>t.archived).length;
+  btn.style.display = n ? '' : 'none';
+  btn.textContent = (showArchived?'隐藏已过期':'已过期') + ` (${n})`;
+}
+function toggleArchived(){ showArchived = !showArchived; rTodos(); }
+function rTodosArchived(){
+  const box = document.getElementById('td-archived'); if(!box) return;
+  if(!showArchived){ box.innerHTML=''; return; }
+  const list = archivedTodos();
+  if(!list.length){ box.innerHTML='<div class="empty">— 无已过期任务 —</div>'; return; }
+  box.innerHTML = `<div class="td-archived-head">已过期 · 未顺延（${list.length}）</div>` + list.map(t=>{
+    const cat = S.cats.find(c=>c.id===t.cat);
+    return `<div class="todo-row td-archived-row" data-id="${t.id}" style="opacity:.55;">
+      <div class="todo-main">
+        <span class="ac-pri" style="background:var(--ghost);"></span>
+        <div class="todo-body">
+          <div class="todo-text" style="text-decoration:line-through;">${escH(t.text)}</div>
+          <div class="todo-meta">
+            ${cat?`<span class="tag tag-cat">${escH(cat.name)}</span>`:''}
+            ${t.date?`<span class="ac-date">${t.date}</span>`:''}
+            <span class="tag tag-urgent">已过期</span>
+          </div>
+        </div>
+        <div class="row-actions">
+          <button class="row-btn" onclick="restoreTodo('${t.id}')">恢复</button>
+          <button class="row-btn" onclick="delTodo('${t.id}')">×</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  if(typeof attachRipples==='function') attachRipples(box);
+}
+function restoreTodo(id){
+  const t = S.todos.find(t=>t.id===id); if(!t) return;
+  t.archived = false; t.archivedAt = null; t.noCarry = false;   // clear noCarry so the sweep won't re-archive it
+  saveTodos(); rTodos(); rMetrics();
 }
