@@ -1,6 +1,6 @@
 # CyrusOS · 活体架构地图（ARCHITECTURE.md）
 
-> **对齐版本：`cyrus-os-v7.16.0`**（v7.16.0 = RPG v2 Phase 3：成就那一波——新增 **自动化 · AUTOMATION** 类(ai_first/vol10/vol50/vol200/streak7/streak30/ship10) + 创造属性成就 attr_cre35 共 8 个；**ACH_TIER 47→55**(rpg.js 目录 + rpg-stats.py 断言同步 + EC2)；attr_balanced 文案修六维；新成就配进度条。v7.15.0 = RPG v2 Phase 2：第 6 属性 **创造/CRE**（雷达五边→六边、战力=6 和，rpgRadarSVG/rpgGrowthSVG 本就泛型）+ 属性接真实活动：**AI 产出 / 健身打卡 自动勾对应 The 90 柱**（`the90AutoMet`，幂等只增不撤；III=AI→智力+创造，IV=健身→力量/敏捷）→ 经验/属性反映真实模块投入；EXP 公式不变（单调）；镜像 rpg-stats.py ATTR_ORDER/ATTR_NAME/ACTIVITY_ATTR +CRE（已 EC2 重部署）；AI 开场动效放慢到 2600ms。v7.14.2 = AI HUD 卷轴开场 AI logo 动效（.ai-cover：黄铜六边环旋转+神经节点+「AI」+副标「AUTOMATION」信号灯式逐字闪入，1500ms 后淡出露内容；仅 cappa，sterile/reduced-motion 跳过；纯 CSS）；v7.14.0 = RPG v2 Phase 1：AI Automation 产出日志 HUD（新表 ai_outputs，独立模块=信号源；记录 构建/学会/交付，派生 streak/活跃天/总数；**本期不接经验/属性/成就**，留 Phase 2/3）；v7.13.2 = The 90 柱 III 课业→AI Automation（暑假重心；信条五柱句 + 服务端战报 rpg-stats.py TARGET_LABEL 同步 + cleanThe90Targets 数据自愈迁移；III→INT 映射不变）；v7.13.1 = HUD tab 真·跟手轮播（拖动时相邻 tab 从边缘实时露出，固定定位幽灵层+id剥离）；v7.13.0 = 专属日历 HUD（新表 cal_events，聚合现有带日期项 + 可增删行程）+ Todo 过期不顺延自动归档（todos +no_carry/archived/archived_at）+ 手机滑动切换（主页三栏 scroll-snap + 各 HUD tab follow-finger pager，新 swipe.js）+ 交易盘前封条（trading +sealed/sealed_at/broke，偏向自动勾 t6）。v7.12.0 = 多代理审计后 35 项 bug/UX 修复：交易日翻篇保留、隐私日合计遮罩、标签 onclick 转义、晨间详情守卫、低谷渡保连续、reduced-motion HUD 外壳、安全区内距、移动端断点、SDK/Chart/three 本地化离线、各 overlay Esc、抽屉 inert 等。SDK 现已 vendored 到 vendor/。）（= sw.js `CACHE_VERSION`，每次 bump 顺手更新此行——
+> **对齐版本：`cyrus-os-v7.17.0`**（v7.17.0 = 全量审计修复批（30-agent 审计 116 项确认 → 实现约 92 项）：**数据完整性**——财务 5 张配置表补 `dirty` 标记+focus 重放（离线编辑不再被 stale 云端覆盖）、跨午夜 `tick()` 自 reload（不再写昨天行）、rehydrate 先 flush 再 reload、pullAll 失败清 `pullAllPromise` 可重试、`pullThe90Daily` 合并保留本地脏 TODAY、pull 守卫(jp/trading/settings 空列表不覆盖)、`cleanJapanese` 进 pull 自愈、todo 拖序只重排可见项、循环交易拉回 cron 的 next_date/last_run。**安全**——应用锁 `?pinreset=1` 须有本次导航的 magic-link token（堵掉裸参数绕过）、锁定退避持久化、CSV 公式注入中和、AI 链接 `javascript:` 方案白名单、搜索在隐私遮罩下不匹配金额。**渲染纯度**——rMR/rFitToday 去掉 DB 写副作用、the90 庆祝/AI 趋势 peek 不再误触发。**财务**——`finFromBase` 修净值/目标换汇(漏 base-rate)、循环跨币种 toAmount 走实时汇率(非 1:1)。**离线/PWA**——SW 导航回退、弹性预缓存(单资产失败不再整体 brick)、SWR 兜底 Response。**性能/杂项**——the90 热力图 450 格签名 memo、herocube 切 sterile 停渲染+WebGL 上下文丢失恢复、lifetree 静止跳算、健身全 +08:00、Lenis 补 fitness-view、reduced-motion 补漏、sterile 配色作用域、焦点轮廓/触控尺寸/aria 一批 a11y、creed.js 死文件删除。**延后(需部署/大改)**：RPG↔rpg-stats.py 镜像那几项(挑战推荐/权重/bool/注释，要 EC2 重部署)、DB RLS 性能迁移(`auth.uid()`→`select`)、字体自托管、replaceTable 跨设备删除、a11y 焦点 trap。v7.16.0 = RPG v2 Phase 3：成就那一波——新增 **自动化 · AUTOMATION** 类(ai_first/vol10/vol50/vol200/streak7/streak30/ship10) + 创造属性成就 attr_cre35 共 8 个；**ACH_TIER 47→55**(rpg.js 目录 + rpg-stats.py 断言同步 + EC2)；attr_balanced 文案修六维；新成就配进度条。v7.15.0 = RPG v2 Phase 2：第 6 属性 **创造/CRE**（雷达五边→六边、战力=6 和，rpgRadarSVG/rpgGrowthSVG 本就泛型）+ 属性接真实活动：**AI 产出 / 健身打卡 自动勾对应 The 90 柱**（`the90AutoMet`，幂等只增不撤；III=AI→智力+创造，IV=健身→力量/敏捷）→ 经验/属性反映真实模块投入；EXP 公式不变（单调）；镜像 rpg-stats.py ATTR_ORDER/ATTR_NAME/ACTIVITY_ATTR +CRE（已 EC2 重部署）；AI 开场动效放慢到 2600ms。v7.14.2 = AI HUD 卷轴开场 AI logo 动效（.ai-cover：黄铜六边环旋转+神经节点+「AI」+副标「AUTOMATION」信号灯式逐字闪入，1500ms 后淡出露内容；仅 cappa，sterile/reduced-motion 跳过；纯 CSS）；v7.14.0 = RPG v2 Phase 1：AI Automation 产出日志 HUD（新表 ai_outputs，独立模块=信号源；记录 构建/学会/交付，派生 streak/活跃天/总数；**本期不接经验/属性/成就**，留 Phase 2/3）；v7.13.2 = The 90 柱 III 课业→AI Automation（暑假重心；信条五柱句 + 服务端战报 rpg-stats.py TARGET_LABEL 同步 + cleanThe90Targets 数据自愈迁移；III→INT 映射不变）；v7.13.1 = HUD tab 真·跟手轮播（拖动时相邻 tab 从边缘实时露出，固定定位幽灵层+id剥离）；v7.13.0 = 专属日历 HUD（新表 cal_events，聚合现有带日期项 + 可增删行程）+ Todo 过期不顺延自动归档（todos +no_carry/archived/archived_at）+ 手机滑动切换（主页三栏 scroll-snap + 各 HUD tab follow-finger pager，新 swipe.js）+ 交易盘前封条（trading +sealed/sealed_at/broke，偏向自动勾 t6）。v7.12.0 = 多代理审计后 35 项 bug/UX 修复：交易日翻篇保留、隐私日合计遮罩、标签 onclick 转义、晨间详情守卫、低谷渡保连续、reduced-motion HUD 外壳、安全区内距、移动端断点、SDK/Chart/three 本地化离线、各 overlay Esc、抽屉 inert 等。SDK 现已 vendored 到 vendor/。）（= sw.js `CACHE_VERSION`，每次 bump 顺手更新此行——
 > 两者不一致即说明本文档已开始腐烂，修文档）。最后全面核对：2026-06-11。
 
 **这份文档的用途**：动工前读它，代替考古式读码。红线与部署纪律在
@@ -100,7 +100,7 @@ rMotivation → rMetrics → rpgAfterChange → attachRipples`
 交互时反复执行——**绝不在渲染函数里挂音效、弹窗、写库等副作用**。副作用只挂在
 用户手势的变异路径（toggleXX/addXX 等），且写在状态变更成功之后、守卫(`if(i)`)之内。
 
-### 模块一览（28 个，scripts/；行数会变，不在此维护——需要时 `wc -l`）
+### 模块一览（27 个，scripts/；行数会变，不在此维护——需要时 `wc -l`）
 
 | 文件 | 职责（关键导出 → 被谁用） |
 |---|---|
@@ -110,7 +110,6 @@ rMotivation → rMetrics → rpgAfterChange → attachRipples`
 | auth.js | Magic Link 登录、session → `currentUser`、登录卡（用 CREED_VARIANTS 随机一条）、`onAuthReady` |
 | app.js | `init`/`renderAll`/`rDate`/`rMetrics`、时钟 `tick`、表单键盘导航(openFormNav/segSet/segPick)、`escH`、`attachRipples`、提醒检查 |
 | notifications.js | Web Push 订阅/权限横幅（VAPID public key） |
-| creed.js | （v6.50 退役）旧三段轮播；文件仍在但主页不再调用，见 §7 技术债 5 |
 | drawer.js | 右缘抽屉开合 |
 | markets.js | TradingView widgets + 财经日历 + 符号选择 |
 | morning.js | 晨间药丸（v7.7 身心灵 6 项：Water/Meditation/Bath·切换/Calisthenics/Bath·洗净/Men's work，MR_DEFAULT+cleanMorning 迁移在 state.js）；`rMR`/`toggleMR`（全清 quest 音按日闩锁 `_mrQuestDate`）；**完成态** `rMRReady`：全勾→面板玻璃遮罩 `#mr-ready` + 日随机短句(MR_READY_PHRASES,date-seeded)glassFlicker 闪现 + 双段穿线(CSS)，点遮罩 `mrDismissReady` 收起(当日不重弹除非破完成) |
@@ -298,8 +297,7 @@ hermes-cyrus/
 3. **auth 里有第二个账号**（kuang.lo433@gmail.com，2026-05-23 注册，零数据）——
    待用户确认是否清除
 4. 财务**利息计算疑似不正确**（用户报告，未排查；fin_accounts.interestRate 相关）
-5. creed.js 整文件已无主页调用（登录卡只用 state.js 的 CREED_VARIANTS）——
-   可在下次清理时删除文件并从 APP_SHELL/index.html 移除
+5. ~~creed.js 死文件~~ **已删（v7.17.0）**：文件 + index.html 脚本标签 + APP_SHELL 条目均移除；CREED_VARIANTS(state.js) 与 #creed-trigger/#creed-wrap 标记保留(principles.js 用)
 
 更多产品向 backlog（滑动切换、健身面板、Morning Ritual 改造等）在 Claude 的
 跨会话记忆里维护，不在本文档。

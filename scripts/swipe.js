@@ -112,7 +112,8 @@ function initTriCarousel(){
   const dots = Array.from(wrap.children);
   dots.forEach((d,i)=> d.addEventListener('click', ()=>{
     const r = panels[i].getBoundingClientRect(), g = grid.getBoundingClientRect();
-    grid.scrollTo({ left: grid.scrollLeft + r.left - g.left, behavior:'smooth' });
+    const sm = (window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches) ? 'auto' : 'smooth';
+    grid.scrollTo({ left: grid.scrollLeft + r.left - g.left, behavior:sm });
   }));
   let raf=null;
   grid.addEventListener('scroll', ()=>{

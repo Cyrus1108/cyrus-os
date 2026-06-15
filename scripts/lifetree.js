@@ -78,6 +78,9 @@ function tick(t){
   const st = document.getElementById('lt-state'); if(st) st.textContent = 'DAY ' + Math.round(day);
   const time = t*0.001;
   const pulse = Math.max(0, 1-((t-pulseStart)/1100));   // check-in energy flash
+  // once growth has fully settled and no pulse is active, colors are fixed and the
+  // plexus only follows the tiny shared sj jitter — skip those recomputes entirely.
+  const settled = Math.abs(p-target) < 1e-3 && pulse <= 0;
   for(let i=0;i<N;i++){
     const reveal = Math.max(0,Math.min(1,(p-THR[i])/0.08));
     const e = reveal*reveal*(3-2*reveal);
@@ -85,15 +88,18 @@ function tick(t){
     pos[i*3]   = seed[0]+(FX[i*3]  -seed[0])*e+sj;
     pos[i*3+1] = seed[1]+(FX[i*3+1]-seed[1])*e;
     pos[i*3+2] = seed[2]+(FX[i*3+2]-seed[2])*e+sj;
+    if(settled) continue;
     if(reveal<=0) tmp.copy(cDim);
     else { const base = LEAF[i]?cLeaf:cBranch; tmp.copy(cFront).lerp(base,e); if(pulse>0) tmp.lerp(cFront, pulse*0.6); }
     col[i*3]=tmp.r; col[i*3+1]=tmp.g; col[i*3+2]=tmp.b;
   }
-  geo.attributes.position.needsUpdate=true; geo.attributes.color.needsUpdate=true;
-  for(let k=0;k<pairs.length;k+=2){const i=pairs[k],j=pairs[k+1],o=k*3;
-    lpos[o]=pos[i*3];lpos[o+1]=pos[i*3+1];lpos[o+2]=pos[i*3+2];
-    lpos[o+3]=pos[j*3];lpos[o+4]=pos[j*3+1];lpos[o+5]=pos[j*3+2];}
-  lgeo.attributes.position.needsUpdate=true;
+  geo.attributes.position.needsUpdate=true; geo.attributes.color.needsUpdate=!settled;
+  if(!settled){
+    for(let k=0;k<pairs.length;k+=2){const i=pairs[k],j=pairs[k+1],o=k*3;
+      lpos[o]=pos[i*3];lpos[o+1]=pos[i*3+1];lpos[o+2]=pos[i*3+2];
+      lpos[o+3]=pos[j*3];lpos[o+4]=pos[j*3+1];lpos[o+5]=pos[j*3+2];}
+  }
+  lgeo.attributes.position.needsUpdate=!settled;
   group.rotation.y = time*0.16;
   if(sporePos){
     for(let i=0;i<sporePos.length;i+=3){
@@ -126,6 +132,9 @@ window.initLifeTree = function(){
   renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
   renderer.setSize(W,H); renderer.setPixelRatio(Math.min(2, window.devicePixelRatio||1));
   mount.appendChild(renderer.domElement);
+  // GL context recovery — loss otherwise leaves a dead canvas with no recovery path
+  renderer.domElement.addEventListener('webglcontextlost', e => { e.preventDefault(); running=false; });
+  renderer.domElement.addEventListener('webglcontextrestored', () => { renderer = null; if(document.documentElement.getAttribute('data-theme')==='sterile') window.initLifeTree(); });
   group = new THREE.Group(); scene.add(group);
   pos = new Float32Array(N*3); col = new Float32Array(N*3);
   geo = new THREE.BufferGeometry();

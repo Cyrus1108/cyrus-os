@@ -9,6 +9,9 @@ const AI_KINDS = [ {k:'built',label:'构建'}, {k:'learned',label:'学会'}, {k:
 const AI_KIND_LABEL = { built:'构建', learned:'学会', shipped:'交付' };
 let aiEditId = null;
 
+/* ── url scheme allow-list (http/https only; rejects javascript:/data:/vbscript:) ── */
+function aiSafeUrl(u){ try{ const p=new URL(String(u), location.href); return (p.protocol==='http:'||p.protocol==='https:') ? p.href : null; }catch(e){ return null; } }
+
 /* ── open / close / routing (clone of calendar.js) ── */
 function aiOnHash(){
   if(location.hash==='#ai'){ if(!aiUI.open) openAi(true); }
@@ -61,7 +64,7 @@ function initAi(){
       cur:()=>aiUI.tab,
       guard:()=>aiModalOpen(),
       go:(t)=>{ if(aiUI.tab==='trends' && t!=='trends') aiDestroyCharts(); aiUI.tab=t; rAi(); },
-      peek:(el,t)=>{ if(t==='trends') rAiTrends(el); else rAiLog(el); },
+      peek:(el,t)=>{ if(t==='trends') rAiTrendsSkeleton(el); else rAiLog(el); },
     });
   }
   aiOnHash();
@@ -127,7 +130,7 @@ function rAiLog(el){
         <div class="ai-row-body">
           <div class="ai-row-title">${escH(o.title)}</div>
           ${o.notes?`<div class="ai-row-notes">${escH(o.notes)}</div>`:''}
-          ${o.link?`<a class="ai-row-link" href="${escH(o.link)}" target="_blank" rel="noopener noreferrer">↗ 链接</a>`:''}
+          ${(()=>{ const safe=o.link&&aiSafeUrl(o.link); return safe?`<a class="ai-row-link" href="${escH(safe)}" target="_blank" rel="noopener noreferrer">↗ 链接</a>`:''; })()}
         </div>
         <div class="ai-row-actions"><button class="row-btn" onclick="aiEditOutput('${o.id}')">编辑</button><button class="row-btn" onclick="aiDelOutput('${o.id}')">×</button></div>
       </div>`;
@@ -147,10 +150,14 @@ function aiDateLabel(ds){
 /* ── trends (weekly outputs bar, last 12 weeks) ── */
 let _aiCharts = [];
 function aiDestroyCharts(){ _aiCharts.forEach(c=>{ try{ c.destroy(); }catch(e){} }); _aiCharts=[]; }
-function rAiTrends(el){
+// pure markup-only skeleton (no side-effects) — used by the swipe peek so peeking never destroys/loads charts
+function rAiTrendsSkeleton(el){
   el.innerHTML = aiStatBar()
     + `<div class="ai-chart-card"><div class="ai-chart-title">近 12 周产出</div><div class="ai-chart-wrap"><canvas id="ai-week-chart"></canvas></div></div>`
     + `<div class="ai-kind-legend">${AI_KINDS.map(k=>`<span class="ai-kind ai-kind-${k.k}">${k.label}</span>`).join('')} · 三类产出</div>`;
+}
+function rAiTrends(el){
+  rAiTrendsSkeleton(el);
   aiDestroyCharts();
   if(typeof ensureChartJs==='function'){
     ensureChartJs().then(()=>{ if(aiUI.open && aiUI.tab==='trends') aiDrawWeekChart(); }).catch(()=>{});
@@ -220,15 +227,18 @@ function aiSaveOutput(){
   const tEl=document.getElementById('ai-f-title'); if(!tEl) return;
   const title=tEl.value.trim(); if(!title) return;
   const kind=document.getElementById('ai-f-kind').value||'built';
-  const date=document.getElementById('ai-f-date').value||TODAY;
+  let date=document.getElementById('ai-f-date').value||TODAY;
+  if(date>TODAY) date=TODAY;   // clamp future dates so streak/activeDays signals stay consistent (YYYY-MM-DD string compare)
   const notes=document.getElementById('ai-f-notes').value.trim();
-  const link=document.getElementById('ai-f-link').value.trim();
+  let link=document.getElementById('ai-f-link').value.trim();
+  if(link && !aiSafeUrl(link)) link='';   // reject hostile schemes (javascript:/data:/vbscript:) at save so stored data is clean
   if(aiEditId==='new'){
     const maxPos=S.ai.reduce((a,o)=>Math.max(a,o.position||0),0);
     S.ai.push({ id:crypto.randomUUID(), date, title, kind, notes, link, position:maxPos+1 });
   } else {
     const o=S.ai.find(x=>x.id===aiEditId);
     if(o){ o.date=date; o.title=title; o.kind=kind; o.notes=notes; o.link=link; }
+    else { const maxPos=S.ai.reduce((a,o)=>Math.max(a,o.position||0),0); S.ai.push({ id:aiEditId, date, title, kind, notes, link, position:maxPos+1 }); }   // edit target vanished (realtime echo dropped it) → re-create with the existing id instead of silently dropping the edit
   }
   aiCloseModal();
   saveAiOutputs(); rAi();

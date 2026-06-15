@@ -47,6 +47,16 @@ async function handleAuthChange(session){
       if(typeof onAuthReady === 'function') onAuthReady();
     }
   } else {
+    // Force-close any open HUD so a stale overlay can't linger over the login
+    // screen (each guard already no-ops when its HUD is closed).
+    try{
+      if(typeof closeFinance==='function') closeFinance();
+      if(typeof closeFitness==='function') closeFitness();
+      if(typeof closeCalendar==='function') closeCalendar();
+      if(typeof closeAi==='function') closeAi();
+      if(typeof closeMotivation==='function') closeMotivation();
+      if(typeof closeSystem==='function') closeSystem();
+    }catch(e){ /* close guards are best-effort */ }
     if(overlay){
       overlay.style.display = 'flex';
       // Reset to email form (in case we came from "sent" state)

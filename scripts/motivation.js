@@ -43,9 +43,12 @@ function motivHashRoute(){
   else if(motivUI.open){ closeMotivation(true); }
 }
 window.addEventListener('hashchange', motivHashRoute);
-/* Escape closes the Motivation HUD (consistent with finance/system/fitness) */
+/* Escape closes the player first (if one is open), else the Motivation HUD
+   (consistent with finance/system/fitness) */
 document.addEventListener('keydown', e => {
-  if(e.key==='Escape' && motivUI.open){ e.preventDefault(); closeMotivation(); }
+  if(e.key!=='Escape' || !motivUI.open) return;
+  e.preventDefault();
+  if(motivUI.playing) closeMotivPlayer(); else closeMotivation();
 });
 
 /* ── render grid + add form (incremental: reuse card nodes keyed by video id, so a

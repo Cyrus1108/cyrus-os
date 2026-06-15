@@ -82,6 +82,8 @@ import * as THREE from 'three';
 
   function frame(){
     raf = requestAnimationFrame(frame);
+    // stop rendering WebGL behind the hidden canvas after a cappa→sterile switch
+    if(document.documentElement.getAttribute('data-theme') === 'sterile') return;
     t += 0.016;
     // scroll velocity feeds the tumble (Lenis-damped native scroll)
     const y = window.scrollY;
@@ -100,5 +102,13 @@ import * as THREE from 'three';
 
   document.addEventListener('visibilitychange', () => { document.hidden ? stop() : start(); });
   window.addEventListener('resize', size);
+
+  // GL context recovery — a dropped context otherwise freezes the cube permanently
+  renderer.domElement.addEventListener('webglcontextlost', e => { e.preventDefault(); stop(); });
+  renderer.domElement.addEventListener('webglcontextrestored', () => {
+    mats.forEach((m, i) => { m.map = faceTexture(glyphs[i]); m.needsUpdate = true; });
+    start();
+  });
+
   start();
 })();

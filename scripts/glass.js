@@ -22,7 +22,7 @@ let _lenis = null;
 function glassInitLenis(){
   if(typeof Lenis === 'undefined') return;
   // inner scrollers must keep native behavior
-  ['drawer','finance-view','system-view','sys-modal','calendar-view','ai-view'].forEach(id => {
+  ['drawer','finance-view','fitness-view','system-view','sys-modal','calendar-view','ai-view'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.setAttribute('data-lenis-prevent','');
   });
@@ -139,7 +139,7 @@ function glassInitStacking(){
      view before the next card starts covering it. Recomputed on resize and on
      every ScrollTrigger refresh (pull-render / flip change heights). */
   function setTops(){
-    const vh = innerHeight;
+    const vh = window.visualViewport?.height || innerHeight;
     cards.forEach((c, i) => {
       const base = Math.min(Math.max(8, vh * 0.035), 36) + i * 14;
       const h = c.offsetHeight;
@@ -202,12 +202,14 @@ function glassInitFlip(){
   }
   syncHeight();
 
+  let flipT = 0;
   btn.addEventListener('click', () => {
     wrap.classList.toggle('flipped');
     btn.textContent = wrap.classList.contains('flipped') ? '⇄ 今日清单' : '⇄ 市场时段';
     syncHeight();
     if(window.Sfx) Sfx.tab();
-    setTimeout(() => { if(window.ScrollTrigger) ScrollTrigger.refresh(); }, 750);
+    clearTimeout(flipT);
+    flipT = setTimeout(() => { if(window.ScrollTrigger) ScrollTrigger.refresh(); }, 750);
   });
 }
 
@@ -449,7 +451,7 @@ function glassInitTilt(){
     function tick(){
       // a focused (fullscreen) panel must not tilt, and must not keep an rAF alive
       // (focus opens on pointerup over the card, so pointerleave never fires)
-      if(p.classList.contains('panel-focused')){ hovering = false; tx = 0; ty = 0; }
+      if(p.classList.contains('panel-focused')){ hovering = false; tx = 0; ty = 0; p.style.setProperty('--mx','50%'); p.style.setProperty('--my','50%'); }
       cx += (tx - cx) * 0.16; cy += (ty - cy) * 0.16;
       p.style.setProperty('--rx', cy.toFixed(3) + 'deg');
       p.style.setProperty('--ry', cx.toFixed(3) + 'deg');
@@ -488,11 +490,11 @@ function glassInitTrails(){
   }
   let stroke = brass();
 
-  function resize(){
+  function resize(cold){
     W = innerWidth; H = innerHeight;
     cv.width = W * DPR; cv.height = H * DPR;
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    seed(); prewarm(520);
+    seed(); prewarm(cold ? 520 : 0);
   }
   function seed(){
     walkers = Array.from({ length: N }, () => ({
@@ -546,11 +548,12 @@ function glassInitTrails(){
 
   window.addEventListener('pointermove', e => { px = e.clientX; py = e.clientY; }, { passive:true });
   document.addEventListener('visibilitychange', () => { document.hidden ? stop() : start(); });
-  window.addEventListener('resize', () => { stroke = brass(); resize(); });
+  let resizeT = 0;
+  window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => { stroke = brass(); resize(false); }, 150); });
   if(window.matchMedia){
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { stroke = brass(); });
   }
-  resize();
+  resize(true);
   start();
 }
 

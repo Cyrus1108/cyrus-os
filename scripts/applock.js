@@ -28,7 +28,6 @@ async function lockHashPin(pin, saltB64u, iter){
 }
 
 /* ── biometric (WebAuthn) ── */
-function lockBioSupported(){ return !!(window.PublicKeyCredential && navigator.credentials && location.protocol==='https:' || location.hostname==='localhost'); }
 async function lockBioRegister(){
   if(!(window.PublicKeyCredential && navigator.credentials)) return null;
   try{
@@ -86,6 +85,8 @@ function lockRenderDots(){
 function appShowLock(){
   lockMount();
   lockRT.unlocked = false; lockRT.entry='';
+  // Rehydrate persisted lockout so escalating backoff survives a reload.
+  { const _c=lockCfg(); lockRT.fails = _c.fails||0; lockRT.lockoutUntil = _c.lockoutUntil||0; }
   document.documentElement.classList.remove('app-locked-boot');
   document.documentElement.classList.add('app-locked');
   const o = lockOverlay(); o.classList.add('show');
@@ -105,6 +106,9 @@ function appShowLock(){
 }
 function appUnlockDone(){
   lockRT.unlocked = true; lockRT.entry=''; lockRT.fails=0; lockRT.lockoutUntil=0;
+  // Clear the PERSISTED backoff too, so a correct unlock truly resets it (else appShowLock
+  // would rehydrate the stale fail count on the next reload and keep escalating forever).
+  try{ const c=lockCfg(); if(c.fails||c.lockoutUntil){ c.fails=0; c.lockoutUntil=0; lockSave(c); } }catch(e){}
   document.documentElement.classList.remove('app-locked','app-locked-boot');
   const o = lockOverlay(); if(o) o.classList.remove('show');
   lockResetIdle();
@@ -132,6 +136,8 @@ async function lockSubmitPin(){
       lockRT.lockoutUntil = Date.now() + wait*1000;
       lockCheckLockout();
     } else if(err){ err.textContent = `PIN 不对 · 还可试 ${5-lockRT.fails} 次`; }
+    // Persist so escalating backoff survives a reload (cleared only on successful unlock).
+    try{ const cc=lockCfg(); cc.fails=lockRT.fails; cc.lockoutUntil=lockRT.lockoutUntil; lockSave(cc); }catch(e){}
   }
 }
 function lockCheckLockout(){
@@ -139,11 +145,12 @@ function lockCheckLockout(){
   const tick=()=>{
     const left = Math.ceil((lockRT.lockoutUntil - Date.now())/1000);
     if(left > 0){ err.textContent = `尝试过多 · 请 ${left}s 后再试`; setTimeout(tick, 500); }
-    else { err.textContent=''; lockRT.fails=0; }
+    else { err.textContent=''; /* keep fails so backoff keeps escalating; cleared only on unlock */ }
   };
   if(Date.now() < lockRT.lockoutUntil) tick();
 }
 async function lockBioTap(auto){
+  if(Date.now() < lockRT.lockoutUntil){ lockCheckLockout(); return; }
   const err=document.getElementById('applock-err');
   if(err) err.textContent = auto ? '' : '验证中…';
   const ok = await lockBioUnlock();
@@ -161,8 +168,9 @@ function initAppLock(){
     document.documentElement.classList.remove('app-locked','app-locked-boot');
     return;
   }
-  if(!lockEnabled()){ document.documentElement.classList.remove('app-locked-boot'); return; }
-  appShowLock();
+  // Attach the background-return listener BEFORE the lockEnabled() early-return so that
+  // enabling the lock in-session starts gating on next app-switch without a reload. It
+  // self-guards with `if(!lockEnabled()) return;`, so it's inert while the lock is off.
   // Only lock when the app returns from the background (e.g. switched to another app
   // on mobile). Idle-while-open timer has been removed at user request.
   document.addEventListener('visibilitychange', ()=>{
@@ -170,6 +178,8 @@ function initAppLock(){
     if(document.visibilityState==='hidden'){ lockRT.hiddenAt = Date.now(); }
     else if(lockRT.unlocked && lockRT.hiddenAt && (Date.now()-lockRT.hiddenAt) > LOCK_BG_MS){ appShowLock(); }
   });
+  if(!lockEnabled()){ document.documentElement.classList.remove('app-locked-boot'); return; }
+  appShowLock();
 }
 
 /* ════════════ setup / management (rendered in finance 更多) ════════════ */
@@ -269,11 +279,30 @@ async function lockForgotPin(){
     if(err) err.textContent = '发送失败：' + (e.message||e);
   }
 }
-/* If page loaded after a pinreset magic-link click, offer to set a new PIN. */
-if(new URLSearchParams(location.search).get('pinreset')==='1'){
+/* If page loaded after a pinreset magic-link click, offer to set a new PIN.
+   SECURITY: ?pinreset=1 alone is NOT trusted — a bystander could type it into the
+   address bar over an already-persisted session and reset the PIN. We require PROOF
+   that a magic-link token was consumed on THIS navigation. With implicit flow +
+   detectSessionInUrl (supabase.js), a fresh magic link arrives with access_token in
+   the URL hash (e.g. #access_token=...&type=recovery|magiclink) which Supabase then
+   clears. Capture the raw hash synchronously NOW (before Supabase clears it) and only
+   proceed if it carried a fresh access_token. A pre-existing session is not enough. */
+const _lockResetHash = (function(){
+  try{
+    const h = (location.hash||'').replace(/^#/,'');
+    if(!h) return null;
+    const p = new URLSearchParams(h);
+    if(!p.get('access_token')) return null;
+    const t = p.get('type');
+    // accept magic-link / recovery tokens (type is absent on some magiclink flows)
+    if(t && !/^(recovery|magiclink|signup|invite)$/.test(t)) return null;
+    return p;
+  }catch(e){ return null; }
+})();
+if(new URLSearchParams(location.search).get('pinreset')==='1' && _lockResetHash){
   window.addEventListener('load', async ()=>{
     await new Promise(r=>setTimeout(r,600));
-    // user is now authenticated; let them set a new PIN without the old one
+    // user just consumed a magic link THIS navigation; let them set a new PIN without the old one
     const pin = await lockPromptNewPin(); if(!pin) return;
     const { hash, salt, iter } = await lockHashPin(pin);
     const c = lockCfg(); c.enabled=true; c.pinHash=hash; c.pinSalt=salt; c.pinIter=iter; c.updated=Date.now();

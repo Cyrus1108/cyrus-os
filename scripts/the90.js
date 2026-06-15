@@ -170,10 +170,18 @@ function toggleThe90Drawer(id){
    the90HeatObserver: IntersectionObserver that fires the cascade when the heatmap
                       first scrolls into view (it sits below the fold + has
                       content-visibility:auto, so a render-time trigger never shows).
-   the90WasComplete: tracks all-5-done so the brass sweep fires only at the moment it flips true. */
+   the90WasComplete: tracks all-5-done so the brass sweep fires only at the moment it flips true.
+                     Seeded null so the FIRST render (e.g. a page reload of an already-complete
+                     day) only latches the state and does NOT replay the celebration; a genuine
+                     false→true flip during the session still fires. */
 let the90Cascaded = false;
 let the90HeatObserver = null;
-let the90WasComplete = false;
+let the90WasComplete = null;
+/* the90HeatSig / the90HeatHtml: cheap memo so the 450-cell heatmap innerHTML is only
+   rebuilt when an input that affects it actually changed (scores in-window, TODAY, day,
+   target set). Unrelated renderAll passes reuse the cached byte-identical markup. */
+let the90HeatSig = null;
+let the90HeatHtml = '';
 
 /* Arm a one-shot cascade: play the diagonal wave the moment the heatmap enters the viewport. */
 function the90ArmCascade(){
@@ -226,6 +234,8 @@ function initThe90Keys(){
        (typeof fitUI!=='undefined' && fitUI.open) ||
        (typeof sysUI!=='undefined' && sysUI.open) ||
        (typeof motivUI!=='undefined' && motivUI.open) ||
+       (typeof calUI!=='undefined' && calUI.open) ||
+       (typeof aiUI!=='undefined' && aiUI.open) ||
        document.body.classList.contains('has-focus') ||
        document.getElementById('drawer')?.classList.contains('open') ||
        document.getElementById('principles-modal')?.classList.contains('open') ||
@@ -396,7 +406,7 @@ function rThe90(){
   // ④ all-done payoff — fire the warm-white shine + glow flash once, the moment all met.
   const metToday = meta.targets.filter(t => the90ScoreMet(todayScores[t.id], phase)).length;
   const allDone = meta.targets.length > 0 && metToday === meta.targets.length;
-  if(allDone && !the90WasComplete){
+  if(the90WasComplete !== null && allDone && !the90WasComplete){
     const cellsBox = document.getElementById('the90-cells');
     if(cellsBox){
       cellsBox.classList.remove('celebrate');
@@ -422,8 +432,26 @@ function rThe90(){
     if(typeof setAmbientLevel === 'function') setAmbientLevel(metToday / meta.targets.length);
   }
 
-  // Heatmap — 13 weeks x 5 targets
-  document.getElementById('the90-heatmap').innerHTML = renderThe90Heatmap();
+  // Heatmap — 13 weeks x 5 targets.
+  // Gate the 450-cell innerHTML rebuild behind a cheap signature: it only depends on the
+  // in-window day scores, the target set/order, and TODAY (which drives isToday/isFuture;
+  // phase is derived from the day index). Unrelated renderAll passes skip the rebuild and
+  // reuse the byte-identical cached markup.
+  const heatHost = document.getElementById('the90-heatmap');
+  const heatSig = TODAY + '|' + meta.targets.map(t => t.id).join(',') + '|' + (() => {
+    const parts = [];
+    for(let d = 1; d <= 90; d++){
+      const date = the90DateForDay(d);
+      const sc = S.the90.daily[date]?.scores;
+      if(sc) parts.push(date + ':' + meta.targets.map(t => sc[t.id]).join(','));
+    }
+    return parts.join(';');
+  })();
+  if(heatSig !== the90HeatSig){
+    the90HeatSig = heatSig;
+    the90HeatHtml = renderThe90Heatmap();
+    heatHost.innerHTML = the90HeatHtml;
+  }
   // ① diagonal cascade — armed via IntersectionObserver so it plays when the
   // heatmap actually scrolls into view (one-shot per load). See the90ArmCascade.
   the90ArmCascade();
@@ -446,6 +474,9 @@ function rThe90(){
 }
 
 function computeThe90Streak(){
+  // Reads S.the90.daily, hydrated by pullThe90Daily's last-95-days window (= the 90-day
+  // program length + buffer). That window must stay ≥ the program length so no in-window
+  // day is trimmed and the streak never breaks falsely on a long run.
   // Current run of days (most recent → back) meeting ≥3 of 5 targets.
   // Today is PENDING: if it isn't met yet it neither counts nor breaks the run —
   // you simply haven't extended your streak today. Only a genuine PAST miss ends it.

@@ -20,7 +20,7 @@ function rMR(){
   // a detail pill is lifted out of #mr-list (FLIP); rebuilding the list now would
   // orphan its placeholder and strand the pill. Skip until the detail closes.
   if(_mrDetailId) return;
-  if(typeof cleanMorning === 'function' && cleanMorning()) saveMR();   // normalize post-pull too
+  if(typeof cleanMorning === 'function') cleanMorning();   // in-memory normalize only; persistence stays at init/pullMorning + next mutator
   const list=S.mr.list,done=list.filter(i=>i.d).length;
   const pct=Math.round(done/list.length*100);
   const remMins=list.filter(i=>!i.d).reduce((a,i)=>a+i.mins,0);
@@ -118,7 +118,7 @@ function mrExpand(id){
     const first = pill.getBoundingClientRect();
     mutate();
     const last = pill.getBoundingClientRect();
-    if(window.gsap) gsap.fromTo(pill,
+    if(window.gsap && !(window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches)) gsap.fromTo(pill,
       { x:first.left-last.left, y:first.top-last.top, scaleX:first.width/last.width, scaleY:first.height/last.height, transformOrigin:'0 0' },
       { x:0, y:0, scaleX:1, scaleY:1, duration:0.6, ease:'power3.inOut', onComplete:()=>gsap.set(pill,{clearProps:'transform'}) });
   }

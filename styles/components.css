@@ -169,7 +169,7 @@ html[data-theme="sterile"] .form-nav-hl{ border-radius:0; }
 .row-body{flex:1;min-width:0;}
 .row-actions{display:flex;gap:2px;opacity:0;transition:opacity .2s;}
 .row:hover .row-actions{opacity:1;}
-.row-btn{font-size:10px;padding:2px 7px;color:var(--ghost);cursor:pointer;background:none;border:none;letter-spacing:.12em;text-transform:uppercase;font-family:var(--sans);transition:color .2s;}
+.row-btn{font-size:10px;min-height:24px;padding:4px 7px;color:var(--ghost);cursor:pointer;background:none;border:none;letter-spacing:.12em;text-transform:uppercase;font-family:var(--sans);transition:color .2s;}
 .row-btn:hover{color:var(--brass);}
 
 .ac-subject{font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--brass);margin-bottom:3px;}
@@ -558,7 +558,7 @@ button.check-btn.done{border-color:var(--brass);color:var(--brass);}
   position:fixed;inset:0;
   background:var(--color-background-tertiary);
   display:none;align-items:center;justify-content:center;
-  z-index:1000;
+  z-index:1450;
   padding:2rem;
   animation:paneFade .5s var(--ease-silk);
 }
@@ -691,7 +691,6 @@ html:not([data-theme="sterile"]) .panel{
   background-repeat:no-repeat;
   background-size:12px 1px, 1px 12px, 12px 1px, 1px 12px, 12px 1px, 1px 12px, 12px 1px, 1px 12px;
   background-position:0 0, 0 0, 100% 0, 100% 0, 0 100%, 0 100%, 100% 100%, 100% 100%;
-  box-shadow:0 10px 30px -22px rgba(0,0,0,.30);
 }
 
 /* hover: brass edge + soft outer glow — transform is owned by the v6.51 tilt
@@ -713,10 +712,8 @@ html:not([data-theme="sterile"]) .panel-label-row::before{
 }
 
 /* The 90 — the homepage hero: the ONLY resting glow on the page, so the eye
-   lands on the five pillars first */
-html:not([data-theme="sterile"]) .the90-panel{
-  box-shadow:0 0 34px -18px var(--brass-glow), 0 12px 36px -26px rgba(0,0,0,.35);
-}
+   lands on the five pillars first. The resting glow itself is set in the
+   authoritative v6.51 glass rule below (.the90-panel box-shadow). */
 
 /* ════════════ v6.51.0 — Phase A 黄铜玻璃 (brass glassmorphism) ════════════
    Panels become warm-gold glass: translucent ground + backdrop blur + an inner
@@ -756,9 +753,11 @@ html[data-theme="sterile"] #glass-trails{ display:none; }
 html:not([data-theme="sterile"]) body.fin-locked::before,
 html:not([data-theme="sterile"]) body.sys-locked::before,
 html:not([data-theme="sterile"]) body.fit-locked::before,
-html:not([data-theme="sterile"]) body.motiv-locked::before{ animation:none; }
+html:not([data-theme="sterile"]) body.motiv-locked::before,
+html:not([data-theme="sterile"]) body.has-focus::before{ animation:none; }
 body.fin-locked #glass-trails, body.sys-locked #glass-trails,
-body.fit-locked #glass-trails, body.motiv-locked #glass-trails{ display:none; }
+body.fit-locked #glass-trails, body.motiv-locked #glass-trails,
+body.has-focus #glass-trails{ display:none; }
 
 /* the glass itself — translucent ground + blur; corner brackets (background-image
    layers from v6.47) sit on top of the glass ground untouched */
@@ -951,7 +950,8 @@ html:not([data-theme="sterile"]) .todo-row{
   .tri-grid > .panel{ flex:0 0 88%; scroll-snap-align:center; }
   .tri-dots{ display:flex; justify-content:center; gap:7px; margin:10px 0 2px; }
   .tri-dot{
-    width:7px; height:7px; border-radius:50%; padding:0; cursor:pointer;
+    width:7px; height:7px; border-radius:50%; cursor:pointer;
+    padding:8px; background-clip:content-box; background-origin:content-box;
     background:var(--hair-strong,var(--hair)); border:none; transition:background .2s, transform .2s;
   }
   .tri-dot.active{ background:var(--brass); transform:scale(1.25); }
@@ -1021,7 +1021,7 @@ html:not([data-theme="sterile"]) .todo-row{
   66%  { background-position:30% 100%; }
   100% { background-position:0% 20%; }
 }
-.creed-pillars, #the90-tagline{
+html:not([data-theme="sterile"]) .creed-pillars, html:not([data-theme="sterile"]) #the90-tagline{
   background:linear-gradient(115deg,
     color-mix(in srgb, var(--brass), #000 38%) 0%,
     var(--brass) 16%,
@@ -1108,7 +1108,7 @@ body.mr-detail-open{ overflow:hidden; }
 .mr-detail-text::placeholder{ color:var(--ghost); }
 ::view-transition-group(mr-fly){ animation-duration:.55s; animation-timing-function:cubic-bezier(.65,0,.35,1); }
 
-#dateline{
+html:not([data-theme="sterile"]) #dateline{
   background:linear-gradient(115deg,
     var(--ink) 0%, var(--ink) 20%,
     var(--brass-soft) 33%,

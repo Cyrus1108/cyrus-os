@@ -1,7 +1,14 @@
 /* TradingView markets widgets + economic calendar */
+let marketsRendered = false, marketsSig = '';
 function getSymbols(){return S.symbols || DEFAULT_SYMBOLS.slice();}
 function renderMarkets(){
+  // render once on first drawer open; only rebuild the script-tag widgets when the
+  // symbol set actually changes (addSymbol/removeSymbol mutate S.symbols then re-call
+  // us, so the signature differs and we fall through), not on every openDrawer.
+  const sig = getSymbols().join('|');
+  if(marketsRendered && sig === marketsSig){ renderMorePanel(); return; }
   const host = document.getElementById('tv-widgets-host');
+  if(!host) return;
   host.innerHTML = '';
   const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   const colorTheme = isDark ? 'dark' : 'light';
@@ -30,6 +37,8 @@ function renderMarkets(){
     wrap.appendChild(container);
     host.appendChild(wrap);
   });
+  marketsRendered = true;
+  marketsSig = sig;
   renderMorePanel();
 }
 function addSymbol(sym){
@@ -55,6 +64,7 @@ function toggleSymbol(sym){
 }
 function renderMorePanel(){
   const grid = document.getElementById('more-grid');
+  if(!grid) return;
   const current = getSymbols();
   grid.innerHTML = SYMBOL_POOL.map(s=>{
     const added = current.includes(s.symbol);
@@ -66,12 +76,15 @@ function renderMorePanel(){
 }
 function toggleMorePanel(){
   const p = document.getElementById('more-panel');
+  if(!p) return;
   p.classList.toggle('open');
-  document.getElementById('more-btn').textContent = p.classList.contains('open') ? '− Close' : '+ More';
+  const btn = document.getElementById('more-btn');
+  if(btn) btn.textContent = p.classList.contains('open') ? '− Close' : '+ More';
 }
 
 function renderCalendar(){
   const host = document.getElementById('calendar-host');
+  if(!host) return;
   const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   const container = document.createElement('div');
   container.className = 'tradingview-widget-container';

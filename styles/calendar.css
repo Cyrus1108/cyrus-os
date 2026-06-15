@@ -67,6 +67,9 @@ body.cal-locked{ overflow:hidden; }
 .cal-dot.ev{ background:var(--brass); }
 .cal-dot.td{ background:#4B89E5; }
 .cal-dot.ac{ background:#E5704B; }
+/* sterile: remap the hard-coded category hex to the brass palette (dots keep a solid fill) */
+html[data-theme="sterile"] .cal-dot.td,
+html[data-theme="sterile"] .cal-dot.ac{ background:var(--brass); }
 
 /* ── selected-day detail ── */
 .cal-day{ padding:6px 16px 32px; }
@@ -95,6 +98,9 @@ body.cal-locked{ overflow:hidden; }
 .cal-item-tag{ flex-shrink:0; font-size:10px; padding:2px 7px; border-radius:9px; }
 .cal-tag-td{ color:#4B89E5; background:color-mix(in srgb,#4B89E5 14%,transparent); }
 .cal-tag-ac{ color:var(--fin-neg,#E5704B); background:color-mix(in srgb,#E5704B 14%,transparent); }
+/* sterile: remap the hard-coded category hex to the brass palette (split fill vs text) */
+html[data-theme="sterile"] .cal-tag-td,
+html[data-theme="sterile"] .cal-tag-ac{ color:var(--brass); background:var(--brass-ghost); }
 .cal-item-text{ flex:1; min-width:0; color:var(--ink); font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .cal-item-time{ font-family:var(--mono); font-size:11px; color:var(--ghost); flex-shrink:0; }
 .cal-item-done{ color:var(--brass); flex-shrink:0; }
@@ -116,6 +122,19 @@ body.cal-locked{ overflow:hidden; }
 .cal-time-row{ align-items:center; }
 .cal-time-row input[type="time"]{ flex:1; }
 .cal-time-sep{ color:var(--ghost); }
+
+/* transient highlight on the item a 当日事项 jump lands on (lives in #ac-list / #td-list) */
+.cal-jump-flash{
+  animation:calJumpFlash 1.6s var(--ease-silk) both;
+  border-radius:var(--border-radius-md);
+}
+@keyframes calJumpFlash{
+  0%,55%{ background:var(--brass-ghost); box-shadow:0 0 0 2px var(--brass-glow); }
+  100%{ background:transparent; box-shadow:0 0 0 2px transparent; }
+}
+@media (prefers-reduced-motion:reduce){
+  .cal-jump-flash{ animation:none; box-shadow:0 0 0 2px var(--brass-glow); }
+}
 
 /* header button dot — lit when today has any item */
 #cal-btn{ position:relative; }

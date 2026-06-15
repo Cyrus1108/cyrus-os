@@ -15,11 +15,13 @@ function trBiasItem(){ return S.tr.list.find(i=>i.id==='t6') || S.tr.list.find(i
 let bT;
 function onBias(){
   if(S.tr.sealed) return;                                   // bias is read-only once sealed
-  S.tr.bias=document.getElementById('t-bias').value;
-  // typing a bias auto-checks the「记录今日交易偏向」item; clearing it un-checks
+  const wasEmpty = !((S.tr.bias||'').trim().length>0);      // emptiness BEFORE this input
+  S.tr.bias=document.getElementById('t-bias').value.trim();  // persist trimmed: whitespace-only ≠ content
+  // typing a bias auto-checks the「记录今日交易偏向」item; clearing it un-checks.
+  // Only flip on the empty<->non-empty TRANSITION so a deliberate manual uncheck while text is present is respected.
   const it=trBiasItem();
   let changed=false;
-  if(it){ const nd=S.tr.bias.trim().length>0; if(it.d!==nd){ it.d=nd; changed=true; } }
+  if(it){ const nowEmpty = !(S.tr.bias.length>0); if(nowEmpty!==wasEmpty){ it.d=!nowEmpty; changed=true; } }
   clearTimeout(bT);bT=setTimeout(saveTR,600);
   if(changed){ rTR(); rMetrics(); }
 }

@@ -295,15 +295,9 @@ html[data-theme="sterile"] .fin-bud-cats{ border-radius:0; }
 .applock-card{ width:100%; max-width:320px; text-align:center; padding:24px; }
 .applock-glyph{ font-size:30px; color:var(--brass); margin-bottom:10px; }
 .applock-title{ font-family:var(--serif); font-size:24px; color:var(--ink); letter-spacing:.04em; }
-.applock-sub{ font-size:13px; color:var(--mute); margin:6px 0 24px; }
 .applock-dots{ display:flex; gap:13px; justify-content:center; margin-bottom:28px; }
 .applock-dot{ width:13px; height:13px; border-radius:50%; border:1.5px solid var(--brass); transition:background .15s; }
 .applock-dot.on{ background:var(--brass); }
-.applock-biomain{ display:block; margin:0 auto 20px; background:var(--brass); color:var(--color-background-primary);
-  border:none; border-radius:26px; padding:13px 26px; font-size:15px; font-weight:600; cursor:pointer; letter-spacing:.02em; }
-html[data-theme="sterile"] .applock-biomain{ border-radius:0; }
-.applock-biomain:active{ opacity:.85; }
-.applock-pinhint{ font-size:11px; color:var(--ghost); margin-top:14px; }
 .applock-pad{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; max-width:264px; margin:0 auto; }
 .applock-key.blank{ border:none; background:none; cursor:default; }
 .applock-key{ aspect-ratio:1; border-radius:50%; border:.5px solid var(--hair-strong); background:var(--color-background-secondary);
@@ -372,7 +366,7 @@ html[data-theme="sterile"] .fin-view select{ border-radius:0; }
 
 /* ── modal ── */
 .fin-modal{
-  position:absolute; inset:0; z-index:1230;
+  position:fixed; inset:0; z-index:1230;
   background:rgba(0,0,0,0.45); display:none;
   align-items:flex-end; justify-content:center;
 }

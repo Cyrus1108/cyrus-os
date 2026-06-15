@@ -1,5 +1,5 @@
 /* App entry — clock, sessions, metrics, init, render orchestration */
-function escH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function escH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
 /* ════ Reminder lead-time: dropdown + custom "number × unit" ════
    Stored value is always minutes (int). Used by todos + academics forms. */
@@ -185,6 +185,7 @@ document.addEventListener('keydown', function(e){
 
   if(e.key==='ArrowDown'||e.key==='ArrowUp'){
     e.preventDefault(); e.stopPropagation();
+    if(!_nav.fields.length){ return; }
     _nav.idx = (_nav.idx + (e.key==='ArrowDown'?1:-1) + _nav.fields.length) % _nav.fields.length;
     _navRefresh(_nav.idx);
     return;
@@ -336,6 +337,7 @@ function rDate(){
   document.getElementById('clock-sub').textContent='Kaohsiung';
 }
 function tick(){
+  const _t = new Date().toLocaleDateString('sv-SE'); if(_t !== TODAY){ location.reload(); return; }
   const now=new Date(),p=n=>String(n).padStart(2,'0');
   document.getElementById('clock').textContent=`${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}`;
   const m=now.getHours()*60+now.getMinutes();
@@ -369,13 +371,13 @@ async function init(){
     if(mr.date===TODAY){
       S.mr=mr;
     } else {
-      S.mr.list = mr.list.map(i=>({...i,d:false}));
+      S.mr.list = (mr.list||[]).map(i=>({...i,d:false}));
       S.mr.date = TODAY;
       saveMR();
     }
   }
   if(cleanMorning()) saveMR();
-  const ac=loadLS('ac',null);if(ac)S.ac=ac;
+  const ac=loadLS('ac',null);if(Array.isArray(ac))S.ac=ac;
   const jp=loadLS('jp',null);
   if(jp){
     S.jp=jp;
@@ -393,11 +395,10 @@ async function init(){
     if(tr.date===TODAY) S.tr=tr;
     else { S.tr=tr; S.tr.date=TODAY; S.tr.bias=''; S.tr.list=(tr.list||[]).map(i=>({...i,d:false})); S.tr.sealed=false; S.tr.sealedAt=null; S.tr.broke=false; saveTR(); }
   }
-  const tds=loadLS('todos',null);if(tds)S.todos=tds;
+  const tds=loadLS('todos',null);if(Array.isArray(tds))S.todos=tds;
   const cats=loadLS('cats',null);if(cats&&cats.length)S.cats=cats;
   const syms=loadLS('symbols',null);if(syms&&Array.isArray(syms)&&syms.length>0)S.symbols=syms;
   const subj=loadLS('subjects',null);if(subj&&Array.isArray(subj))S.subjects=subj;
-  const noti=loadLS('notifiedIds',null);if(noti)S.notifiedIds=noti;
   const finA=loadLS('fin_accounts',null);if(finA&&Array.isArray(finA))S.fin.accounts=finA;
   const finC=loadLS('fin_categories',null);if(finC&&Array.isArray(finC))S.fin.categories=finC;
   const finT=loadLS('fin_transactions',null);if(finT&&Array.isArray(finT))S.fin.transactions=finT;
@@ -450,8 +451,6 @@ async function init(){
   setInterval(tick,1000);
   attachRipples();
   checkNotifBanner();
-  checkReminders();
-  setInterval(checkReminders, 30000);
   // after the first-paint entrance animations settle, stop list rows from replaying
   // their fade-in on every re-render (a toggle re-render would otherwise flicker)
   setTimeout(()=>document.body.classList.add('booted'), 1500);

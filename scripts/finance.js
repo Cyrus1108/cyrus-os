@@ -21,6 +21,10 @@ function finToBase(amt, c){
   const base=S.fin.baseCurrency||'TWD';
   return amt * finRate(c) / (finRate(base)||1);
 }
+function finFromBase(amt, c){
+  const base=S.fin.baseCurrency||'TWD';
+  return amt * finRate(base) / (finRate(c)||1);
+}
 function finNum(amt){
   return Math.abs(amt).toLocaleString('en-US',{minimumFractionDigits:0, maximumFractionDigits:2});
 }
@@ -298,7 +302,7 @@ function finSwitchTab(tab){
   withViewTransition(()=>{ finUI.tab=tab; finUI.acctMgr=false; rFinance(); });
 }
 function finTogglePrivacy(){ finUI.privacy=!finUI.privacy; saveLSRaw('fin_privacy', finUI.privacy); finUpdateEye(); rFinance(); }
-function finUpdateEye(){ const e=document.getElementById('fin-eye'); if(e) e.textContent = finUI.privacy?'🙈':'👁'; }
+function finUpdateEye(){ const e=document.getElementById('fin-eye'); if(e){ e.textContent = finUI.privacy?'🙈':'👁'; e.setAttribute('aria-pressed', String(finUI.privacy)); e.setAttribute('aria-label', finUI.privacy?'显示金额':'隐藏金额'); } }
 
 /* ════════════ main render ════════════ */
 function rFinance(){
@@ -324,7 +328,7 @@ function finRenderWallet(){
 
   // Asset dashboard
   const altCur = FIN_CURRENCIES.filter(c=>c!==base)
-    .map(c=>`≈ ${finMoney(finRate(c)?nw.net/finRate(c):0, c)}`).join(' ');
+    .map(c=>`≈ ${finMoney(finRate(c)?finFromBase(nw.net, c):0, c)}`).join(' ');
   let h = `<div class="fin-dash">
     <div class="fin-dash-net">
       <div class="fin-dash-label">净资产 · NET WORTH <span class="fin-dash-cur">${base}</span></div>
@@ -445,7 +449,7 @@ function finSetLedgerView(v){
 }
 function finRenderLedger(){
   const month = finUI.month;
-  const txs = finMonthList(month).slice().sort((a,b)=> (a.date<b.date?1:a.date>b.date?-1:(a.created<b.created?1:-1)));
+  const txs = finMonthList(month).slice().sort((a,b)=> (a.date<b.date?1:a.date>b.date?-1:(a.created<b.created?1:a.created>b.created?-1:(a.id<b.id?1:-1))));
   const tot = finTotals(txs);
   const [yy,mm] = month.split('-');
 
@@ -584,7 +588,7 @@ function finRenderLedgerCalendar(txs){
   let dayPanel;
   if(finUI.calDay){
     const dayTxs = txs.filter(t=>t.date===finUI.calDay)
-      .sort((a,b)=> (a.created<b.created?1:-1));
+      .sort((a,b)=> (a.created<b.created?1:a.created>b.created?-1:(a.id<b.id?1:-1)));
     dayPanel = `<div class="fin-lcal-day-head">${finDateLabel(finUI.calDay)}</div>` +
       (dayTxs.length ? dayTxs.map(finTxCard).join('') : '<div class="fin-empty sm">这天没有流水</div>');
   } else {
@@ -704,15 +708,28 @@ function finDeleteBudget(id){
 /* ════════════ SAVINGS GOALS (Phase 3-A) ════════════ */
 function finGoalSaved(g){
   if(g.mode==='account' && g.accountId){
-    const a = finAcct(g.accountId); if(!a) return 0;
-    return finToBase(finBalance(g.accountId), a.currency) / (finRate(g.currency)||1);  // account balance in the goal's currency
+    const a = finAcct(g.accountId); if(!a) return null;   // sentinel: linked account was deleted
+    return finFromBase(finToBase(finBalance(g.accountId), a.currency), g.currency);  // account balance in the goal's currency
   }
   return g.savedAmount||0;
 }
 function finGoalsBlockHtml(){
   let rows = '';
   for(const g of S.fin.goals){
-    const saved = finGoalSaved(g), pct = g.target>0 ? saved/g.target : 0, done = pct>=1;
+    const saved = finGoalSaved(g);   // null sentinel = linked account was deleted
+    if(saved===null){
+      rows += `<div class="fin-goal">
+      <div class="fin-goal-top">
+        <span class="fin-goal-name">${escH(g.name)}${g.deadline?` <span class="fin-goal-dl">${g.deadline}</span>`:''}</span>
+        <span class="fin-goal-nums">— / ${finMoney(g.target,g.currency)}</span>
+      </div>
+      <div class="fin-goal-meta"><span class="fin-neg">账户已删除</span>
+        <span class="fin-goal-acts"><button onclick="finOpenGoalForm('${g.id}')">编辑</button></span>
+      </div>
+    </div>`;
+      continue;
+    }
+    const pct = g.target>0 ? saved/g.target : 0, done = pct>=1;
     rows += `<div class="fin-goal">
       <div class="fin-goal-top">
         <span class="fin-goal-name">${escH(g.name)}${g.deadline?` <span class="fin-goal-dl">${g.deadline}</span>`:''}</span>
@@ -855,6 +872,7 @@ function finOpenRecurringForm(id){
     <div class="fin-field"><label>金额 · <span class="fin-cur-suffix" id="fin-rec-curlabel"></span></label><input id="fin-rec-amount" type="number" step="0.01" inputmode="decimal" placeholder="0.00" value="${r?r.amount:''}"></div>
     <div class="fin-field" id="fin-rec-acct-wrap"><label id="fin-rec-acct-label">账户</label><select id="fin-rec-account" onchange="finRecAcctChanged()">${acctOpts(r?r.accountId:(accts[0]&&accts[0].id))}</select></div>
     <div class="fin-field" id="fin-rec-toacct-wrap" style="display:none;"><label>转入账户</label><select id="fin-rec-toaccount" onchange="finRecAcctChanged()">${acctOpts(r?r.toAccountId:(accts[1]?accts[1].id:accts[0].id))}</select></div>
+    <div class="fin-field" id="fin-rec-toamt-wrap" style="display:none;"><label>转入金额 · <span id="fin-rec-tocurlabel"></span> <span class="fin-hint-inline">（跨币种到账金额 · 留空按实时汇率）</span></label><input id="fin-rec-toamount" type="number" step="0.01" inputmode="decimal" placeholder="对方账户实际到账" value="${r&&r.toAmount!=null?r.toAmount:''}"></div>
     <div class="fin-field" id="fin-rec-cat-wrap"><label>分类</label><select id="fin-rec-category">${finRecCatOptions(type==='income'?'income':'expense', r&&r.categoryId)}</select></div>
     <div class="fin-field"><label>频率</label>
       <div class="fin-seg" id="fin-rec-freqseg">${[['daily','每日'],['weekly','每周'],['monthly','每月'],['yearly','每年']].map(([k,l])=>`<button type="button" class="fin-seg-btn ${k===freq?'active':''}" data-f="${k}" onclick="finRecSetFreq('${k}')">${l}</button>`).join('')}</div>
@@ -894,6 +912,15 @@ function finRecAcctChanged(){
   const from = finAcct(document.getElementById('fin-rec-account').value);
   const lbl = document.getElementById('fin-rec-curlabel');
   if(lbl && from) lbl.textContent = from.currency;
+  // Transfer "to amount" only shown for cross-currency moves (mirror finTxAcctChanged)
+  const wrap = document.getElementById('fin-rec-toamt-wrap');
+  if(!wrap) return;
+  const type = document.getElementById('fin-rec-type').value;
+  if(type!=='transfer'){ wrap.style.display='none'; return; }
+  const to = finAcct(document.getElementById('fin-rec-toaccount').value);
+  const toLbl = document.getElementById('fin-rec-tocurlabel');
+  if(toLbl && to) toLbl.textContent = to.currency;
+  wrap.style.display = (from&&to&&from.currency!==to.currency)?'':'none';
 }
 function finSubmitRecurring(){
   const id = document.getElementById('fin-rec-id').value;
@@ -917,7 +944,14 @@ function finSubmitRecurring(){
     rec.toAccountId = document.getElementById('fin-rec-toaccount').value;
     if(rec.accountId===rec.toAccountId){ alert('转出和转入账户不能相同'); return; }
     const from=acct, to=finAcct(rec.toAccountId);
-    if(from&&to&&from.currency!==to.currency) rec.toAmount = amount;   // simple 1:1 default; edit the generated tx for exact fx
+    if(from&&to&&from.currency!==to.currency){
+      // cross-currency: store the user-entered destination amount; if blank, default
+      // via live FX (NOT 1:1). The balance read at finBalances still uses toAmount.
+      const taEl = document.getElementById('fin-rec-toamount');
+      const ta = taEl ? parseFloat(taEl.value) : NaN;
+      rec.toAmount = (isFinite(ta)&&ta>0) ? Math.round(ta*100)/100
+        : Math.round(finToBase(amount, from.currency)/finRate(to.currency)*100)/100;
+    }
   } else {
     rec.categoryId = document.getElementById('fin-rec-category').value || null;
   }
@@ -1024,7 +1058,7 @@ function finExportCSV(scope){
   if(scope==='year'){ tag=TODAY.slice(0,4); txs=S.fin.transactions.filter(t=>String(t.date).slice(0,4)===tag); }
   else { tag=TODAY.slice(0,7); txs=S.fin.transactions.filter(t=>String(t.date).slice(0,7)===tag); }
   txs = txs.slice().sort((a,b)=> a.date<b.date?-1:a.date>b.date?1:0);
-  const esc = s => { s=String(s==null?'':s); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; };
+  const esc = s => { s=String(s==null?'':s); if(/^[=+\-@\t\r]/.test(s)) s = "'"+s; return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; };
   const header = ['日期','类型','分类','账户','转入账户','金额','币种',`金额(${base})`,'备注','标签'];
   const lines = txs.map(t=>{
     const typeL = t.type==='income'?'收入':t.type==='expense'?'支出':'转账';
@@ -1064,7 +1098,7 @@ function finSearchResults(){
     const c = finCat(t.categoryId);
     return (t.note&&t.note.toLowerCase().includes(q))
       || (c&&c.name.toLowerCase().includes(q))
-      || String(t.amount).includes(q)
+      || (!finUI.privacy && String(t.amount).includes(q))
       || (t.tags||[]).some(tg=>tg.toLowerCase().includes(q));
   }).slice(0,40);
   if(!hits.length) return '<div class="fin-empty sm">无匹配</div>';

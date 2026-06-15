@@ -50,6 +50,9 @@ body.ai-locked{ overflow:hidden; }
 .ai-kind-built{ color:var(--brass); background:color-mix(in srgb, var(--brass) 14%, transparent); }
 .ai-kind-learned{ color:#4B89E5; background:color-mix(in srgb,#4B89E5 14%, transparent); }
 .ai-kind-shipped{ color:#3FAE6B; background:color-mix(in srgb,#3FAE6B 16%, transparent); }
+/* sterile remaps the hard-coded learned/shipped hex onto the brass palette (mirrors finance/calendar pattern) */
+html[data-theme="sterile"] .ai-kind-learned,
+html[data-theme="sterile"] .ai-kind-shipped{ color:var(--brass); background:var(--brass-ghost); }
 .ai-row-body{ flex:1; min-width:0; }
 .ai-row-title{ color:var(--ink); font-size:14px; }
 .ai-row-notes{ color:var(--mute); font-size:12px; margin-top:2px; white-space:pre-wrap; }

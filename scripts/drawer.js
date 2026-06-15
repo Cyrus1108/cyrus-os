@@ -1,17 +1,22 @@
 /* Right-side reference drawer (Markets + Inbox panes) */
 function openDrawer(pane){
-  document.getElementById('drawer').classList.add('open');
+  const d=document.getElementById('drawer');
+  d._opener=document.activeElement;            // a11y: remember focus to restore on close
+  d.classList.add('open');
   document.getElementById('drawer-backdrop').classList.add('open');
-  document.getElementById('drawer').setAttribute('aria-hidden','false');
-  document.getElementById('drawer').removeAttribute('inert');
+  d.setAttribute('aria-hidden','false');
+  d.removeAttribute('inert');
   if(pane) switchPane(pane);
   renderMarkets();
   if(!calendarRendered) renderCalendar();
+  d.querySelector('.drawer-close')?.focus();   // move focus into the drawer
 }
 function closeDrawer(){
-  document.getElementById('drawer').classList.remove('open');
+  const d=document.getElementById('drawer');
+  d.classList.remove('open');
   document.getElementById('drawer-backdrop').classList.remove('open');
-  const d=document.getElementById('drawer'); d.setAttribute('aria-hidden','true'); d.setAttribute('inert','');
+  d.setAttribute('aria-hidden','true'); d.setAttribute('inert','');
+  d._opener?.focus?.(); d._opener=null;        // a11y: restore focus to the opener
 }
 function switchPane(pane){
   document.querySelectorAll('.drawer-tab-btn').forEach(btn=>btn.classList.toggle('active', btn.dataset.pane===pane));

@@ -48,6 +48,14 @@ function closeCalendar(fromHash){
 
 function initCalendar(){
   window.addEventListener('hashchange', calOnHash);
+  document.addEventListener('keydown', e=>{ if(!calUI.open) return; if(e.key==='Escape'){ if(calModalOpen()) calCloseModal(); else closeCalendar(); e.preventDefault(); } });
+  // 当日事项 rows are role=button/tabindex=0; delegate click + Enter/Space to jump (keeps id off inline onclick)
+  const dEl = document.getElementById('cal-day');
+  if(dEl){
+    const fire = (t)=>{ const row = t && t.closest && t.closest('.cal-item-row[data-jump-id]'); if(row) calJumpTo(row.dataset.jumpKind, row.dataset.jumpId); };
+    dEl.addEventListener('click', e=> fire(e.target));
+    dEl.addEventListener('keydown', e=>{ if(e.key==='Enter' || e.key===' '){ const row = e.target.closest && e.target.closest('.cal-item-row[data-jump-id]'); if(row){ e.preventDefault(); calJumpTo(row.dataset.jumpKind, row.dataset.jumpId); } } });
+  }
   // month swipe: left = next month, right = prev (same threshold as the HUD-tab pager)
   const mEl = document.getElementById('cal-month');
   if(mEl){
@@ -141,7 +149,7 @@ function calDayHtml(ds){
   it.acs.forEach(a => rows.push({ kind:'ac', id:a.id, text:a.name||'', sub:a.sub||'', done:a.done, time:a.time }));
   it.todos.forEach(t => rows.push({ kind:'td', id:t.id, text:t.text||'', sub:'', done:t.done, time:t.time }));
   if(rows.length){
-    itemHtml += rows.map(r=>`<div class="cal-item-row ${r.done?'done':''}" onclick="calJumpTo('${r.kind}','${r.id}')">
+    itemHtml += rows.map(r=>`<div class="cal-item-row ${r.done?'done':''}" role="button" tabindex="0" data-jump-kind="${r.kind}" data-jump-id="${escH(r.id)}">
         <span class="cal-item-tag cal-tag-${r.kind}">${r.kind==='ac'?'课业':'杂务'}</span>
         <span class="cal-item-text">${escH(r.text)}${r.sub?` · ${escH(r.sub)}`:''}</span>
         ${r.time?`<span class="cal-item-time">${escH(r.time.slice(0,5))}</span>`:''}
@@ -194,8 +202,9 @@ function calSaveEvent(){
   const titleEl = document.getElementById('cal-f-title'); if(!titleEl) return;
   const title = titleEl.value.trim(); if(!title) return;
   const date  = (document.getElementById('cal-f-date').value) || calUI.sel;
-  const start = document.getElementById('cal-f-start').value || '';
-  const end   = document.getElementById('cal-f-end').value || '';
+  let   start = document.getElementById('cal-f-start').value || '';
+  let   end   = document.getElementById('cal-f-end').value || '';
+  if(start && end && end < start){ const t = start; start = end; end = t; }  // swap reversed range (HH:MM lexical = chronological)
   const loc   = document.getElementById('cal-f-loc').value.trim();
   const notes = document.getElementById('cal-f-notes').value.trim();
   if(calUI.editId==='new'){
@@ -221,10 +230,25 @@ function calDelEvent(id){
 function calJumpTo(kind, id){
   closeCalendar();
   setTimeout(()=>{
-    const el = document.querySelector(kind==='ac' ? '#ac-list' : '#td-list');
-    const panel = el ? el.closest('.panel') : null;
-    const target = panel || el;
-    if(target && target.scrollIntoView) target.scrollIntoView({ behavior:'smooth', block:'center' });
+    const sm = (window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches) ? 'auto' : 'smooth';
+    const list = document.querySelector(kind==='ac' ? '#ac-list' : '#td-list');
+    // academics lives in the tri-grid 课业 column — drive the horizontal scroll there first
+    if(kind==='ac'){
+      const panel = list ? list.closest('.panel') : null;
+      const grid = panel ? panel.closest('.tri-grid') : null;
+      if(grid && panel){
+        const r = panel.getBoundingClientRect(), g = grid.getBoundingClientRect();
+        grid.scrollTo({ left: grid.scrollLeft + r.left - g.left, behavior: sm });
+      }
+    }
+    // scroll to the actual item node (rows carry data-id), with a transient highlight
+    const item = list ? list.querySelector(`[data-id="${id}"]`) : null;
+    const target = item || (list ? list.closest('.panel') : null) || list;
+    if(target && target.scrollIntoView) target.scrollIntoView({ behavior: sm, block:'center' });
+    if(item){
+      item.classList.add('cal-jump-flash');
+      setTimeout(()=>item.classList.remove('cal-jump-flash'), 1600);
+    }
   }, 520);   // after the furl-close finishes
 }
 

@@ -39,6 +39,8 @@ function openFitness(fromHash){
     S.fit.exercises = FIT_PRESET.map((e,i)=>({ id:crypto.randomUUID(), name:e.name, kind:e.kind, isPreset:true, sort:i, archived:false }));
     saveFitExercises();
   }
+  fitEnsureLog(TODAY);   // reconcile today's log against the plan ONCE on open (rFitToday stays read-only)
+  if(!fitTimer.down.total) fitTimer.down.total = S.fit.plan.restDefault||90;   // seed countdown from configured rest default
   fitStartTicker();
   rFitness();
 }
@@ -157,7 +159,7 @@ function fitAfterChange(undo){
   else fitSfx(undo ? 'untick' : 'tick');
   rFitness();
   // RPG v2: completing today's training marks the The 90 「健身」(IV) pillar met → feeds 力量/敏捷 + EXP
-  if(r.all && typeof the90AutoMet==='function') the90AutoMet('IV');
+  if(r.changed && r.all && typeof the90AutoMet==='function') the90AutoMet('IV');
   if(typeof rpgAfterChange==='function') rpgAfterChange();
 }
 
@@ -166,7 +168,7 @@ function fitAfterChange(undo){
 function fitComputeStreak(){
   const log = S.fit.log||{}, week = (S.fit.plan&&S.fit.plan.week)||{};
   const planned = ds => { const a = week[fitWeekdayKey(ds)]; return !!(a && a.length); };
-  const cur = new Date(TODAY+'T00:00:00');
+  const cur = new Date(TODAY+'T00:00:00+08:00');
   let s = 0;
   for(let i=0;i<400;i++){
     const ds = cur.toLocaleDateString('sv-SE');
@@ -191,7 +193,7 @@ function fitBodyLogged(){ return Object.keys(S.fit.body||{}).length; }
 function fitPlanWeekComplete(){
   const week=(S.fit.plan&&S.fit.plan.week)||{}, log=S.fit.log||{};
   if(!FIT_WEEK_KEYS.some(k=>(week[k]||[]).length)) return false;
-  const base=new Date(TODAY+'T00:00:00'); let planned=0, done=0;
+  const base=new Date(TODAY+'T00:00:00+08:00'); let planned=0, done=0;
   for(let i=0;i<7;i++){ const c=new Date(base); c.setDate(base.getDate()-i); const ds=c.toLocaleDateString('sv-SE');
     if((week[fitWeekdayKey(ds)]||[]).length){ planned++; if(log[ds]&&log[ds].done) done++; } }
   return planned>0 && planned===done;
@@ -214,7 +216,9 @@ function rFitToday(body){
   const plan = (S.fit.plan.week[k])||[];
   let html = `<div class="fit-day-head"><span class="fit-day-wk">${FIT_WK_LABEL[k]}</span>`;
   html += plan.length ? `<span class="fit-day-label">训练日 · ${plan.length} 个动作</span>` : `<span class="fit-day-label">休息日</span>`;
-  const day = fitEnsureLog(TODAY);
+  // read-only: openFitness + the gesture mutators already reconcile via fitEnsureLog;
+  // if TODAY's log is absent just render rest/empty from the plan without writing.
+  const day = S.fit.log[TODAY] || { done:false, entries:[] };
   if(day.done) html += `<span class="fit-day-done">✓ 已完成</span>`;
   html += `</div>`;
 
@@ -322,6 +326,7 @@ function fitTimersHtml(){
         <button onclick="fitDownCustom()">自定义</button>
       </div>
     </div>
+    <div aria-live="assertive" class="sr-only" id="fit-rest-announce"></div>
   </div>`;
 }
 function fitStartTicker(){ if(_fitTick) return; _fitTick=setInterval(fitTickRender, 500); }
@@ -339,18 +344,21 @@ function fitUpToggle(){ const u=fitTimer.up;
   else { u.startTs=Date.now(); u.running=true; }
   fitTickRender();
 }
-function fitUpReset(){ fitTimer.up={running:false,startTs:0,acc:0}; fitSaveDuration(); fitTickRender(); }
+function fitUpReset(){ fitTimer.up={running:false,startTs:0,acc:0};
+  const day=S.fit.log[TODAY]; if(day){ day.durationSec=0; saveFitLog(TODAY); }   // explicit zero (monotonic-max stays on the pause path only)
+  fitTickRender(); }
 function fitSaveDuration(){ const day=S.fit.log[TODAY]; if(!day) return; const sec=Math.round(fitUpElapsed());
   if(sec>(day.durationSec||0)){ day.durationSec=sec; saveFitLog(TODAY); } }
 function fitDownToggle(){ const d=fitTimer.down;
   if(d.running){ d.remain=fitDownRemain(); d.running=false; }
-  else { if(d.remain<=0) d.remain=d.total||60; d.endTs=Date.now()+d.remain*1000; d.running=true; }
+  else { if(d.remain<=0) d.remain=d.total||S.fit.plan.restDefault||60; d.endTs=Date.now()+d.remain*1000; d.running=true; }
   fitTickRender();
 }
-function fitDownReset(){ const d=fitTimer.down; d.remain=d.total||0; d.running=false; fitTickRender(); }
+function fitDownReset(){ const d=fitTimer.down; d.remain=d.total||S.fit.plan.restDefault||0; d.running=false; fitTickRender(); }
 function fitTimerStartDown(sec){ const d=fitTimer.down; d.total=sec; d.remain=sec; d.endTs=Date.now()+sec*1000; d.running=true; fitTickRender(); }
 function fitDownRing(){
   const el=document.getElementById('fit-timer-down'); if(el){ el.classList.add('ring'); setTimeout(()=>el.classList.remove('ring'),1600); }
+  const an=document.getElementById('fit-rest-announce'); if(an){ an.textContent='组间休息结束'; setTimeout(()=>{ an.textContent=''; },2000); }
   fitSfx('quest');
   if(navigator.vibrate) try{ navigator.vibrate([180,90,180]); }catch(e){}
 }
@@ -397,7 +405,7 @@ function rFitPlan(body){
       <span class="fit-lib-kind">${ex.kind==='time'?'计时':'计次'}</span>
       <span class="fit-lib-tools">
         <button onclick="fitEditExercise('${ex.id}')" aria-label="编辑">✎</button>
-        <button onclick="fitToggleArchiveExercise('${ex.id}')" aria-label="归档">${ex.archived?'↺':'🗑'}</button>
+        <button onclick="fitToggleArchiveExercise('${ex.id}')" aria-label="${ex.archived?'恢复':'归档'}">${ex.archived?'↺':'🗑'}</button>
       </span></div>`;
   });
   html += `</div>`;
@@ -481,7 +489,7 @@ function rFitTrends(body){
   html += `<div class="fit-chart-card"><div class="fit-chart-title"><span>体征趋势</span><button class="fit-btn mini" onclick="fitBodyModal()">+ 记录</button></div>
     <div class="fit-dim-chips">${FIT_DIMS.map(d=>`<button class="fit-dim-chip ${fitUI.trendDim===d.k?'active':''}" onclick="fitSetDim('${d.k}')">${d.l}</button>`).join('')}</div>
     <div class="fit-chart-wrap"><canvas id="fit-body-chart"></canvas></div></div>`;
-  html += `<div class="fit-chart-card"><div class="fit-chart-title"><span>每周训练量</span></div>
+  html += `<div class="fit-chart-card"><div class="fit-chart-title"><span>每周累计次数</span></div>
     <div class="fit-chart-wrap"><canvas id="fit-vol-chart"></canvas></div></div>`;
   body.innerHTML = html;
   fitDestroyCharts();
@@ -512,7 +520,7 @@ function fitDrawBodyChart(){
 }
 function fitDrawVolChart(){
   const cv=document.getElementById('fit-vol-chart'); if(!cv||!window.Chart) return;
-  const now=new Date(TODAY+'T00:00:00'); const dow=(now.getDay()+6)%7;
+  const now=new Date(TODAY+'T00:00:00+08:00'); const dow=(now.getDay()+6)%7;
   const thisMon=new Date(now); thisMon.setDate(now.getDate()-dow);
   const labels=[], vals=[];
   for(let w=7; w>=0; w--){ const mon=new Date(thisMon); mon.setDate(thisMon.getDate()-w*7); let tot=0;

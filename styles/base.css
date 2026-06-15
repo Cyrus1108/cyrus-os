@@ -72,7 +72,7 @@ textarea:focus,input:focus,select:focus{
   outline:none;
   border-color:var(--brass);
   background:var(--color-background-primary);
-  box-shadow:0 0 0 3px rgba(168,132,85,0.08);
+  box-shadow:0 0 0 2px var(--brass-glow);
 }
 textarea::placeholder,input::placeholder{color:var(--ghost);font-style:italic;font-family:var(--serif);font-size:13px;}
 textarea.bias-input{font-family:var(--serif);font-style:italic;}

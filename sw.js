@@ -5,7 +5,7 @@
    - TradingView widgets and external CDNs: stale-while-revalidate.
    Bump CACHE_VERSION on every shell change to force clients to drop the old cache. */
 
-const CACHE_VERSION = 'cyrus-os-v7.16.0';
+const CACHE_VERSION = 'cyrus-os-v7.17.0';
 const APP_SHELL = [
   './',
   './index.html',
@@ -30,7 +30,6 @@ const APP_SHELL = [
   './scripts/supabase.js',
   './scripts/state.js',
   './scripts/notifications.js',
-  './scripts/creed.js',
   './scripts/drawer.js',
   './scripts/markets.js',
   './scripts/morning.js',
@@ -76,7 +75,10 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_VERSION).then((cache) =>
       // Force-revalidate every shell entry on install so a CSS/JS edit always
       // wins over the browser HTTP cache once a new SW version takes over.
-      cache.addAll(APP_SHELL.map((u) => new Request(u, { cache: 'no-cache' })))
+      // Per-asset add().catch() so one missing/404 path can't brick the whole install.
+      Promise.all(APP_SHELL.map((u) =>
+        cache.add(new Request(u, { cache: 'no-cache' })).catch((e) => console.warn('[sw] precache miss', u, e))
+      ))
     ).then(() => self.skipWaiting())
   );
 });
@@ -110,10 +112,18 @@ self.addEventListener('fetch', (event) => {
           // Only cache successful, same-type responses
           if (res && res.ok) cache.put(req, res.clone()).catch(() => {});
           return res;
-        }).catch(() => cached);
+        }).catch(() => cached || new Response('', { status: 504, statusText: 'offline' }));
         return cached || network;
       })
     );
+    return;
+  }
+
+  // Navigation requests (magic-link return, deep-links, offline reload):
+  // network-first so live HTML picks up new deploys, with the precached
+  // shell as the offline fallback so we never serve a blank page.
+  if (req.mode === 'navigation') {
+    event.respondWith(fetch(req).catch(() => caches.match('./index.html').then((r) => r || caches.match('./'))));
     return;
   }
 
@@ -121,10 +131,13 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(req).then((cached) => {
       if (cached) {
-        // Background refresh — don't block on it
-        fetch(req).then((res) => {
-          if (res && res.ok) caches.open(CACHE_VERSION).then((c) => c.put(req, res));
-        }).catch(() => {});
+        // Background refresh — don't block on it (skip navigations so we
+        // never store query-keyed nav variants in the version cache)
+        if (req.mode !== 'navigation') {
+          fetch(req).then((res) => {
+            if (res && res.ok) caches.open(CACHE_VERSION).then((c) => c.put(req, res));
+          }).catch(() => {});
+        }
         return cached;
       }
       return fetch(req);

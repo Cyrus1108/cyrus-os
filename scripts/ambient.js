@@ -8,6 +8,7 @@
 let _ambReady = false;
 
 function _ambOnMove(e){
+  if(typeof currentTheme === 'function' && currentTheme() !== 'sterile') return;
   const c = document.getElementById('amb-cursor');
   if(c) c.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
 }
@@ -24,10 +25,10 @@ function initAmbient(){
       document.body.appendChild(scan);
     }
     window.addEventListener('pointermove', _ambOnMove, { passive:true });
+    // one-time "system boot" sweep on the FIRST sterile activation this session
+    bootSweep();
     _ambReady = true;
   }
-  // one-time "system boot" sweep on entering sterile
-  bootSweep();
 }
 
 function bootSweep(){

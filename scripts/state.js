@@ -106,7 +106,7 @@ const FIT_PRESET = [
 const FIT_WEEK_KEYS = ['mon','tue','wed','thu','fri','sat','sun'];
 function fitWeekdayKey(dateStr){
   // getDay(): 0=Sun..6=Sat → map to Mon-first index
-  const d = new Date((dateStr||TODAY)+'T00:00:00');
+  const d = new Date((dateStr||TODAY)+'T00:00:00+08:00');
   return FIT_WEEK_KEYS[(d.getDay()+6)%7];
 }
 
@@ -218,6 +218,7 @@ const dirty = {
   principles: false, principlesDaily: false,
   fitExercises: false, fitPlan: false, fitLog: false, fitBody: false, fitDiet: false,
   calEvents: false, aiOutputs: false,
+  finAccounts: false, finCategories: false, finBudgets: false, finGoals: false, finRecurring: false,
 };
 
 function saveMR(){saveLSRaw('mr',S.mr); dirty.morning=true; if(typeof syncPushMorning==='function') syncPushMorning();}

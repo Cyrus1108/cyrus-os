@@ -24,6 +24,24 @@ function makeSortable(container, opts){
   container._sortableBound = true;
 
   let dragEl = null, placeholder = null, offsetY = 0;
+  let scrollTimer = 0, lastClientY = 0;   // edge autoscroll while dragging
+
+  const EDGE = 40, STEP = 10;
+  function stopAutoScroll(){ if(scrollTimer){ clearInterval(scrollTimer); scrollTimer = 0; } }
+  function edgeAutoScroll(){
+    let dir = 0;
+    if(lastClientY < EDGE) dir = -1;
+    else if(lastClientY > innerHeight - EDGE) dir = 1;
+    if(!dir){ stopAutoScroll(); return; }
+    if(scrollTimer) return;
+    scrollTimer = setInterval(() => {
+      window.scrollBy(0, dir * STEP);
+      dragEl && (dragEl.style.top = (lastClientY - offsetY) + 'px');
+      const after = afterElement(lastClientY);
+      if(after) container.insertBefore(placeholder, after);
+      else container.appendChild(placeholder);
+    }, 16);
+  }
 
   function afterElement(y){
     const els = [...container.querySelectorAll(itemSelector)]
@@ -69,14 +87,17 @@ function makeSortable(container, opts){
   function onMove(e){
     if(!dragEl) return;
     e.preventDefault();
+    lastClientY = e.clientY;
     dragEl.style.top = (e.clientY - offsetY) + 'px';
     const after = afterElement(e.clientY);
     if(after) container.insertBefore(placeholder, after);
     else container.appendChild(placeholder);
+    edgeAutoScroll();
   }
 
   function onUp(){
     if(!dragEl) return;
+    stopAutoScroll();
     container.insertBefore(dragEl, placeholder);
     placeholder.remove();
     dragEl.classList.remove('dragging');

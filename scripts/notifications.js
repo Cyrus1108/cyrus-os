@@ -80,13 +80,15 @@ async function reattachPushSubscription(){
 }
 
 function dismissNotifBanner(){
-  document.getElementById('notif-banner').classList.remove('show');
+  const b = document.getElementById('notif-banner');
+  if(b) b.classList.remove('show');
   saveLS('notif_banner_dismissed', true);
 }
 function checkNotifBanner(){
   if(!('Notification' in window)) return;
   if(Notification.permission === 'default' && !loadLS('notif_banner_dismissed', false)){
-    document.getElementById('notif-banner').classList.add('show');
+    const b = document.getElementById('notif-banner');
+    if(b) b.classList.add('show');
   }
 }
 

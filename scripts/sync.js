@@ -28,11 +28,11 @@ async function pullSettings(){
   if(data.creed_idx != null) saveLSRaw('creed_idx', data.creed_idx);
   if(data.creed_open != null) saveLSRaw('creed_open', data.creed_open);
   if(data.show_done != null) saveLSRaw('show_done', data.show_done);
-  if(data.symbols != null){
+  if(Array.isArray(data.symbols) && data.symbols.length){
     saveLSRaw('symbols', data.symbols);
     S.symbols = data.symbols;
   }
-  if(data.subjects != null){
+  if(Array.isArray(data.subjects) && data.subjects.length){
     saveLSRaw('subjects', data.subjects);
     S.subjects = data.subjects;
   }
@@ -84,7 +84,9 @@ async function pullJapanese(){
       last: data.last_date || null,
       log: data.log || {},
       note: data.note || '',
-      list: data.list || JSON.parse(JSON.stringify(DEF_JP)),
+      // Keep the LS-hydrated/in-memory list when the cloud column is empty (matches
+      // pullMorning/pullTrading) instead of clobbering it with the empty default.
+      list: (Array.isArray(data.list) && data.list.length) ? data.list : S.jp.list,
     };
     // daily reset on pull too — another device's yesterday must not arrive
     // as today's checks (log keeps history; flags belong to one day)
@@ -93,13 +95,16 @@ async function pullJapanese(){
       S.jp.list = S.jp.list.map(i=>({...i,d:false}));
     }
   }
+  // Retire legacy seeded presets on the realtime/pull path too, so it self-heals
+  // (mirrors pullMorning's cleanMorning call). cleanJapanese is idempotent.
+  if(cleanJapanese()) saveJP();
 }
 
 async function pullTrading(){
   const { data } = await sb.from('trading').select('*')
     .eq('user_id', currentUser.id).eq('date', TODAY).maybeSingle();
   if(data){
-    S.tr = { date: data.date, bias: data.bias || '', list: data.list,
+    S.tr = { date: data.date, bias: data.bias || '', list: Array.isArray(data.list) ? data.list : JSON.parse(JSON.stringify(DEF_TR)),
              sealed: !!data.sealed, sealedAt: data.sealed_at ? new Date(data.sealed_at).getTime() : null, broke: !!data.broke };
   } else {
     S.tr.list = S.tr.list.map(i=>({...i, d:false}));
@@ -137,14 +142,21 @@ async function pullThe90Meta(){
 
 async function pullThe90Daily(){
   if(typeof ensureThe90Defaults === 'function') ensureThe90Defaults();
-  // Only fetch the last 95 days (covers entire 90-day window + buffer)
+  // Only fetch the last 95 days: the 90-day program length + a 5-day buffer. This window
+  // must stay >= the program length so a refresh/realtime pull never trims an in-window day.
   const since = new Date(Date.now() - 95 * 86400000).toISOString().slice(0,10);
   const { data } = await sb.from('the90_daily').select('*')
     .eq('user_id', currentUser.id).gte('date', since);
+  // Preserve a locally-dirty (un-pushed) TODAY edit so a concurrent realtime/refresh pull
+  // can't drop it before it's been pushed. Restore it only if the cloud has no TODAY row.
+  const localToday = dirty.the90Daily ? S.the90.daily[TODAY] : null;
+  let cloudSuppliedToday = false;
   S.the90.daily = {};
   for(const row of (data || [])){
     S.the90.daily[row.date] = { scores: row.scores || {}, note: row.note || '' };
+    if(row.date === TODAY) cloudSuppliedToday = true;
   }
+  if(localToday && !cloudSuppliedToday) S.the90.daily[TODAY] = localToday;
 }
 
 async function pullTodos(){
@@ -359,11 +371,13 @@ async function pullFinBudgets(){
 }
 async function finSaveBudgets(){
   if(!currentUser) return;
+  dirty.finBudgets = true;
   await waitForPull();
-  await replaceTable('fin_budgets', S.fin.budgets, b => ({
+  const ok = await replaceTable('fin_budgets', S.fin.budgets, b => ({
     id:b.id, user_id:currentUser.id, name:b.name, amount_limit:b.limit||0,
     type:b.type, target_categories:b.targets||[], period:b.period||'monthly', sort:b.sort||0,
   }));
+  if(ok) dirty.finBudgets = false;
 }
 async function pullFinGoals(){
   const { data } = await sb.from('fin_goals').select('*').eq('user_id', currentUser.id).order('sort');
@@ -376,11 +390,13 @@ async function pullFinGoals(){
 }
 async function finSaveGoals(){
   if(!currentUser) return;
+  dirty.finGoals = true;
   await waitForPull();
-  await replaceTable('fin_goals', S.fin.goals, g => ({
+  const ok = await replaceTable('fin_goals', S.fin.goals, g => ({
     id:g.id, user_id:currentUser.id, name:g.name, target_amount:g.target||0, currency:g.currency,
     mode:g.mode, account_id:g.accountId||null, saved_amount:g.savedAmount||0, deadline:g.deadline||null, sort:g.sort||0,
   }));
+  if(ok) dirty.finGoals = false;
 }
 async function pullFinRecurring(){
   const { data } = await sb.from('fin_recurring').select('*').eq('user_id', currentUser.id).order('sort');
@@ -394,13 +410,27 @@ async function pullFinRecurring(){
 }
 async function finSaveRecurring(){
   if(!currentUser) return;
+  dirty.finRecurring = true;
+  // Refresh cron-owned scheduling state (next_date/last_run) before pushing so a stale
+  // local next_date can't regress over the value the nightly cron already advanced.
+  // Merge the server scheduling fields back onto the just-edited local rows (don't clobber
+  // the user's in-memory edit, which lives in S.fin.recurring before this push).
+  const localRecurring = S.fin.recurring;
+  await pullFinRecurring();
+  const sched = {};
+  for(const r of S.fin.recurring){ sched[r.id] = { nextDate:r.nextDate, lastRun:r.lastRun }; }
+  S.fin.recurring = localRecurring.map(r => sched[r.id]
+    ? { ...r, nextDate:sched[r.id].nextDate, lastRun:sched[r.id].lastRun }
+    : r);
+  saveLSRaw('fin_recurring', S.fin.recurring);
   await waitForPull();
-  await replaceTable('fin_recurring', S.fin.recurring, r => ({
+  const ok = await replaceTable('fin_recurring', S.fin.recurring, r => ({
     id:r.id, user_id:currentUser.id, name:r.name, type:r.type, amount:r.amount||0, currency:r.currency,
     account_id:r.accountId||null, to_account_id:r.toAccountId||null, to_amount:r.toAmount!=null?r.toAmount:null,
     category_id:r.categoryId||null, note:r.note||null, tags:(r.tags&&r.tags.length)?r.tags:null,
-    frequency:r.frequency, interval_n:r.intervalN||1, next_date:r.nextDate, active:r.active!==false, sort:r.sort||0,
+    frequency:r.frequency, interval_n:r.intervalN||1, next_date:r.nextDate, last_run:r.lastRun||null, active:r.active!==false, sort:r.sort||0,
   }));
+  if(ok) dirty.finRecurring = false;
 }
 
 async function pullFinSnapshots(){
@@ -444,6 +474,9 @@ async function pullAll(force){
       }
     } catch(e){
       console.error('[sync] pullAll', e);
+      // Clear the cached promise (initialPullDone stays false) so the next pullAll()
+      // retries instead of resolving against this broken pull forever.
+      pullAllPromise = null;
     }
   })();
   return pullAllPromise;
@@ -777,21 +810,25 @@ async function syncDismissHermes(id){
    Transactions: targeted single-row ops returning the server row (for its generated id). */
 async function finSaveAccounts(){
   if(!currentUser) return;
+  dirty.finAccounts = true;
   await waitForPull();
-  await replaceTable('fin_accounts', S.fin.accounts, a => ({
+  const ok = await replaceTable('fin_accounts', S.fin.accounts, a => ({
     id:a.id, user_id:currentUser.id, name:a.name, type:a.type, currency:a.currency,
     initial_balance:a.initialBalance||0, is_liability:!!a.isLiability,
     status:a.status, icon:a.icon||null, color:a.color||null,
     interest_rate:a.interestRate||0, sort:a.sort||0,
   }));
+  if(ok) dirty.finAccounts = false;
 }
 async function finSaveCategories(){
   if(!currentUser) return;
+  dirty.finCategories = true;
   await waitForPull();
-  await replaceTable('fin_categories', S.fin.categories, c => ({
+  const ok = await replaceTable('fin_categories', S.fin.categories, c => ({
     id:c.id, user_id:currentUser.id, name:c.name, kind:c.kind,
     icon:c.icon||null, color:c.color||null, archived:!!c.archived, sort:c.sort||0,
   }));
+  if(ok) dirty.finCategories = false;
 }
 async function finAddTx(tx){
   if(!currentUser) return null;
@@ -916,10 +953,6 @@ function unsubscribeRealtime(){
 async function rehydrateOnFocus(){
   if(document.visibilityState !== 'visible') return;
   if(!currentUser) return;
-  // The day rolled over while the tab sat open (TODAY is frozen at page load). Reload so
-  // the per-module daily reset re-runs against the new date — otherwise toggles/check-ins
-  // keep writing to yesterday's row and 'today' columns/streaks point at the wrong day.
-  if(new Date().toLocaleDateString('sv-SE') !== TODAY){ location.reload(); return; }
 
   const ch = realtimeChannel;
   const healthy = ch && (ch.state === 'joined' || ch.state === 'joining');
@@ -954,8 +987,20 @@ async function rehydrateOnFocus(){
     if(dirty.fitDiet) pushes.push(syncPushFitDiet());
     if(dirty.calEvents) pushes.push(syncPushCalEvents());
     if(dirty.aiOutputs) pushes.push(syncPushAiOutputs());
+    if(dirty.finAccounts) pushes.push(finSaveAccounts());
+    if(dirty.finCategories) pushes.push(finSaveCategories());
+    if(dirty.finBudgets) pushes.push(finSaveBudgets());
+    if(dirty.finGoals) pushes.push(finSaveGoals());
+    if(dirty.finRecurring) pushes.push(finSaveRecurring());
     try{ await Promise.all(pushes); }catch(e){ console.error('[sync] flush', e); }
   }
+
+  // The day rolled over while the tab sat open (TODAY is frozen at page load). Reload so
+  // the per-module daily reset re-runs against the new date — otherwise toggles/check-ins
+  // keep writing to yesterday's row and 'today' columns/streaks point at the wrong day.
+  // Runs AFTER the dirty-flush above so yesterday's date-keyed offline writes are pushed
+  // while TODAY is still correct, instead of being discarded by the reload.
+  if(new Date().toLocaleDateString('sv-SE') !== TODAY){ location.reload(); return; }
 
   // Then pull (clean tables are now up-to-date with remote; dirty tables are now pushed and authoritative)
   await pullAll(true);

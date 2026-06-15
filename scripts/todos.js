@@ -213,7 +213,11 @@ function rTodos(){
 }
 function onReorderTodos(ids){
   S.todos = reorderById(S.todos, ids);
-  S.todos.forEach((t,i)=> t.position = i);
+  const vis = ids.map(id=>S.todos.find(t=>String(t.id)===String(id))).filter(Boolean);
+  if(vis.length){
+    const base = Math.min(...vis.map(t=>t.position||0));
+    vis.forEach((t,i)=> t.position = base+i);
+  }
   saveTodos();
   rTodos();
 }
@@ -234,7 +238,7 @@ function toggleTd(id){
   if(t.done && t.repeat && t.repeat !== 'none' && t.date){
     const nextDate = computeNextRepeatDate(t.date, t.repeat, t.customDays);
     if(nextDate){
-      S.todos.push({...t,id:crypto.randomUUID(),date:nextDate,done:false,doneAt:null,created:TODAY});
+      S.todos.push({...t,id:crypto.randomUUID(),date:nextDate,done:false,doneAt:null,created:TODAY,position:S.todos.reduce((m,x)=>Math.max(m,x.position||0),0)+1});
     }
   }
   if(window.Sfx){ t.done ? Sfx.tick() : Sfx.untick(); }

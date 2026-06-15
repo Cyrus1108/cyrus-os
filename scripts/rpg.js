@@ -20,7 +20,7 @@ const RPG_ATTRS = [
 const RPG_ATTR_ORDER = ['STR','AGI','INT','WIS','VIT','CRE'];
 const RPG_ATTR_NAME = { STR:'力量', AGI:'敏捷', INT:'智力', WIS:'智慧', VIT:'体力', CRE:'创造' };
 // activity (the90 target id) → attribute weights. Sleep (I) is the foundation →
-// full weight to all five; the others feed only their directly-related attributes.
+// full weight to all six; the others feed only their directly-related attributes.
 const RPG_ACTIVITY_ATTR = {
   I:   { STR:1, AGI:1, INT:1, WIS:1, VIT:1, CRE:1 },   // 睡眠 — foundation, feeds all six
   II:  { INT:1, WIS:1 },                                // 冥想
@@ -258,7 +258,7 @@ function finNetWorthMYR(){
 /* ── achievements (tested against real data) ──
    id = persisted jsonb key (NEVER rename); cat = gallery category; tier drives
    EXP (RPG_TIER_EXP) + badge hue; hidden masks the card until unlocked.
-   47 total across 12 categories (see RPG_ACH_CATS for order + labels). */
+   55 total across 13 categories (see RPG_ACH_CATS for order + labels). */
 const RPG_ACHIEVEMENTS = [
   // 坚持 · STREAK
   { id:'streak3',  cat:'streak', tier:'bronze',   name:'三日不辍', desc:'The 90 连续达标 3 天', hidden:false, test:()=> (typeof computeThe90Streak==='function' && computeThe90Streak()>=3) },

@@ -338,7 +338,7 @@
   // mute toggle used by the speaker control in the System title bar
   window.sfxToggleMute = function(btn){
     const m = Sfx.toggle();
-    if(btn) btn.classList.toggle('sfx-muted', m);
+    if(btn){ btn.classList.toggle('sfx-muted', m); btn.setAttribute('aria-pressed', String(m)); }
     if(!m) Sfx.save();   // little confirmation chirp when turning sound back on
   };
 })();
