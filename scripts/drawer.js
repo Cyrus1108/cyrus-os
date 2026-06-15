@@ -28,42 +28,38 @@ function closeDrawer(){
   d.setAttribute('aria-hidden', 'true'); d.setAttribute('inert', '');
   d._opener?.focus?.(); d._opener = null;        // a11y: restore focus to the opener
 }
-/* Pick a channel: SAO select cue → the tapped slab EXPANDS IN PLACE into its HUD.
-   A ghost rectangle starts at the slab's on-screen rect and grows (clip-path) to
-   fullscreen; the real module HUD opens underneath as the morph completes, so it
-   reads as "the slab unfolded into the screen". Reduced-motion → plain open. */
+/* Pick a channel (SAO select cue), then choreograph the hand-off:
+   1. the other five slabs fade + slide away in sequence;
+   2. the picked slab glides smoothly to screen centre ("singled out");
+   3. the real module HUD then opens from there with its OWN unfurl (sysScrollOpen),
+      and closes later with its own furl — we no longer suppress those animations.
+   Reduced-motion → plain open. */
 const _navOpenMap = { fin:'openFinance', fit:'openFitness', ai:'openAi', cal:'openCalendar', sys:'openSystem', motiv:'openMotivation' };
 const _navIdMap   = { fin:'fin-btn', fit:'fit-btn', ai:'ai-btn', cal:'cal-btn', sys:'sys-btn', motiv:'motiv-btn' };
-const _navViewMap = { fin:'finance-view', fit:'fitness-view', ai:'ai-view', cal:'calendar-view', sys:'system-view', motiv:'motivation-view' };
 function navOpen(which){
   _navPlay(_saoSel);
   const fn = window[_navOpenMap[which]];
   if (typeof fn !== 'function') { closeDrawer(); return; }
-  const slab = document.getElementById(_navIdMap[which]);
+  const drawer = document.getElementById('drawer');
+  const list = drawer && drawer.querySelector('.navd-list');
+  const picked = document.getElementById(_navIdMap[which]);
   const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches;
-  if (reduce || !slab) { closeDrawer(); setTimeout(fn, 120); return; }
-  // FLIP: open the REAL HUD now, then fly its .sys-window from the tapped slab's
-  // rect to its natural position (suppressing the window's own unfurl) — one
-  // continuous motion, no empty ghost, no second "open" flash.
-  const sr = slab.getBoundingClientRect();
-  closeDrawer();
-  fn();
-  const view = document.getElementById(_navViewMap[which]);
-  const win = view && view.querySelector('.sys-window');
-  if (!win) return;                            // e.g. motivation has no .sys-window → normal open
-  view.classList.add('nav-morphing');          // kills the window's sysScrollOpen so our transform owns it
-  win.style.transition = 'none'; win.style.transform = 'none';
-  const wr = win.getBoundingClientRect();       // natural rect (forces a sync layout, no paint)
-  const sx = Math.max(0.06, sr.width  / (wr.width  || 1));
-  const sy = Math.max(0.06, sr.height / (wr.height || 1));
-  win.style.transformOrigin = 'top left';
-  win.style.willChange = 'transform';
-  win.style.transform = `translate(${sr.left - wr.left}px, ${sr.top - wr.top}px) scale(${sx}, ${sy})`;
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    win.style.transition = 'transform .44s cubic-bezier(.22,1,.36,1)';
-    win.style.transform = 'none';
-  }));
-  setTimeout(() => { win.style.transition = ''; win.style.transform = ''; win.style.transformOrigin = ''; win.style.willChange = ''; }, 520);
+  if (reduce || !list || !picked) { closeDrawer(); setTimeout(fn, 120); return; }
+  const pr = picked.getBoundingClientRect();
+  const dx = Math.round(window.innerWidth / 2 - (pr.left + pr.width / 2));
+  const dy = Math.round(window.innerHeight / 2 - (pr.top + pr.height / 2));
+  list.classList.add('is-picking');              // others fade/slide out (CSS), navSlideIn cleared
+  picked.classList.add('picked');                // gets a transform transition
+  requestAnimationFrame(() => { picked.style.transform = `translate(${dx}px, ${dy}px)`; });  // glide to centre
+  setTimeout(() => {
+    fn();                                         // HUD unfurls (its own animation) from centre
+    closeDrawer();                                // nav stage fades out behind the HUD
+    setTimeout(() => {                            // reset for next open, hidden behind the HUD
+      picked.style.transform = '';
+      picked.classList.remove('picked');
+      list.classList.remove('is-picking');
+    }, 420);
+  }, 340);
 }
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.getElementById('drawer')?.classList.contains('open')) { e.preventDefault(); closeDrawer(); } });
 

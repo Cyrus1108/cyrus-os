@@ -1209,15 +1209,27 @@ html:not([data-theme="sterile"]) .row{
   .drawer.open .navd-item:nth-child(5){ animation-delay:.33s; }
   .drawer.open .navd-item:nth-child(6){ animation-delay:.40s; }
 }
-/* 导览抽屉只剩六块浮在主页上 → 高度自适应,去掉下方那一整块空白 */
-.drawer.drawer-nav{ top:0; bottom:auto; height:auto; max-height:100vh; max-height:100dvh; }
-/* 点频道 → 真 HUD 的 .sys-window 从该按钮矩形 FLIP 飞到原位(drawer.js);
-   这里只压掉窗体自带的 sysScrollOpen,让我们的 transform 独占入场,不再有空幽灵层/二次打开 */
-.nav-morphing .sys-window{ animation:none !important; }
+/* 导览面板:荧幕居中浮层(不再贴右边)。整块 #drawer 变成全屏居中舞台,靠透明度/可见性
+   开合(transform 让位给频道动画);空白区点击穿透到背板 = 关闭。 */
+.drawer.drawer-nav{ inset:0; width:auto; height:auto; max-height:none; transform:none !important;
+  display:flex; align-items:center; justify-content:center; pointer-events:none;
+  opacity:0; visibility:hidden; transition:opacity .3s var(--ease-silk,ease), visibility .3s; }
+.drawer.drawer-nav.open{ opacity:1; visibility:visible; }
+/* 选中编排:被选的滑到荧幕正中(.picked),其余按序淡出滑走;随后真 HUD 从中央用它
+   自带的 sysScrollOpen 展开、自带的 furl 收起(不再压 HUD 动画,所以关闭恢复原样) */
+.navd-list.is-picking .navd-item{ animation:none; }
+.navd-list.is-picking .navd-item.picked{ position:relative; z-index:2; transition:transform .42s cubic-bezier(.22,1,.36,1); }
+.navd-list.is-picking .navd-item:not(.picked){ animation:navDismiss .3s var(--ease-silk,ease) both; }
+.navd-list.is-picking .navd-item:not(.picked):nth-child(2){ animation-delay:.03s; }
+.navd-list.is-picking .navd-item:not(.picked):nth-child(3){ animation-delay:.06s; }
+.navd-list.is-picking .navd-item:not(.picked):nth-child(4){ animation-delay:.09s; }
+.navd-list.is-picking .navd-item:not(.picked):nth-child(5){ animation-delay:.12s; }
+.navd-list.is-picking .navd-item:not(.picked):nth-child(6){ animation-delay:.15s; }
+@keyframes navDismiss{ to{ opacity:0; transform:translateX(48px); } }
 
 /* ── 导览 = 只剩六块浮在「毛玻璃模糊主页」上:抽屉本身透明无框,背板加强模糊 ── */
 .drawer.drawer-nav{ background:none !important; border:none !important; box-shadow:none !important; }
-.drawer-nav .navd-list{ padding:clamp(1.2rem,4vw,1.75rem) clamp(1rem,4vw,1.6rem); }
+.drawer-nav .navd-list{ width:min(440px,90vw); max-height:88vh; overflow-y:auto; pointer-events:auto; padding:clamp(1.2rem,4vw,1.75rem) clamp(1rem,4vw,1.6rem); }
 .drawer-backdrop{ background:rgba(8,9,6,0.42); backdrop-filter:blur(14px) saturate(1.05); -webkit-backdrop-filter:blur(14px) saturate(1.05); }
 /* 导览把手 = 单个左向箭头(无框、无字) */
 .nav-arrow{ background:none; border:none; cursor:pointer; padding:18px 12px 18px 16px; display:flex; align-items:center; justify-content:center; }
