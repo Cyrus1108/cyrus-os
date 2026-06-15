@@ -1182,3 +1182,30 @@ html:not([data-theme="sterile"]) .row{
 .hn-item.has-today .hn-ico, .hn-item.has-today .hn-en{ color:var(--brass-soft); }
 .hn-item.has-today::after{ content:""; position:absolute; left:0; top:12px; bottom:12px; width:2px; background:var(--brass-soft); }
 @media (prefers-reduced-motion:reduce){ .hn-item{ transition:none; } }
+
+/* ════════════ v7.18 右侧导览抽屉(原 Markets 抽屉)· SAO 式逐条滑入 ════════════
+   触发:点右缘的「导览」把手 或 从右向左滑(drawer.js)。六频道竖排,展开时由上到下
+   依次从右滑入(navSlideIn + nth-child 错峰),配 SAO 音效。频道复用 .hn-item 样式。 */
+.nav-launch{ display:flex !important; flex-direction:column; align-items:center; gap:8px; }
+.nav-launch-arrows{ display:flex; flex-direction:column; gap:3px; }
+.nav-launch-arrows i{ width:7px; height:7px; border-left:1.5px solid currentColor; border-bottom:1.5px solid currentColor; transform:rotate(45deg); opacity:.75; }
+.nav-launch-label{ writing-mode:vertical-rl; letter-spacing:.28em; font-size:11px; font-family:var(--mono); }
+.navd-head{ display:flex; align-items:center; gap:8px; padding-bottom:14px; margin-bottom:16px;
+  border-bottom:0.5px solid var(--hair); font-family:var(--mono); font-size:9px; letter-spacing:.18em; text-transform:uppercase; color:var(--ghost); }
+.navd-dot{ width:5px; height:5px; border-radius:50%; background:var(--brass); flex:0 0 auto; box-shadow:0 0 6px var(--brass-glow); }
+.navd-id{ flex:1; min-width:0; }
+.navd-close{ background:none; border:none; color:var(--ghost); cursor:pointer; font-family:var(--mono); font-size:9px; letter-spacing:.12em; padding:4px 2px; }
+.navd-close:hover{ color:var(--brass); }
+.navd-list{ display:flex; flex-direction:column; gap:10px; }
+.navd-item{ width:100%; padding:15px 16px; }
+.navd-item .hn-ico{ width:24px; height:24px; }
+@keyframes navSlideIn{ from{ opacity:0; transform:translateX(40px); } to{ opacity:1; transform:translateX(0); } }
+@media (prefers-reduced-motion:no-preference){
+  .drawer.open .navd-item{ animation:navSlideIn .36s var(--ease-silk,ease) both; }
+  .drawer.open .navd-item:nth-child(1){ animation-delay:.05s; }
+  .drawer.open .navd-item:nth-child(2){ animation-delay:.12s; }
+  .drawer.open .navd-item:nth-child(3){ animation-delay:.19s; }
+  .drawer.open .navd-item:nth-child(4){ animation-delay:.26s; }
+  .drawer.open .navd-item:nth-child(5){ animation-delay:.33s; }
+  .drawer.open .navd-item:nth-child(6){ animation-delay:.40s; }
+}

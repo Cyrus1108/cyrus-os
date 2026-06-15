@@ -78,65 +78,41 @@
 </div>
 
 <div class="drawer-tab-group">
-  <button id="drawer-tab" class="drawer-tab" onclick="openDrawer('reference')">
-    <span class="drawer-tab-icon">&#9670;</span>
-    Markets
+  <button id="drawer-tab" class="drawer-tab nav-launch" onclick="openDrawer()" aria-label="打开导览">
+    <span class="nav-launch-arrows" aria-hidden="true"><i></i><i></i></span>
+    <span class="nav-launch-label">导览</span>
   </button>
 </div>
 
 <div id="drawer-backdrop" class="drawer-backdrop" onclick="closeDrawer()"></div>
-<aside id="drawer" class="drawer" aria-hidden="true" inert>
+<!-- v7.18 右侧导览抽屉(原 Markets 抽屉改造)。六大频道 SAO 式逐条滑入;
+     Markets 已撤(日后并入交易面板专注页)。频道沿用旧按钮 id+onclick→rCalDot/rAiDot 零改。 -->
+<aside id="drawer" class="drawer drawer-nav" aria-hidden="true" inert>
   <div class="drawer-inner">
-    <div class="drawer-head">
-      <div>
-        <div class="eyebrow">Reference · Inbox</div>
-        <div class="serif-it" style="color:var(--brass);margin-top:6px;">參考情報</div>
-      </div>
-      <button class="drawer-close" onclick="closeDrawer()">Close · esc</button>
+    <div class="navd-head">
+      <span class="navd-dot" aria-hidden="true"></span>
+      <span class="navd-id">CYRUS//OS · NAVIGATION</span>
+      <button class="drawer-close navd-close" onclick="closeDrawer()" aria-label="关闭导览">✕ ESC</button>
     </div>
-    <div class="drawer-tabs">
-      <button class="drawer-tab-btn active" data-pane="reference" onclick="switchPane('reference')">
-        Reference
-        <span class="drawer-tab-btn-sub">Markets · Macro</span>
-      </button>
-      <button class="drawer-tab-btn" data-pane="inbox" onclick="switchPane('inbox')">
-        Inbox
-        <span class="drawer-tab-btn-sub">Mail · Signals</span>
-      </button>
-    </div>
-
-    <div class="drawer-pane active" id="pane-reference">
-      <div class="dsec">
-        <div class="dsec-head"><span class="eyebrow">I</span><span class="eyebrow-mute">Markets</span></div>
-        <div id="tv-widgets-host"></div>
-        <div class="markets-foot">
-          <span class="markets-meta-text">Live via TradingView</span>
-          <button class="ghost fx-btn" onclick="toggleMorePanel()" id="more-btn">+ More</button>
-        </div>
-        <div id="more-panel" class="more-panel">
-          <div class="more-label">Add symbols</div>
-          <div class="more-grid" id="more-grid"></div>
-        </div>
-      </div>
-      <div class="dsec">
-        <div class="dsec-head"><span class="eyebrow">II</span><span class="eyebrow-mute">Economic calendar</span></div>
-        <div id="calendar-host" class="calendar-wrap"></div>
-        <div class="calendar-note">Live macro events · filter inside the calendar</div>
-      </div>
-    </div>
-
-    <div class="drawer-pane" id="pane-inbox">
-      <div class="dsec">
-        <div class="dsec-head"><span class="eyebrow">I</span><span class="eyebrow-mute">School mail</span></div>
-        <div class="dsec-empty">
-          <div style="margin-bottom:8px;">— 需部署到 Web 域名才能接入 —</div>
-          <div style="font-size:11px;opacity:.7;">OAuth 要求注册域名作为授权端点</div>
-        </div>
-      </div>
-      <div class="dsec">
-        <div class="dsec-head"><span class="eyebrow">II</span><span class="eyebrow-mute">Personal signals</span></div>
-        <div class="dsec-empty">— 待定义 —</div>
-      </div>
+    <div class="navd-list">
+      <button id="fin-btn" class="hn-item navd-item" data-i="01" onclick="navOpen('fin')" aria-label="财务">
+        <svg class="hn-ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><line x1="5" y1="8" x2="11" y2="8"/></svg>
+        <span class="hn-tx"><span class="hn-en">FIN</span><span class="hn-zh">财务</span></span></button>
+      <button id="fit-btn" class="hn-item navd-item" data-i="02" onclick="navOpen('fit')" aria-label="健身">
+        <svg class="hn-ico" viewBox="0 0 16 16" aria-hidden="true"><line x1="3" y1="8" x2="13" y2="8"/><line x1="3.5" y1="5" x2="3.5" y2="11"/><line x1="12.5" y1="5" x2="12.5" y2="11"/></svg>
+        <span class="hn-tx"><span class="hn-en">FIT</span><span class="hn-zh">健身</span></span></button>
+      <button id="ai-btn" class="hn-item navd-item" data-i="03" onclick="navOpen('ai')" aria-label="AI Automation">
+        <svg class="hn-ico" viewBox="0 0 16 16" aria-hidden="true"><polygon points="8,2 13,5 13,11 8,14 3,11 3,5"/></svg>
+        <span class="hn-tx"><span class="hn-en">AUT</span><span class="hn-zh">AI</span></span></button>
+      <button id="cal-btn" class="hn-item navd-item" data-i="04" onclick="navOpen('cal')" aria-label="日历">
+        <svg class="hn-ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3.5" width="11" height="10" rx="1"/><line x1="2.5" y1="6.5" x2="13.5" y2="6.5"/></svg>
+        <span class="hn-tx"><span class="hn-en">CAL</span><span class="hn-zh">日历</span></span></button>
+      <button id="sys-btn" class="hn-item navd-item hn-sys" data-i="05" onclick="navOpen('sys')" aria-label="系统">
+        <svg class="hn-ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="2.5" width="11" height="11"/><rect x="5.5" y="5.5" width="5" height="5"/></svg>
+        <span class="hn-tx"><span class="hn-en">SYS</span><span class="hn-zh">系统</span></span></button>
+      <button id="motiv-btn" class="hn-item navd-item hn-sys" data-i="06" onclick="navOpen('motiv')" aria-label="动力">
+        <svg class="hn-ico" viewBox="0 0 16 16" aria-hidden="true"><polygon points="9,2 4,9 7.5,9 7,14 12,7 8.5,7"/></svg>
+        <span class="hn-tx"><span class="hn-en">PWR</span><span class="hn-zh">动力</span></span></button>
     </div>
   </div>
 </aside>
@@ -268,35 +244,7 @@
     <div id="the90-amp" class="the90-amp"></div>
   </div>
 
-  <!-- v7.18 嵌入主页模块导览(明日方舟风斜切「角色板」菜单,排在 The 90 hero 下方)。
-       频道沿用旧按钮 id+onclick → rCalDot/rAiDot 等 JS 零改;亮黄=今日有料(.has-today)/按下。 -->
-  <nav id="home-nav" class="home-nav" aria-label="模块导览">
-    <div class="home-nav-head">
-      <span class="hn-dot" aria-hidden="true"></span>
-      <span class="hn-id">CYRUS//OS · NAVIGATION</span>
-      <span class="hn-count">06 CH</span>
-    </div>
-    <div class="home-nav-grid">
-      <button id="fin-btn" class="hn-item" data-i="01" onclick="openFinance()" aria-label="财务">
-        <svg class="hn-ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><line x1="5" y1="8" x2="11" y2="8"/></svg>
-        <span class="hn-tx"><span class="hn-en">FIN</span><span class="hn-zh">财务</span></span></button>
-      <button id="fit-btn" class="hn-item" data-i="02" onclick="openFitness()" aria-label="健身">
-        <svg class="hn-ico" viewBox="0 0 16 16" aria-hidden="true"><line x1="3" y1="8" x2="13" y2="8"/><line x1="3.5" y1="5" x2="3.5" y2="11"/><line x1="12.5" y1="5" x2="12.5" y2="11"/></svg>
-        <span class="hn-tx"><span class="hn-en">FIT</span><span class="hn-zh">健身</span></span></button>
-      <button id="ai-btn" class="hn-item" data-i="03" onclick="openAi()" aria-label="AI Automation">
-        <svg class="hn-ico" viewBox="0 0 16 16" aria-hidden="true"><polygon points="8,2 13,5 13,11 8,14 3,11 3,5"/></svg>
-        <span class="hn-tx"><span class="hn-en">AUT</span><span class="hn-zh">AI</span></span></button>
-      <button id="cal-btn" class="hn-item" data-i="04" onclick="openCalendar()" aria-label="日历">
-        <svg class="hn-ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3.5" width="11" height="10" rx="1"/><line x1="2.5" y1="6.5" x2="13.5" y2="6.5"/></svg>
-        <span class="hn-tx"><span class="hn-en">CAL</span><span class="hn-zh">日历</span></span></button>
-      <button id="sys-btn" class="hn-item hn-sys" data-i="05" onclick="openSystem()" aria-label="系统">
-        <svg class="hn-ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="2.5" width="11" height="11"/><rect x="5.5" y="5.5" width="5" height="5"/></svg>
-        <span class="hn-tx"><span class="hn-en">SYS</span><span class="hn-zh">系统</span></span></button>
-      <button id="motiv-btn" class="hn-item hn-sys" data-i="06" onclick="openMotivation()" aria-label="动力">
-        <svg class="hn-ico" viewBox="0 0 16 16" aria-hidden="true"><polygon points="9,2 4,9 7.5,9 7,14 12,7 8.5,7"/></svg>
-        <span class="hn-tx"><span class="hn-en">PWR</span><span class="hn-zh">动力</span></span></button>
-    </div>
-  </nav>
+  <!-- v7.18: 嵌入主页菜单(选项③)已改为右侧 SAO 导览抽屉(#drawer .drawer-nav) -->
 
   <div class="panel mr-panel">
     <div class="panel-head">

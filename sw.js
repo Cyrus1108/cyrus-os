@@ -68,6 +68,8 @@ const APP_SHELL = [
   './scripts/sync.js',
   './scripts/auth.js',
   './scripts/app.js',
+  './sounds/sao-menu.mp3',
+  './sounds/sao-menu-select.mp3',
 ];
 
 self.addEventListener('install', (event) => {
