@@ -34,29 +34,36 @@ function closeDrawer(){
    reads as "the slab unfolded into the screen". Reduced-motion → plain open. */
 const _navOpenMap = { fin:'openFinance', fit:'openFitness', ai:'openAi', cal:'openCalendar', sys:'openSystem', motiv:'openMotivation' };
 const _navIdMap   = { fin:'fin-btn', fit:'fit-btn', ai:'ai-btn', cal:'cal-btn', sys:'sys-btn', motiv:'motiv-btn' };
+const _navViewMap = { fin:'finance-view', fit:'fitness-view', ai:'ai-view', cal:'calendar-view', sys:'system-view', motiv:'motivation-view' };
 function navOpen(which){
   _navPlay(_saoSel);
   const fn = window[_navOpenMap[which]];
+  if (typeof fn !== 'function') { closeDrawer(); return; }
   const slab = document.getElementById(_navIdMap[which]);
   const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches;
-  if (!reduce && slab && typeof fn === 'function') {
-    const r = slab.getBoundingClientRect();
-    const g = document.createElement('div');
-    g.className = 'nav-morph-ghost';
-    const start = `inset(${r.top}px ${Math.max(0, innerWidth - r.right)}px ${Math.max(0, innerHeight - r.bottom)}px ${r.left}px)`;
-    g.style.clipPath = start; g.style.webkitClipPath = start;
-    document.body.appendChild(g);
-    closeDrawer();
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      g.style.clipPath = 'inset(0px)'; g.style.webkitClipPath = 'inset(0px)';
-    }));
-    setTimeout(() => { try { fn(); } catch(e){} }, 300);   // real HUD opens as the morph fills the screen
-    setTimeout(() => g.classList.add('fade'), 380);
-    setTimeout(() => g.remove(), 660);
-    return;
-  }
+  if (reduce || !slab) { closeDrawer(); setTimeout(fn, 120); return; }
+  // FLIP: open the REAL HUD now, then fly its .sys-window from the tapped slab's
+  // rect to its natural position (suppressing the window's own unfurl) — one
+  // continuous motion, no empty ghost, no second "open" flash.
+  const sr = slab.getBoundingClientRect();
   closeDrawer();
-  if (typeof fn === 'function') setTimeout(fn, 120);
+  fn();
+  const view = document.getElementById(_navViewMap[which]);
+  const win = view && view.querySelector('.sys-window');
+  if (!win) return;                            // e.g. motivation has no .sys-window → normal open
+  view.classList.add('nav-morphing');          // kills the window's sysScrollOpen so our transform owns it
+  win.style.transition = 'none'; win.style.transform = 'none';
+  const wr = win.getBoundingClientRect();       // natural rect (forces a sync layout, no paint)
+  const sx = Math.max(0.06, sr.width  / (wr.width  || 1));
+  const sy = Math.max(0.06, sr.height / (wr.height || 1));
+  win.style.transformOrigin = 'top left';
+  win.style.willChange = 'transform';
+  win.style.transform = `translate(${sr.left - wr.left}px, ${sr.top - wr.top}px) scale(${sx}, ${sy})`;
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    win.style.transition = 'transform .44s cubic-bezier(.22,1,.36,1)';
+    win.style.transform = 'none';
+  }));
+  setTimeout(() => { win.style.transition = ''; win.style.transform = ''; win.style.transformOrigin = ''; win.style.willChange = ''; }, 520);
 }
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.getElementById('drawer')?.classList.contains('open')) { e.preventDefault(); closeDrawer(); } });
 
