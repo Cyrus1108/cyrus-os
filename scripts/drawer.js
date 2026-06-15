@@ -21,12 +21,22 @@ function openDrawer(){
   _navPlay(_saoOpen);                            // SAO menu-open cue
   d.querySelector('.navd-item')?.focus();        // move focus to the first channel
 }
-function closeDrawer(){
-  const d = document.getElementById('drawer'); if (!d) return;
+function _drawerHide(d){
   d.classList.remove('open');
-  document.getElementById('drawer-backdrop').classList.remove('open');
+  document.getElementById('drawer-backdrop')?.classList.remove('open');
   d.setAttribute('aria-hidden', 'true'); d.setAttribute('inert', '');
   d._opener?.focus?.(); d._opener = null;        // a11y: restore focus to the opener
+}
+function closeDrawer(){
+  const d = document.getElementById('drawer'); if (!d || !d.classList.contains('open')) return;
+  const list = d.querySelector('.navd-list');
+  if (list && list.classList.contains('is-exiting')) return;   // exit cascade already running
+  const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches;
+  // hand-off after a pick (the HUD takes over) or reduced-motion → hide instantly
+  if (reduce || !list || list.classList.contains('is-picking')) { _drawerHide(d); return; }
+  // plain close → exit cascade: PWR→SYS slide out in reverse order, then hide
+  list.classList.add('is-exiting');
+  setTimeout(() => { list.classList.remove('is-exiting'); _drawerHide(d); }, 430);
 }
 /* Pick a channel (SAO select cue), then choreograph the hand-off:
    1. the other five slabs fade + slide away in sequence;
@@ -59,7 +69,7 @@ function navOpen(which){
       picked.classList.remove('picked');
       list.classList.remove('is-picking');
     }, 420);
-  }, 340);
+  }, 510);
 }
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.getElementById('drawer')?.classList.contains('open')) { e.preventDefault(); closeDrawer(); } });
 
