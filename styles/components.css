@@ -1209,3 +1209,12 @@ html:not([data-theme="sterile"]) .row{
   .drawer.open .navd-item:nth-child(5){ animation-delay:.33s; }
   .drawer.open .navd-item:nth-child(6){ animation-delay:.40s; }
 }
+/* 导览抽屉只剩六块浮在主页上 → 高度自适应,去掉下方那一整块空白 */
+.drawer.drawer-nav{ top:0; bottom:auto; height:auto; max-height:100vh; max-height:100dvh; }
+/* 点频道 → 从该按钮「原地展开」成 HUD 的过渡幽灵层(clip-path 由按钮矩形长到满屏,
+   真 HUD 在其下方打开) */
+.nav-morph-ghost{ position:fixed; inset:0; z-index:1190; pointer-events:none;
+  background:var(--color-background-primary); border:0.5px solid var(--brass-ghost);
+  transition:clip-path .34s cubic-bezier(.4,0,.2,1); will-change:clip-path; }
+.nav-morph-ghost.fade{ transition:opacity .26s ease; opacity:0; }
+html[data-theme="terminal"] .nav-morph-ghost{ background:#15160e; border-color:var(--brass-ghost); }

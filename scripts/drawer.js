@@ -28,13 +28,35 @@ function closeDrawer(){
   d.setAttribute('aria-hidden', 'true'); d.setAttribute('inert', '');
   d._opener?.focus?.(); d._opener = null;        // a11y: restore focus to the opener
 }
-/* Pick a channel: SAO select cue → close the drawer → open the module HUD. */
+/* Pick a channel: SAO select cue → the tapped slab EXPANDS IN PLACE into its HUD.
+   A ghost rectangle starts at the slab's on-screen rect and grows (clip-path) to
+   fullscreen; the real module HUD opens underneath as the morph completes, so it
+   reads as "the slab unfolded into the screen". Reduced-motion → plain open. */
+const _navOpenMap = { fin:'openFinance', fit:'openFitness', ai:'openAi', cal:'openCalendar', sys:'openSystem', motiv:'openMotivation' };
+const _navIdMap   = { fin:'fin-btn', fit:'fit-btn', ai:'ai-btn', cal:'cal-btn', sys:'sys-btn', motiv:'motiv-btn' };
 function navOpen(which){
   _navPlay(_saoSel);
+  const fn = window[_navOpenMap[which]];
+  const slab = document.getElementById(_navIdMap[which]);
+  const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches;
+  if (!reduce && slab && typeof fn === 'function') {
+    const r = slab.getBoundingClientRect();
+    const g = document.createElement('div');
+    g.className = 'nav-morph-ghost';
+    const start = `inset(${r.top}px ${Math.max(0, innerWidth - r.right)}px ${Math.max(0, innerHeight - r.bottom)}px ${r.left}px)`;
+    g.style.clipPath = start; g.style.webkitClipPath = start;
+    document.body.appendChild(g);
+    closeDrawer();
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      g.style.clipPath = 'inset(0px)'; g.style.webkitClipPath = 'inset(0px)';
+    }));
+    setTimeout(() => { try { fn(); } catch(e){} }, 300);   // real HUD opens as the morph fills the screen
+    setTimeout(() => g.classList.add('fade'), 380);
+    setTimeout(() => g.remove(), 660);
+    return;
+  }
   closeDrawer();
-  const map = { fin:'openFinance', fit:'openFitness', ai:'openAi', cal:'openCalendar', sys:'openSystem', motiv:'openMotivation' };
-  const fn = window[map[which]];
-  if (typeof fn === 'function') setTimeout(fn, 150);   // let the drawer start closing first
+  if (typeof fn === 'function') setTimeout(fn, 120);
 }
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.getElementById('drawer')?.classList.contains('open')) { e.preventDefault(); closeDrawer(); } });
 
