@@ -1201,13 +1201,13 @@ html:not([data-theme="sterile"]) .row{
 .navd-item .hn-ico{ width:24px; height:24px; }
 @keyframes navSlideIn{ from{ opacity:0; transform:translateX(40px); } to{ opacity:1; transform:translateX(0); } }
 @media (prefers-reduced-motion:no-preference){
-  .drawer.open .navd-item{ animation:navSlideIn .36s var(--ease-silk,ease) both; }
-  .drawer.open .navd-item:nth-child(1){ animation-delay:.05s; }
-  .drawer.open .navd-item:nth-child(2){ animation-delay:.12s; }
-  .drawer.open .navd-item:nth-child(3){ animation-delay:.19s; }
-  .drawer.open .navd-item:nth-child(4){ animation-delay:.26s; }
-  .drawer.open .navd-item:nth-child(5){ animation-delay:.33s; }
-  .drawer.open .navd-item:nth-child(6){ animation-delay:.40s; }
+  .drawer.open .navd-item{ animation:navSlideIn .45s var(--ease-silk,ease) both; }
+  .drawer.open .navd-item:nth-child(1){ animation-delay:.06s; }
+  .drawer.open .navd-item:nth-child(2){ animation-delay:.15s; }
+  .drawer.open .navd-item:nth-child(3){ animation-delay:.24s; }
+  .drawer.open .navd-item:nth-child(4){ animation-delay:.33s; }
+  .drawer.open .navd-item:nth-child(5){ animation-delay:.41s; }
+  .drawer.open .navd-item:nth-child(6){ animation-delay:.50s; }
 }
 /* 导览面板:荧幕居中浮层(不再贴右边)。整块 #drawer 变成全屏居中舞台,靠透明度/可见性
    开合(transform 让位给频道动画);空白区点击穿透到背板 = 关闭。 */
@@ -1218,23 +1218,26 @@ html:not([data-theme="sterile"]) .row{
 /* 选中编排:被选的滑到荧幕正中(.picked),其余按序淡出滑走;随后真 HUD 从中央用它
    自带的 sysScrollOpen 展开、自带的 furl 收起(不再压 HUD 动画,所以关闭恢复原样) */
 .navd-list.is-picking .navd-item{ animation:none; }
-.navd-list.is-picking .navd-item.picked{ position:relative; z-index:2; transition:transform .63s cubic-bezier(.22,1,.36,1); }
-.navd-list.is-picking .navd-item:not(.picked){ animation:navDismiss .3s var(--ease-silk,ease) both; }
-.navd-list.is-picking .navd-item:not(.picked):nth-child(2){ animation-delay:.03s; }
-.navd-list.is-picking .navd-item:not(.picked):nth-child(3){ animation-delay:.06s; }
-.navd-list.is-picking .navd-item:not(.picked):nth-child(4){ animation-delay:.09s; }
-.navd-list.is-picking .navd-item:not(.picked):nth-child(5){ animation-delay:.12s; }
-.navd-list.is-picking .navd-item:not(.picked):nth-child(6){ animation-delay:.15s; }
+.navd-list.is-picking .navd-item.picked{ position:relative; z-index:2; transition:transform .79s cubic-bezier(.22,1,.36,1); }
+.navd-list.is-picking .navd-item:not(.picked){ animation:navDismiss .38s var(--ease-silk,ease) both; }
+.navd-list.is-picking .navd-item:not(.picked):nth-child(2){ animation-delay:.04s; }
+.navd-list.is-picking .navd-item:not(.picked):nth-child(3){ animation-delay:.08s; }
+.navd-list.is-picking .navd-item:not(.picked):nth-child(4){ animation-delay:.11s; }
+.navd-list.is-picking .navd-item:not(.picked):nth-child(5){ animation-delay:.15s; }
+.navd-list.is-picking .navd-item:not(.picked):nth-child(6){ animation-delay:.19s; }
 @keyframes navDismiss{ to{ opacity:0; transform:translateX(48px); } }
 /* 退出(关闭导览):六块按 PWR→SYS 反序向右滑出(红色顺序),与入场同一套动画镜像 */
-.navd-list.is-exiting .navd-item{ animation:navExit .34s var(--ease-silk,ease) both; }
+.navd-list.is-exiting .navd-item{ animation:navExit .42s var(--ease-silk,ease) both; }
 .navd-list.is-exiting .navd-item:nth-child(6){ animation-delay:0s; }    /* PWR 先走 */
-.navd-list.is-exiting .navd-item:nth-child(5){ animation-delay:.05s; }  /* CAL */
-.navd-list.is-exiting .navd-item:nth-child(4){ animation-delay:.10s; }  /* FIN */
-.navd-list.is-exiting .navd-item:nth-child(3){ animation-delay:.15s; }  /* AUT */
-.navd-list.is-exiting .navd-item:nth-child(2){ animation-delay:.20s; }  /* FIT */
-.navd-list.is-exiting .navd-item:nth-child(1){ animation-delay:.25s; }  /* SYS 最后走 */
+.navd-list.is-exiting .navd-item:nth-child(5){ animation-delay:.06s; }  /* CAL */
+.navd-list.is-exiting .navd-item:nth-child(4){ animation-delay:.13s; }  /* FIN */
+.navd-list.is-exiting .navd-item:nth-child(3){ animation-delay:.19s; }  /* AUT */
+.navd-list.is-exiting .navd-item:nth-child(2){ animation-delay:.25s; }  /* FIT */
+.navd-list.is-exiting .navd-item:nth-child(1){ animation-delay:.31s; }  /* SYS 最后走 */
 @keyframes navExit{ to{ opacity:0; transform:translateX(48px); } }
+/* 键盘选择(↑↓)时高亮当前频道 */
+.navd-item:focus-visible{ outline:none; border-color:var(--brass); background:color-mix(in srgb, var(--brass) 8%, transparent); }
+html[data-theme="terminal"] .navd-item:focus-visible{ border-color:var(--brass-soft); background:rgba(239,224,0,0.08); }
 
 /* ── 导览 = 只剩六块浮在「毛玻璃模糊主页」上:抽屉本身透明无框,背板加强模糊 ── */
 .drawer.drawer-nav{ background:none !important; border:none !important; box-shadow:none !important; }

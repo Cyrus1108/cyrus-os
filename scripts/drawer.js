@@ -34,9 +34,13 @@ function closeDrawer(){
   const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches;
   // hand-off after a pick (the HUD takes over) or reduced-motion → hide instantly
   if (reduce || !list || list.classList.contains('is-picking')) { _drawerHide(d); return; }
-  // plain close → exit cascade: PWR→SYS slide out in reverse order, then hide
+  // plain close → SAO cue (same as entering) + exit cascade: PWR→SYS slide out reversed.
+  _navPlay(_saoOpen);
   list.classList.add('is-exiting');
-  setTimeout(() => { list.classList.remove('is-exiting'); _drawerHide(d); }, 430);
+  setTimeout(() => {
+    _drawerHide(d);                                   // hide the stage WHILE is-exiting still holds the slabs
+    setTimeout(() => list.classList.remove('is-exiting'), 360);  // out of view (opacity 0) — only then reset, so no flash-back
+  }, 600);
 }
 /* Pick a channel (SAO select cue), then choreograph the hand-off:
    1. the other five slabs fade + slide away in sequence;
@@ -69,9 +73,33 @@ function navOpen(which){
       picked.classList.remove('picked');
       list.classList.remove('is-picking');
     }, 420);
-  }, 510);
+  }, 640);
 }
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.getElementById('drawer')?.classList.contains('open')) { e.preventDefault(); closeDrawer(); } });
+/* Desktop keyboard: ← opens the nav (same as the arrow handle); once open, ↑/↓ move
+   the selection through the six channels and Enter picks it (native button click →
+   navOpen); Esc closes. */
+document.addEventListener('keydown', (e) => {
+  const d = document.getElementById('drawer');
+  const open = d && d.classList.contains('open');
+  const ae = document.activeElement;
+  const typing = ae && (/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) || ae.isContentEditable);
+  if (typing) return;
+  if (open && e.key === 'Escape') { e.preventDefault(); closeDrawer(); return; }
+  if (!open && e.key === 'ArrowLeft') {
+    const hudOpen = document.querySelector('.fin-view.open, .fit-view.open, .ai-view.open, .cal-view.open, .sys-view.open, .motiv-view.open') || document.body.classList.contains('has-focus');
+    if (!hudOpen) { e.preventDefault(); openDrawer(); }
+    return;
+  }
+  if (!open) return;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    const items = [...d.querySelectorAll('.navd-item')]; if (!items.length) return;
+    const cur = items.indexOf(ae);
+    const next = cur < 0 ? (e.key === 'ArrowDown' ? 0 : items.length - 1)
+                         : (cur + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+    items[next].focus();
+  }
+});
 
 /* Swipe in from the right screen edge to open the nav (mobile). */
 (function(){
