@@ -6,12 +6,17 @@
 
 let _lifetreeLoading = false;
 
+/* Three themes now: cappa (brass/cream default) → sterile (light Endfield futurism)
+   → terminal (dark Arknights tactical). The toggle cycles through them. */
+const THEMES = ['cappa', 'sterile', 'terminal'];
+
 function currentTheme(){
-  return document.documentElement.getAttribute('data-theme') === 'sterile' ? 'sterile' : 'cappa';
+  const t = document.documentElement.getAttribute('data-theme');
+  return THEMES.includes(t) ? t : 'cappa';
 }
 
 function applyTheme(name, persist){
-  const t = name === 'sterile' ? 'sterile' : 'cappa';
+  const t = THEMES.includes(name) ? name : 'cappa';
   document.documentElement.setAttribute('data-theme', t);
   try { localStorage.setItem('cyrus_dashboard_v6_theme', JSON.stringify(t)); } catch(e){}
   // sync to Supabase settings (saveLS is defined in state.js and triggers push)
@@ -22,17 +27,20 @@ function applyTheme(name, persist){
     ensureLifeTree();
     if(typeof initAmbient === 'function') initAmbient();
   } else if(typeof window.destroyLifeTree === 'function'){
+    // both cappa and terminal drop the life-tree (terminal has its own dark chrome)
     window.destroyLifeTree();
   }
 }
 
 function toggleTheme(){
-  applyTheme(currentTheme() === 'sterile' ? 'cappa' : 'sterile', true);
+  const i = THEMES.indexOf(currentTheme());
+  applyTheme(THEMES[(i + 1) % THEMES.length], true);
 }
 
 function updateThemeBtn(t){
   const b = document.getElementById('theme-btn');
-  if(b) b.textContent = t === 'sterile' ? '☼ 经典' : '◆ 终末';
+  // label shows the NEXT theme in the cycle
+  if(b) b.textContent = t === 'cappa' ? '◆ 终末' : t === 'sterile' ? '▣ 终端' : '☼ 经典';
 }
 
 /* Lazy-load the life-tree module (pulls in Three.js) only when needed. */

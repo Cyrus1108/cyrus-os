@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 
 (function(){
-  const sterile = document.documentElement.getAttribute('data-theme') === 'sterile';
+  const sterile = ['sterile','terminal'].includes(document.documentElement.getAttribute('data-theme'));
   const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if(sterile || reduced) return;
 
@@ -82,8 +82,8 @@ import * as THREE from 'three';
 
   function frame(){
     raf = requestAnimationFrame(frame);
-    // stop rendering WebGL behind the hidden canvas after a cappa→sterile switch
-    if(document.documentElement.getAttribute('data-theme') === 'sterile') return;
+    // stop rendering WebGL behind the hidden canvas after a switch to sterile/terminal
+    if(['sterile','terminal'].includes(document.documentElement.getAttribute('data-theme'))) return;
     t += 0.016;
     // scroll velocity feeds the tumble (Lenis-damped native scroll)
     const y = window.scrollY;

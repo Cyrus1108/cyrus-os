@@ -1154,3 +1154,31 @@ html:not([data-theme="sterile"]) .row{
       linear-gradient(var(--brass), var(--brass));
   }
 }
+
+/* ════════════ v7.18 嵌入主页模块导览 (inline home nav · 角色板菜单) ════════════
+   排在 The 90 hero 下方,模块 = 一格格菜单板(选项③)。频道复用旧按钮 id
+   (fin/fit/ai/cal/sys/motiv-btn)+onclick → JS 零改。亮黄=今日有料(.has-today,
+   rCalDot/rAiDot 切)/按下。基础样式在此;终端主题再升级成明日方舟斜切板。 */
+.home-nav{ margin:1.6rem 0; }
+.home-nav-head{ display:flex; align-items:center; gap:8px; font-family:var(--mono);
+  font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--ghost); margin:0 2px 9px; }
+.hn-dot{ width:5px; height:5px; border-radius:50%; background:var(--brass); flex:0 0 auto; }
+.hn-count{ margin-left:auto; }
+.home-nav-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.hn-item{ display:flex; align-items:center; gap:11px; padding:13px 14px; cursor:pointer; text-align:left;
+  background:color-mix(in srgb, var(--color-background-primary) 60%, transparent);
+  border:0.5px solid var(--hair-strong); border-radius:var(--border-radius-md);
+  color:var(--ink); font-family:var(--mono); position:relative;
+  transition:border-color .2s ease, background .2s ease, color .2s ease, transform .1s ease; }
+.hn-ico{ width:23px; height:23px; flex:0 0 auto; stroke:var(--brass); fill:none; stroke-width:1.2; stroke-linejoin:round; stroke-linecap:round; }
+.hn-tx{ display:flex; flex-direction:column; gap:1px; min-width:0; }
+.hn-en{ font-size:12px; font-weight:700; letter-spacing:.09em; color:var(--ink); }
+.hn-zh{ font-size:11px; color:var(--mute); }
+.hn-item::before{ content:attr(data-i); position:absolute; top:6px; right:9px; font-size:7.5px; letter-spacing:.1em; color:var(--ghost); }
+.hn-sys{ opacity:.8; }
+.hn-item:active{ transform:translateY(1px); }
+@media (hover:hover){ .hn-item:hover{ border-color:var(--brass); } }
+/* 今日有料 → 亮黄引导 + 左缘竖条 */
+.hn-item.has-today .hn-ico, .hn-item.has-today .hn-en{ color:var(--brass-soft); }
+.hn-item.has-today::after{ content:""; position:absolute; left:0; top:12px; bottom:12px; width:2px; background:var(--brass-soft); }
+@media (prefers-reduced-motion:reduce){ .hn-item{ transition:none; } }
