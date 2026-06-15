@@ -78,23 +78,14 @@
 </div>
 
 <div class="drawer-tab-group">
-  <button id="drawer-tab" class="drawer-tab nav-launch" onclick="openDrawer()" aria-label="打开导览">
-    <span class="nav-launch-arrows" aria-hidden="true"><i></i><i></i></span>
-    <span class="nav-launch-label">导览</span>
-  </button>
+  <button id="drawer-tab" class="nav-arrow" onclick="openDrawer()" aria-label="打开导览"><i aria-hidden="true"></i></button>
 </div>
 
 <div id="drawer-backdrop" class="drawer-backdrop" onclick="closeDrawer()"></div>
 <!-- v7.18 右侧导览抽屉(原 Markets 抽屉改造)。六大频道 SAO 式逐条滑入;
      Markets 已撤(日后并入交易面板专注页)。频道沿用旧按钮 id+onclick→rCalDot/rAiDot 零改。 -->
 <aside id="drawer" class="drawer drawer-nav" aria-hidden="true" inert>
-  <div class="drawer-inner">
-    <div class="navd-head">
-      <span class="navd-dot" aria-hidden="true"></span>
-      <span class="navd-id">CYRUS//OS · NAVIGATION</span>
-      <button class="drawer-close navd-close" onclick="closeDrawer()" aria-label="关闭导览">✕ ESC</button>
-    </div>
-    <div class="navd-list">
+  <div class="navd-list">
       <button id="sys-btn" class="hn-item navd-item" data-i="01" onclick="navOpen('sys')" aria-label="系统">
         <svg class="hn-ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="2.5" width="11" height="11"/><rect x="5.5" y="5.5" width="5" height="5"/></svg>
         <span class="hn-tx"><span class="hn-en">SYS</span><span class="hn-zh">系统</span></span></button>
@@ -113,7 +104,6 @@
       <button id="motiv-btn" class="hn-item navd-item" data-i="06" onclick="navOpen('motiv')" aria-label="动力">
         <svg class="hn-ico" viewBox="0 0 16 16" aria-hidden="true"><polygon points="9,2 4,9 7.5,9 7,14 12,7 8.5,7"/></svg>
         <span class="hn-tx"><span class="hn-en">PWR</span><span class="hn-zh">动力</span></span></button>
-    </div>
   </div>
 </aside>
 

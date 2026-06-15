@@ -19,7 +19,7 @@ function openDrawer(){
   d.setAttribute('aria-hidden', 'false');
   d.removeAttribute('inert');
   _navPlay(_saoOpen);                            // SAO menu-open cue
-  d.querySelector('.drawer-close')?.focus();     // move focus into the drawer
+  d.querySelector('.navd-item')?.focus();        // move focus to the first channel
 }
 function closeDrawer(){
   const d = document.getElementById('drawer'); if (!d) return;

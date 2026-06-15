@@ -1218,3 +1218,13 @@ html:not([data-theme="sterile"]) .row{
   transition:clip-path .34s cubic-bezier(.4,0,.2,1); will-change:clip-path; }
 .nav-morph-ghost.fade{ transition:opacity .26s ease; opacity:0; }
 html[data-theme="terminal"] .nav-morph-ghost{ background:#15160e; border-color:var(--brass-ghost); }
+
+/* ── 导览 = 只剩六块浮在「毛玻璃模糊主页」上:抽屉本身透明无框,背板加强模糊 ── */
+.drawer.drawer-nav{ background:none !important; border:none !important; box-shadow:none !important; }
+.drawer-nav .navd-list{ padding:clamp(1.2rem,4vw,1.75rem) clamp(1rem,4vw,1.6rem); }
+.drawer-backdrop{ background:rgba(8,9,6,0.42); backdrop-filter:blur(14px) saturate(1.05); -webkit-backdrop-filter:blur(14px) saturate(1.05); }
+/* 导览把手 = 单个左向箭头(无框、无字) */
+.nav-arrow{ background:none; border:none; cursor:pointer; padding:18px 12px 18px 16px; display:flex; align-items:center; justify-content:center; }
+.nav-arrow i{ display:block; width:11px; height:11px; border-left:2px solid var(--brass); border-bottom:2px solid var(--brass); transform:rotate(45deg); transition:transform .22s var(--ease-silk,ease), border-color .22s; }
+.nav-arrow:hover i{ border-color:var(--brass-soft); transform:rotate(45deg) translate(2px,-2px); }
+.nav-arrow:active i{ transform:rotate(45deg) scale(.88); }
