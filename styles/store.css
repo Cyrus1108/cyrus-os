@@ -1,0 +1,168 @@
+/* ════════════════════════════════════════════════════════════
+   心愿单 · Wishlist / Store HUD — clones the Calendar/Finance shell.
+   All colors via global theme tokens so it reskins for every theme.
+   Default theme: glass .sys-window.store-hud (built by glass.js) + scroll-unfurl.
+   Sterile: no wrapper — .store-view self-styles as a full-screen pane.
+   ════════════════════════════════════════════════════════════ */
+
+body.store-locked{ overflow:hidden; }
+
+/* ── view shell (base = sterile / fallback: opaque sheet) ── */
+.store-view{
+  position:fixed; inset:0; z-index:1200;
+  background:var(--color-background-primary);
+  display:flex; flex-direction:column;
+  transform:translateY(100%);
+  transition:transform .42s var(--ease-drawer);
+  visibility:hidden;
+}
+.store-view.open{ transform:translateY(0); visibility:visible; }
+
+.store-top{
+  display:flex; align-items:center; gap:12px;
+  padding:calc(16px + env(safe-area-inset-top)) 18px 12px;
+  border-bottom:.5px solid var(--hair);
+  position:sticky; top:0; z-index:3; background:var(--color-background-primary);
+}
+.store-back{
+  background:none; border:none; color:var(--mute); font-size:14px;
+  cursor:pointer; padding:6px 8px; border-radius:var(--border-radius-md);
+}
+.store-back:hover{ color:var(--ink); background:var(--color-background-secondary); }
+.store-title{ flex:1; font-family:var(--serif); font-size:20px; color:var(--ink); letter-spacing:.04em; }
+
+.store-body{ padding:14px 16px 36px; }
+
+/* ── stats bar ── */
+.store-stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:14px; }
+.store-stat{
+  background:var(--color-background-secondary); border-radius:var(--border-radius-md);
+  padding:10px 6px; text-align:center; display:flex; flex-direction:column; gap:2px;
+}
+.store-stat-n{ font-family:var(--mono); font-size:15px; color:var(--ink); font-weight:600; line-height:1.1; }
+.store-stat-l{ font-size:10px; color:var(--ghost); letter-spacing:.06em; }
+
+/* ── toolbar (tabs + add) ── */
+.store-toolbar{ display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+.store-tabs{ display:flex; gap:6px; flex:1; }
+.store-tab{
+  background:none; border:.5px solid var(--hair); color:var(--mute);
+  padding:6px 14px; border-radius:var(--border-radius-md); cursor:pointer; font-size:13px;
+}
+.store-tab.on{ border-color:var(--brass); color:var(--brass); background:color-mix(in srgb,var(--brass) 10%,transparent); }
+.store-add{
+  background:none; border:.5px dashed var(--hair); color:var(--mute);
+  padding:7px 14px; border-radius:var(--border-radius-md); cursor:pointer; font-size:13px; white-space:nowrap;
+}
+.store-add:hover{ border-color:var(--brass); color:var(--brass); }
+
+/* ── product grid ── */
+.store-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
+.store-empty{ color:var(--ghost); font-size:13px; padding:34px 0; text-align:center; }
+
+.store-card{
+  background:var(--color-background-secondary); border:.5px solid var(--hair);
+  border-radius:var(--border-radius-lg,14px); overflow:hidden;
+  display:flex; flex-direction:column; transition:border-color .18s, transform .1s;
+}
+.store-card:hover{ border-color:var(--brass-ghost); }
+.store-card.p2{ border-color:color-mix(in srgb,var(--brass) 45%,transparent); }
+.store-card.is-bought{ opacity:.62; }
+
+.store-card-imgwrap{ position:relative; width:100%; aspect-ratio:4/3; background:var(--color-background-primary); }
+.store-card-img{ width:100%; height:100%; object-fit:cover; display:block; }
+.store-noimg{ display:flex; align-items:center; justify-content:center; color:var(--ghost); }
+.store-pri-flag{
+  position:absolute; top:7px; left:7px; font-size:10px; color:var(--brass-soft,var(--brass));
+  background:color-mix(in srgb,#000 55%,transparent); padding:2px 7px; border-radius:9px; backdrop-filter:blur(3px);
+}
+.store-bought-flag{
+  position:absolute; top:7px; right:7px; font-size:10px; color:var(--ink);
+  background:color-mix(in srgb,var(--brass) 80%,#000); padding:2px 7px; border-radius:9px;
+}
+
+.store-card-body{ padding:10px 11px 11px; display:flex; flex-direction:column; gap:5px; flex:1; }
+.store-card-top{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+.store-card-name{ font-size:14px; color:var(--ink); line-height:1.3; font-weight:500; }
+.store-card-price{ font-family:var(--mono); font-size:13px; color:var(--brass); white-space:nowrap; flex-shrink:0; }
+.store-card-cat{ align-self:flex-start; font-size:10px; color:var(--mute); border:.5px solid var(--hair); border-radius:8px; padding:1px 8px; }
+.store-card-desc{ font-size:12px; color:var(--ghost); line-height:1.5; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+.store-card-actions{ display:flex; gap:4px; align-items:center; margin-top:auto; padding-top:6px; flex-wrap:wrap; }
+.store-card-link{ font-size:12px; color:var(--brass); text-decoration:none; margin-right:auto; }
+.store-card-link:hover{ text-decoration:underline; }
+
+/* ── modal (add / edit) ── */
+.store-modal{
+  position:absolute; inset:0; z-index:1230; display:none;
+  align-items:center; justify-content:center; padding:16px; overflow:auto;
+  background:color-mix(in srgb, var(--color-background-primary) 55%, transparent);
+}
+.store-modal.open{ display:flex; }
+.store-modal-card{
+  width:100%; max-width:400px; background:var(--color-background-primary);
+  border:.5px solid var(--hair); border-radius:var(--border-radius-lg,14px);
+  padding:18px; display:flex; flex-direction:column; gap:10px; margin:auto;
+  box-shadow:0 18px 50px rgba(0,0,0,0.3);
+}
+.store-modal-title{ font-family:var(--serif); font-size:17px; color:var(--ink); margin-bottom:2px; }
+.store-modal-card #store-f-ccy{ flex:0 0 auto; width:auto; }
+
+.store-imgpick{ display:block; cursor:pointer; }
+.store-imgpick-box{
+  width:100%; aspect-ratio:16/9; border:.5px dashed var(--hair); border-radius:var(--border-radius-md);
+  display:flex; align-items:center; justify-content:center; overflow:hidden; background:var(--color-background-secondary);
+}
+.store-imgpick-box:hover{ border-color:var(--brass); }
+.store-imgpick-box img{ width:100%; height:100%; object-fit:cover; }
+.store-imgpick-hint{ color:var(--mute); font-size:13px; }
+
+.store-status-btn{
+  flex:1; background:none; border:.5px solid var(--hair); color:var(--mute);
+  padding:7px; border-radius:var(--border-radius-md); cursor:pointer; font-size:13px;
+}
+.store-status-btn.on{ border-color:var(--brass); color:var(--brass); background:color-mix(in srgb,var(--brass) 10%,transparent); }
+
+/* ════ default theme (cappa/terminal): glass .sys-window.store-hud + scroll-unfurl ════
+   glass.js wraps #store-view into .sys-backdrop + .sys-window.store-hud at init;
+   .store-view becomes a transparent centering stage. Mirrors calendar.css/finance.css.
+   NB: never add .store-closing{opacity:1;visibility:visible} — that breaks the furl-hold. */
+html:not([data-theme="sterile"]) .store-view{
+  display:flex; align-items:center; justify-content:center; padding:16px;
+  background:transparent;
+  transform:none; opacity:0;
+  transition:opacity .4s var(--ease-silk), visibility .4s var(--ease-silk);
+}
+html:not([data-theme="sterile"]) .store-view.open{ transform:none; opacity:1; }
+html:not([data-theme="sterile"]) .store-view .sys-window.store-hud{
+  width:100%; max-width:640px; max-height:94vh;
+  overflow:auto; overscroll-behavior:contain;
+}
+html:not([data-theme="sterile"]) .store-view.open .store-hud{
+  animation:sysScrollOpen 1100ms linear both; transform-origin:center center;
+}
+html:not([data-theme="sterile"]) .store-view.open .store-hud::after{
+  animation:sysFold 1100ms linear both;
+}
+html:not([data-theme="sterile"]) .store-view.store-closing .store-hud{
+  animation:sysScrollClose 480ms cubic-bezier(0.5,0,0.78,0.2) both; transform-origin:center center;
+}
+html:not([data-theme="sterile"]) .store-view.store-closing .store-hud::after{
+  animation:sysFoldClose 480ms ease both;
+}
+html:not([data-theme="sterile"]) .store-view.store-closing .sys-backdrop{
+  animation:sysBackFade 480ms var(--ease-silk) both;
+}
+html:not([data-theme="sterile"]) .store-view .store-top{ background:transparent; }
+@media (prefers-reduced-motion:reduce){
+  html:not([data-theme="sterile"]) .store-view.open .store-hud,
+  html:not([data-theme="sterile"]) .store-view.open .store-hud::after{
+    animation:none !important; clip-path:none !important; opacity:1 !important;
+  }
+}
+
+@media(max-width:559px){
+  .store-stats{ gap:6px; }
+  .store-stat-n{ font-size:13px; }
+  .store-grid{ grid-template-columns:repeat(auto-fill,minmax(132px,1fr)); gap:10px; }
+  html:not([data-theme="sterile"]) .store-view .sys-window.store-hud{ max-height:96vh; }
+}

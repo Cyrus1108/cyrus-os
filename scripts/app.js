@@ -357,7 +357,7 @@ function rMetrics(){
   updateShowDoneBtn();
 }
 
-function renderAll(){rDate();rMR();rAC();rJP();rTR();rCats();rTodos();if(typeof rThe90==='function') rThe90();if(typeof rLowDay==='function') rLowDay();if(typeof rHermes==='function') rHermes();if(typeof rMotivation==='function') rMotivation();rMetrics();if(typeof rpgAfterChange==='function') rpgAfterChange();if(typeof rCalDot==='function') rCalDot();if(typeof rAiDot==='function') rAiDot();attachRipples();}
+function renderAll(){rDate();rMR();rAC();rJP();rTR();rCats();rTodos();if(typeof rThe90==='function') rThe90();if(typeof rLowDay==='function') rLowDay();if(typeof rHermes==='function') rHermes();if(typeof rMotivation==='function') rMotivation();rMetrics();if(typeof rpgAfterChange==='function') rpgAfterChange();if(typeof rCalDot==='function') rCalDot();if(typeof rAiDot==='function') rAiDot();if(typeof rStoreDot==='function') rStoreDot();attachRipples();}
 
 function onAuthReady(){
   /* Called by auth.js once a Supabase session is established.
@@ -418,6 +418,7 @@ async function init(){
   const fitD=loadLS('fit_diet',null);if(fitD&&typeof fitD==='object'&&!Array.isArray(fitD))S.fit.diet=fitD;
   const calE=loadLS('cal_events',null);if(calE&&Array.isArray(calE))S.cal=calE;
   const aiL=loadLS('ai_outputs',null);if(aiL&&Array.isArray(aiL))S.ai=aiL;
+  const stL=loadLS('wishlist',null);if(stL&&Array.isArray(stL))S.store=stL;
   // expire & archive overdue 'no-carry' todos so they don't keep nagging day after day
   if(typeof sweepExpiredTodos==='function') sweepExpiredTodos();
   showDone = loadLS('show_done', false);
@@ -426,6 +427,7 @@ async function init(){
   if(typeof initFitness === 'function') initFitness();
   if(typeof initCalendar === 'function') initCalendar();
   if(typeof initAi === 'function') initAi();
+  if(typeof initStore === 'function') initStore();
   if(typeof initTriCarousel === 'function') initTriCarousel();
   if(typeof initThe90Keys === 'function') initThe90Keys();
 

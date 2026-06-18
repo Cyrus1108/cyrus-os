@@ -48,8 +48,8 @@ function closeDrawer(){
    3. the real module HUD then opens from there with its OWN unfurl (sysScrollOpen),
       and closes later with its own furl — we no longer suppress those animations.
    Reduced-motion → plain open. */
-const _navOpenMap = { fin:'openFinance', fit:'openFitness', ai:'openAi', cal:'openCalendar', sys:'openSystem', motiv:'openMotivation' };
-const _navIdMap   = { fin:'fin-btn', fit:'fit-btn', ai:'ai-btn', cal:'cal-btn', sys:'sys-btn', motiv:'motiv-btn' };
+const _navOpenMap = { fin:'openFinance', fit:'openFitness', ai:'openAi', cal:'openCalendar', sys:'openSystem', motiv:'openMotivation', shop:'openStore' };
+const _navIdMap   = { fin:'fin-btn', fit:'fit-btn', ai:'ai-btn', cal:'cal-btn', sys:'sys-btn', motiv:'motiv-btn', shop:'shop-btn' };
 function navOpen(which){
   _navPlay(_saoSel);
   const fn = window[_navOpenMap[which]];
@@ -86,7 +86,7 @@ document.addEventListener('keydown', (e) => {
   if (typing) return;
   if (open && e.key === 'Escape') { e.preventDefault(); closeDrawer(); return; }
   if (!open && e.key === 'ArrowLeft') {
-    const hudOpen = document.querySelector('.fin-view.open, .fit-view.open, .ai-view.open, .cal-view.open, .sys-view.open, .motiv-view.open') || document.body.classList.contains('has-focus');
+    const hudOpen = document.querySelector('.fin-view.open, .fit-view.open, .ai-view.open, .cal-view.open, .sys-view.open, .motiv-view.open, .store-view.open') || document.body.classList.contains('has-focus');
     if (!hudOpen) { e.preventDefault(); openDrawer(); }
     return;
   }

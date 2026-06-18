@@ -190,6 +190,10 @@ let S={
      {id, date:'YYYY-MM-DD', title, kind:'built'|'learned'|'shipped', notes, link, position}
      Phase 1: standalone signal source (streak/active-days/total); wired into RPG in Phase 2. */
   ai:[],
+  /* 心愿单 · Wishlist (archetype C replace-all list). Each:
+     {id, name, description, price, currency, image_path, link, category,
+      priority:0|1|2, status:'want'|'bought', bought_at, actual_paid, position} */
+  store:[],
 };
 
 let editingAC=null, editingJP=null, editingTR=null, editingTD=null;
@@ -217,7 +221,7 @@ const dirty = {
   the90Meta: false, the90Daily: false, motiv: false, rpg: false,
   principles: false, principlesDaily: false,
   fitExercises: false, fitPlan: false, fitLog: false, fitBody: false, fitDiet: false,
-  calEvents: false, aiOutputs: false,
+  calEvents: false, aiOutputs: false, store: false,
   finAccounts: false, finCategories: false, finBudgets: false, finGoals: false, finRecurring: false,
 };
 
@@ -241,3 +245,4 @@ function saveFitBody(date){saveLSRaw('fit_body', S.fit.body); dirty.fitBody=true
 function saveFitDiet(date){saveLSRaw('fit_diet', S.fit.diet); dirty.fitDiet=true; if(typeof syncPushFitDiet==='function') syncPushFitDiet(date||TODAY);}
 function saveCalEvents(){saveLSRaw('cal_events', S.cal); dirty.calEvents=true; if(typeof syncPushCalEvents==='function') syncPushCalEvents();}
 function saveAiOutputs(){saveLSRaw('ai_outputs', S.ai); dirty.aiOutputs=true; if(typeof syncPushAiOutputs==='function') syncPushAiOutputs();}
+function saveStore(){saveLSRaw('wishlist', S.store); dirty.store=true; if(typeof syncPushStore==='function') syncPushStore();}

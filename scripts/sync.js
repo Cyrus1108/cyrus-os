@@ -214,6 +214,27 @@ async function pullAiOutputs(){
   saveLSRaw('ai_outputs', S.ai);
 }
 
+async function pullWishlist(){
+  const { data } = await sb.from('wishlist').select('*')
+    .eq('user_id', currentUser.id);
+  S.store = (data || []).map(r => ({
+    id: r.id,
+    name: r.name || '',
+    description: r.description || '',
+    price: r.price,
+    currency: r.currency || '',
+    image_path: r.image_path || '',
+    link: r.link || '',
+    category: r.category || '',
+    priority: r.priority || 0,
+    status: r.status || 'want',
+    bought_at: r.bought_at || null,
+    actual_paid: r.actual_paid,
+    position: r.position || 0,
+  }));
+  saveLSRaw('wishlist', S.store);
+}
+
 async function pullHermes(){
   // Only un-dismissed notices; cap to a sane number, newest first.
   const { data } = await sb.from('hermes_notices').select('*')
@@ -462,7 +483,7 @@ async function pullAll(force){
         pullFitExercises(), pullFitPlan(), pullFitLog(), pullFitBody(), pullFitDiet(),
         pullFinAccounts(), pullFinCategories(), pullFinTransactions(), pullFinBudgets(),
         pullFinGoals(), pullFinRecurring(), pullFinSnapshots(),
-        pullCalEvents(), pullAiOutputs(),
+        pullCalEvents(), pullAiOutputs(), pullWishlist(),
       ]);
       initialPullDone = true;
       console.log('[sync] initial pull complete');
@@ -673,6 +694,27 @@ async function syncPushAiOutputs(){
     position: o.position || 0,
   }));
   if(ok) dirty.aiOutputs = false;
+}
+
+async function syncPushWishlist(){
+  if(!currentUser) return;
+  await waitForPull();
+  const ok = await replaceTable('wishlist', S.store, i => ({
+    id: i.id, user_id: currentUser.id,
+    name: i.name || '',
+    description: i.description || null,
+    price: (i.price===''||i.price==null) ? null : Number(i.price),
+    currency: i.currency || null,
+    image_path: i.image_path || null,
+    link: i.link || null,
+    category: i.category || null,
+    priority: i.priority || 0,
+    status: i.status || 'want',
+    bought_at: i.bought_at || null,
+    actual_paid: (i.actual_paid===''||i.actual_paid==null) ? null : Number(i.actual_paid),
+    position: i.position || 0,
+  }));
+  if(ok) dirty.store = false;
 }
 
 async function syncPushMotiv(){
@@ -931,6 +973,8 @@ function subscribeRealtime(){
       () => rtCoalesce('cal_events', async () => { await pullCalEvents(); if(typeof calUI!=='undefined' && calUI.open && typeof rCalendar==='function') rCalendar(); if(typeof rCalDot==='function') rCalDot(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'ai_outputs', filter: `user_id=eq.${uid}` },
       () => rtCoalesce('ai_outputs', async () => { await pullAiOutputs(); if(typeof aiUI!=='undefined' && aiUI.open && typeof rAi==='function') rAi(); if(typeof rAiDot==='function') rAiDot(); }))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'wishlist', filter: `user_id=eq.${uid}` },
+      () => rtCoalesce('wishlist', async () => { await pullWishlist(); if(typeof storeUI!=='undefined' && storeUI.open && typeof rStore==='function') rStore(); if(typeof rStoreDot==='function') rStoreDot(); }))
     .subscribe((status, err) => {
       console.log('[realtime]', status);
       if(err) console.error('[realtime] error', err);
@@ -987,6 +1031,7 @@ async function rehydrateOnFocus(){
     if(dirty.fitDiet) pushes.push(syncPushFitDiet());
     if(dirty.calEvents) pushes.push(syncPushCalEvents());
     if(dirty.aiOutputs) pushes.push(syncPushAiOutputs());
+    if(dirty.store) pushes.push(syncPushWishlist());
     if(dirty.finAccounts) pushes.push(finSaveAccounts());
     if(dirty.finCategories) pushes.push(finSaveCategories());
     if(dirty.finBudgets) pushes.push(finSaveBudgets());

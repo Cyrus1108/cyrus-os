@@ -1241,10 +1241,29 @@ html[data-theme="terminal"] .navd-item:focus-visible{ border-color:var(--brass-s
 
 /* ── 导览 = 只剩六块浮在「毛玻璃模糊主页」上:抽屉本身透明无框,背板加强模糊 ── */
 .drawer.drawer-nav{ background:none !important; border:none !important; box-shadow:none !important; }
-.drawer-nav .navd-list{ width:min(440px,90vw); max-height:88vh; overflow-y:auto; pointer-events:auto; padding:clamp(1.2rem,4vw,1.75rem) clamp(1rem,4vw,1.6rem); }
+.drawer-nav .navd-list{ width:min(336px,92vw); max-height:88vh; overflow-y:auto; pointer-events:auto; padding:clamp(1.2rem,4vw,1.75rem) clamp(1rem,4vw,1.6rem); }
 .drawer-backdrop{ background:rgba(8,9,6,0.42); backdrop-filter:blur(14px) saturate(1.05); -webkit-backdrop-filter:blur(14px) saturate(1.05); }
 /* 导览把手 = 单个左向箭头(无框、无字) */
 .nav-arrow{ background:none; border:none; cursor:pointer; padding:18px 12px 18px 16px; display:flex; align-items:center; justify-content:center; }
 .nav-arrow i{ display:block; width:11px; height:11px; border-left:2px solid var(--brass); border-bottom:2px solid var(--brass); transform:rotate(45deg); transition:transform .22s var(--ease-silk,ease), border-color .22s; }
 .nav-arrow:hover i{ border-color:var(--brass-soft); transform:rotate(45deg) translate(2px,-2px); }
 .nav-arrow:active i{ transform:rotate(45deg) scale(.88); }
+
+/* ── v7.19 导览 = 黄铜 3D logo（raster PNG，替换原线条 SVG）。放大到 42px 细节才读得清；
+   已抠掉深色底 → 浮在板上无方块补丁。图标固定金色、不再随主题染色（金配棕/配黑都好看）。 ── */
+.navd-item .hn-ico.hn-logo{ width:42px; height:42px; object-fit:contain; flex:0 0 auto;
+  filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.5)); }
+@media (hover:hover){ .navd-item:hover .hn-ico.hn-logo{ filter:drop-shadow(0 1px 3px rgba(0,0,0,.6)) brightness(1.07); } }
+
+/* ── v7.22 第 7 频道「心愿/SHOP」：占位矢量购物袋图标(暂无黄铜版) + 把进/退/选级联动画从 6 扩到 7 ── */
+.navd-item .hn-ico.nav-shop-ico{ width:34px; height:34px; flex:0 0 auto; stroke-width:1.4; }
+@media (prefers-reduced-motion:no-preference){ .drawer.open .navd-item:nth-child(7){ animation-delay:.59s; } }
+.navd-list.is-picking .navd-item:not(.picked):nth-child(7){ animation-delay:.23s; }
+/* 退场反序:SHOP(7) 先走 → SYS(1) 最后，整体重排 7 项 */
+.navd-list.is-exiting .navd-item:nth-child(7){ animation-delay:0s; }
+.navd-list.is-exiting .navd-item:nth-child(6){ animation-delay:.06s; }
+.navd-list.is-exiting .navd-item:nth-child(5){ animation-delay:.12s; }
+.navd-list.is-exiting .navd-item:nth-child(4){ animation-delay:.17s; }
+.navd-list.is-exiting .navd-item:nth-child(3){ animation-delay:.22s; }
+.navd-list.is-exiting .navd-item:nth-child(2){ animation-delay:.27s; }
+.navd-list.is-exiting .navd-item:nth-child(1){ animation-delay:.32s; }
