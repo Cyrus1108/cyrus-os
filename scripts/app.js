@@ -373,7 +373,7 @@ async function init(){
     } else {
       S.mr.list = (mr.list||[]).map(i=>({...i,d:false}));
       S.mr.date = TODAY;
-      saveMR();
+      saveLSRaw('mr',S.mr);   // 仅写本地,不推云;pullAll 后才是权威(否则会在拉取前把另一端的打卡覆盖掉)
     }
   }
   if(cleanMorning()) saveMR();
@@ -386,14 +386,14 @@ async function init(){
     // the log keeps history, the list flags belong to ONE day only
     if(jp.date!==TODAY){S.jp.date=TODAY;S.jp.list=(jp.list||[]).map(i=>({...i,d:false}));_jpChg=true;}
     if(typeof cleanJapanese==='function' && cleanJapanese())_jpChg=true;   // retire legacy presets (j1–j4)
-    if(_jpChg)saveJP();
+    if(_jpChg)saveLSRaw('jp',S.jp);   // 仅写本地,不推云;pullJapanese + 拉后 cleanJapanese 才是权威
   }
   const tr=loadLS('tr',null);
   // carry the user's custom trading checklist across the day-rollover (mirror mr/jp).
   // BUG was: the else branch mapped over the in-memory DEF_TR default, not tr.list.
   if(tr){
     if(tr.date===TODAY) S.tr=tr;
-    else { S.tr=tr; S.tr.date=TODAY; S.tr.bias=''; S.tr.list=(tr.list||[]).map(i=>({...i,d:false})); S.tr.sealed=false; S.tr.sealedAt=null; S.tr.broke=false; saveTR(); }
+    else { S.tr=tr; S.tr.date=TODAY; S.tr.bias=''; S.tr.list=(tr.list||[]).map(i=>({...i,d:false})); S.tr.sealed=false; S.tr.sealedAt=null; S.tr.broke=false; saveLSRaw('tr',S.tr); }  // 仅写本地,不推云;pullTrading 才是权威(修复手机端晨间打卡在电脑端被翻篇重置覆盖)
   }
   const tds=loadLS('todos',null);if(Array.isArray(tds))S.todos=tds;
   const cats=loadLS('cats',null);if(cats&&cats.length)S.cats=cats;
@@ -451,6 +451,9 @@ async function init(){
   updateShowDoneBtn();
   tick();
   setInterval(tick,1000);
+  // 晚间核查(原则修订)9pm 提醒:tab 开一整天时 init 不重跑,用计时器每分钟重判 21:00 闸门。
+  // principlesEveningAutoShow 自带幂等(review_prompted/低谷锁/modal-blocked),不会重复弹。
+  setInterval(()=>{ if(typeof principlesEveningAutoShow==='function') principlesEveningAutoShow(); }, 60000);
   attachRipples();
   checkNotifBanner();
   // after the first-paint entrance animations settle, stop list rows from replaying

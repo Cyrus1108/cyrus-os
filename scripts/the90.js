@@ -299,7 +299,7 @@ function rThe90(){
   // Identity statement removed per Cyrus's request — only the tagline (date + countdown) shows.
 
   // Tagline — countdown to August 9
-  const daysLeft = the90DaysUntil(THE_90_END);
+  const daysLeft = the90DaysUntil(THE_90_END, new Date().toLocaleDateString('sv-SE'));   // 读实时日期,跨午夜不会停在昨天
   document.getElementById('the90-tagline').textContent = daysLeft > 0
     ? `8/9 那个 Cyrus 正在向你走来 · ${daysLeft} 天`
     : '8/9 到了。回顾你成为的人。';

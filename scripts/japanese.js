@@ -51,6 +51,7 @@ let jpNT;function onJPNote(){S.jp.note=document.getElementById('jp-note').value;
 function rJP(){
   S.jp.streak=jpComputeStreak();   // derived — also corrects stale server values after a pull
   document.getElementById('streak-n').textContent=S.jp.streak;
+  const _jpT=document.getElementById('jp-total'); if(_jpT) _jpT.textContent=Object.keys(S.jp.log||{}).length;   // 累计打卡天数(全部历史,证明记录没被删)
   const now=new Date(),dow=now.getDay();
   const mon=new Date(now);mon.setDate(now.getDate()-(dow===0?6:dow-1));
   const labs=['M','T','W','T','F','S','S'];

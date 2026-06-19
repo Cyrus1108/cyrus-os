@@ -1,5 +1,11 @@
-*{box-sizing:border-box;scrollbar-width:none;-ms-overflow-style:none;}
+*{box-sizing:border-box;scrollbar-width:none;-ms-overflow-style:none;-webkit-tap-highlight-color:transparent;}
 *::-webkit-scrollbar{display:none;}
+/* 手机端打卡时不再闪蓝色选取框：去掉默认 tap 高亮(上面 *)+ 可点击控件禁止文字选取
+   (但输入框/文本域保留选取与编辑) */
+button,.mr-pill,.the90-cell,.row,.symbol-chip,.check-btn,.hn-item,.navd-item,[role="button"],.focusable{
+  -webkit-user-select:none;user-select:none;
+}
+input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:text;}
 html,body{margin:0;padding:0;background:var(--color-background-tertiary);color:var(--ink);font-family:var(--sans);}
 
 .page-wrapper{max-width:1080px;margin:0 auto;padding:2.5rem 2rem;}
