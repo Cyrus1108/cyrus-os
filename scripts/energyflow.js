@@ -38,8 +38,8 @@
         speed: rnd(0.06, 0.16) * (Math.random()<0.5 ? -1 : 1), // 相位漂移(流动)
         drift: rnd(-0.011, 0.011),                             // 竖直漂移
         tilt:  rnd(-0.09, 0.09),                                // 斜度
-        w:     rnd(1.0, 2.4) * (mobile ? 1 : 1.2),             // 核心粗细 px
-        a:     rnd(0.16, 0.40)                                  // 基础 alpha
+        w:     rnd(1.2, 2.8) * (mobile ? 1 : 1.25),            // 核心粗细 px
+        a:     rnd(0.32, 0.62)                                  // 基础 alpha(够明显)
       });
     }
   }
@@ -59,9 +59,9 @@
       if(s===0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     }
     ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = col;
-    ctx.globalAlpha = f.a*0.26; ctx.lineWidth = f.w*6;   ctx.stroke();   // 外辉光
-    ctx.globalAlpha = f.a*0.50; ctx.lineWidth = f.w*2.6; ctx.stroke();   // 中层
-    ctx.globalAlpha = f.a*0.95; ctx.lineWidth = f.w;     ctx.stroke();   // 亮核
+    ctx.globalAlpha = f.a*0.34; ctx.lineWidth = f.w*7;   ctx.stroke();   // 外辉光
+    ctx.globalAlpha = f.a*0.62; ctx.lineWidth = f.w*3;   ctx.stroke();   // 中层
+    ctx.globalAlpha = f.a*1.0;  ctx.lineWidth = f.w*1.3; ctx.stroke();   // 亮核
   }
   function frame(dt){
     ctx.clearRect(0, 0, W, H);
@@ -84,7 +84,7 @@
   function stop(){ if(raf){ cancelAnimationFrame(raf); raf = 0; } }
 
   // 脚本在 body 内联执行早于 layout,innerWidth 此时可能为 0 → 等 load + 视口有尺寸再初始化
-  function init(){ readTheme(); resize(); seed(); if(reduce) frame(0.016); else start(); }   // reduced-motion: 只画一帧静态
+  function init(){ readTheme(); resize(); seed(); frame(0.016); if(!reduce) start(); }   // 先画一帧静态(立即可见,即使 rAF 未跑也有内容),非 reduced-motion 再起动画
   if(document.readyState === 'complete') init();
   else window.addEventListener('load', init, { once:true });
 
