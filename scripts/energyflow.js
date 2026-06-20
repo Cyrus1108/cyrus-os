@@ -38,8 +38,8 @@
         speed: rnd(0.06, 0.16) * (Math.random()<0.5 ? -1 : 1), // 相位漂移(流动)
         drift: rnd(-0.011, 0.011),                             // 竖直漂移
         tilt:  rnd(-0.09, 0.09),                                // 斜度
-        w:     rnd(1.2, 2.8) * (mobile ? 1 : 1.25),            // 核心粗细 px
-        a:     rnd(0.32, 0.62)                                  // 基础 alpha(够明显)
+        w:     rnd(0.55, 1.25) * (mobile ? 1 : 1.15),         // 核心粗细 px(v7.27.2 调细)
+        a:     rnd(0.30, 0.58)                                  // 基础 alpha
       });
     }
   }
@@ -59,9 +59,9 @@
       if(s===0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     }
     ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = col;
-    ctx.globalAlpha = f.a*0.34; ctx.lineWidth = f.w*7;   ctx.stroke();   // 外辉光
-    ctx.globalAlpha = f.a*0.62; ctx.lineWidth = f.w*3;   ctx.stroke();   // 中层
-    ctx.globalAlpha = f.a*1.0;  ctx.lineWidth = f.w*1.3; ctx.stroke();   // 亮核
+    ctx.globalAlpha = f.a*0.26; ctx.lineWidth = f.w*4.2; ctx.stroke();   // 外辉光(v7.27.2 收窄)
+    ctx.globalAlpha = f.a*0.56; ctx.lineWidth = f.w*1.9; ctx.stroke();   // 中层
+    ctx.globalAlpha = f.a*1.0;  ctx.lineWidth = f.w*0.85;ctx.stroke();   // 亮核(细线)
   }
   function frame(dt){
     ctx.clearRect(0, 0, W, H);
