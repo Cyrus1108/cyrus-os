@@ -303,15 +303,24 @@ function toggleTdCustom(){
 }
 
 /* ════════ 过期不顺延 · 自动归档 ════════
-   A task flagged noCarry that's past its due date and still undone gets archived
-   on day-rollover (init + after pull + midnight reload) so it stops nagging.
-   Archived ≠ done: excluded from active list, counts, and RPG; kept in a drawer
-   for restore/delete. Idempotent — only touches overdue+noCarry+undone+unarchived. */
+   A SINGLE (non-recurring) noCarry task that's past its due date and still undone gets
+   archived on day-rollover (init + after pull + midnight reload) so it stops nagging.
+   Recurring tasks are EXEMPT: the repeat rule itself IS their carry mechanism, so
+   archiving an undone occurrence would both hide it AND — since the next occurrence
+   only spawns on completion (toggleTd) — silently end the series, turning a repeat task
+   into a one-shot hidden task. That was the v7.27.4 bug. Archived ≠ done: excluded from
+   active list, counts, RPG; kept in a drawer for restore/delete. Idempotent. */
 let showArchived = false;
 function sweepExpiredTodos(){
   let changed = false;
   S.todos.forEach(t=>{
-    if(t.noCarry && !t.done && !t.archived && t.date && t.date < TODAY){
+    const isRecurring = t.repeat && t.repeat !== 'none';
+    if(t.archived && isRecurring && t.noCarry){
+      // self-heal: the old sweep wrongly archived noCarry recurring tasks; restore them.
+      // This function is the ONLY code that ever sets archived=true, so an archived
+      // recurring task can only be a past bug artifact → safe to un-archive.
+      t.archived = false; t.archivedAt = null; changed = true;
+    } else if(t.noCarry && !isRecurring && !t.done && !t.archived && t.date && t.date < TODAY){
       t.archived = true; t.archivedAt = Date.now(); changed = true;
     }
   });
