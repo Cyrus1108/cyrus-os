@@ -51,13 +51,21 @@
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   }
   function drawFil(f){
-    var yBase = f.y * H, amp = f.amp * H, steps = mobile ? 26 : 46;
-    ctx.beginPath();
+    var yBase = f.y * H, amp = f.amp * H, steps = mobile ? 40 : 56;
+    // 先采样所有点,再用「中点二次贝塞尔」平滑连接:控制点=采样点、终点=相邻两点中点,
+    // 得到 C1 连续的曲线、彻底消除折线尖角(手机端低采样下尤其明显)。
+    var px = [], py = [];
     for(var s=0;s<=steps;s++){
       var x = (s/steps) * (W + 120) - 60;
       var y = yBase + f.tilt*(x - W/2) + amp*Math.sin((s/steps)*f.freq*Math.PI*2 + f.phase);
-      if(s===0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      px.push(x); py.push(y);
     }
+    ctx.beginPath();
+    ctx.moveTo(px[0], py[0]);
+    for(var i=1;i<px.length-1;i++){
+      ctx.quadraticCurveTo(px[i], py[i], (px[i]+px[i+1])/2, (py[i]+py[i+1])/2);
+    }
+    ctx.lineTo(px[px.length-1], py[py.length-1]);
     ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = col;
     ctx.globalAlpha = f.a*0.26; ctx.lineWidth = f.w*4.2; ctx.stroke();   // 外辉光(v7.27.2 收窄)
     ctx.globalAlpha = f.a*0.56; ctx.lineWidth = f.w*1.9; ctx.stroke();   // 中层
