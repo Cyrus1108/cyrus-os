@@ -1268,8 +1268,13 @@ html[data-theme="terminal"] .navd-item:focus-visible{ border-color:var(--brass-s
 .navd-list.is-exiting .navd-item:nth-child(2){ animation-delay:.27s; }
 .navd-list.is-exiting .navd-item:nth-child(1){ animation-delay:.32s; }
 
-/* ── v7.25 流动能量背景(energyflow.js 的 canvas)：z:-2 最深一层,三主题都显示、取主题色
+/* ── v7.25 流动能量背景(energyflow.js 的 canvas)：z:-1 全屏,三主题都显示、取主题色
    (--brass-soft);每主题不同不透明度;全屏 HUD/聚焦时不渲染;reduced-motion 减淡 ── */
+/* v7.27 关键修复:terminal/sterile 的 body 背景不透明(theme-*.css 里 body{background:...}),
+   会把 z:-1 的 canvas 盖在 body 底色之下、完全看不见。给 body 建立独立层叠上下文(isolation:
+   isolate),让 body 自身背景画在它的负 z 子元素「之下」,能量层才显现。cappa 早已成上下文,
+   所以先前只有它可见。isolation 不为 fixed 子元素建立包含块,弹窗/HUD 的层级顺序不受影响。*/
+body{ isolation:isolate; }
 #energy-flow{ position:fixed; inset:0; width:100vw; height:100vh; z-index:-1; pointer-events:none; opacity:.9; }
 html[data-theme="terminal"] #energy-flow{ opacity:.8; }
 html[data-theme="sterile"]  #energy-flow{ opacity:.5; }
