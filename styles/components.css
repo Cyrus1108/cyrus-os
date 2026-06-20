@@ -1267,3 +1267,13 @@ html[data-theme="terminal"] .navd-item:focus-visible{ border-color:var(--brass-s
 .navd-list.is-exiting .navd-item:nth-child(3){ animation-delay:.22s; }
 .navd-list.is-exiting .navd-item:nth-child(2){ animation-delay:.27s; }
 .navd-list.is-exiting .navd-item:nth-child(1){ animation-delay:.32s; }
+
+/* ── v7.25 流动能量背景(energyflow.js 的 canvas)：z:-2 最深一层,三主题都显示、取主题色
+   (--brass-soft);每主题不同不透明度;全屏 HUD/聚焦时不渲染;reduced-motion 减淡 ── */
+#energy-flow{ position:fixed; inset:0; width:100vw; height:100vh; z-index:-2; pointer-events:none; opacity:.6; }
+html[data-theme="terminal"] #energy-flow{ opacity:.5; }
+html[data-theme="sterile"]  #energy-flow{ opacity:.32; }
+body.has-focus #energy-flow, body.fin-locked #energy-flow, body.fit-locked #energy-flow,
+body.sys-locked #energy-flow, body.cal-locked #energy-flow, body.ai-locked #energy-flow,
+body.store-locked #energy-flow, body.motiv-locked #energy-flow{ display:none; }
+@media (prefers-reduced-motion:reduce){ #energy-flow{ opacity:.35; } }
