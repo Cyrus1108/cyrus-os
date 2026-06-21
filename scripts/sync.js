@@ -82,9 +82,11 @@ async function pullAcademics(){
 function jpUnionLog(cloudLog, localLog){
   return Object.assign({}, cloudLog || {}, localLog || {});
 }
+let jpPulled = false;   // true once this device has pulled the cloud JP row this session
 async function pullJapanese(){
   const { data } = await sb.from('japanese').select('*')
     .eq('user_id', currentUser.id).maybeSingle();
+  jpPulled = true;   // we now know the authoritative cloud state → safe to own TODAY on push
   if(data){
     S.jp = {
       date: data.date || null,
@@ -560,7 +562,10 @@ async function syncPushJP(){
       .eq('user_id', currentUser.id).maybeSingle();
     if(cur && cur.log && typeof cur.log === 'object'){
       const merged = jpUnionLog(cur.log, log);
-      if(log[TODAY]) merged[TODAY] = true; else delete merged[TODAY];
+      // TODAY is locally authoritative ONLY after this device has pulled this session, so
+      // an absent TODAY means an intentional un-check (not a not-yet-synced device). Before
+      // any pull → pure union, so a stale device can never wipe today's check-in.
+      if(jpPulled){ if(log[TODAY]) merged[TODAY] = true; else delete merged[TODAY]; }
       log = merged;
     }
   }catch(e){ /* cloud read failed → push local log as-is (no worse than the old behaviour) */ }
