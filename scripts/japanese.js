@@ -8,7 +8,7 @@
    still unfinished) — never manually incremented, so it can't drift. */
 let jpOpen=false;
 function toggleJPForm(){jpOpen=!jpOpen;document.getElementById('jp-new-form').style.display=jpOpen?'block':'none';}
-function addJPItem(){const t=document.getElementById('jp-new-text').value.trim();if(!t)return;S.jp.list.push({id:'j'+Date.now(),t,d:false});document.getElementById('jp-new-text').value='';jpOpen=false;document.getElementById('jp-new-form').style.display='none';jpSettle();saveJP();rJP();rMetrics();if(typeof rpgAfterChange==='function')rpgAfterChange();}
+function addJPItem(){const t=document.getElementById('jp-new-text').value.trim();if(!t)return;const rs=document.getElementById('jp-new-repeat'),cs=document.getElementById('jp-new-custom');const rep=(rs&&rs.value)||'daily',cd=(cs&&parseInt(cs.value))||0;S.jp.list.push({id:'j'+Date.now(),t,d:false,repeat:rep,customDays:cd,since:TODAY});document.getElementById('jp-new-text').value='';if(cs){cs.value='';cs.style.display='none';}if(rs)rs.value='daily';jpOpen=false;document.getElementById('jp-new-form').style.display='none';jpSettle();saveJP();rJP();rMetrics();if(typeof rpgAfterChange==='function')rpgAfterChange();}
 function toggleJP(id){
   const i=S.jp.list.find(i=>i.id===id);
   if(i){
@@ -24,7 +24,7 @@ function toggleJP(id){
 function delJP(id){if(editingJP===id)editingJP=null;S.jp.list=S.jp.list.filter(i=>i.id!==id);jpSettle();saveJP();rJP();rMetrics();if(typeof rpgAfterChange==='function')rpgAfterChange();}
 function startJPEdit(id){editingJP=id;rJP();}
 function cancelJPEdit(){editingJP=null;rJP();}
-function saveJPEdit(id){const i=S.jp.list.find(i=>i.id===id);if(!i)return;const t=document.getElementById('ej-text').value.trim();if(!t)return;i.t=t;editingJP=null;saveJP();rJP();}
+function saveJPEdit(id){const i=S.jp.list.find(i=>i.id===id);if(!i)return;const t=document.getElementById('ej-text').value.trim();if(!t)return;i.t=t;const rs=document.getElementById('ej-repeat'),cs=document.getElementById('ej-custom');if(rs)i.repeat=rs.value;if(cs)i.customDays=parseInt(cs.value)||0;if(!i.since)i.since=TODAY;editingJP=null;jpSettle();saveJP();rJP();rMetrics();}
 
 /* streak = consecutive logged days ending today; an unfinished TODAY doesn't
    break the run (it just doesn't count yet) */
@@ -35,15 +35,38 @@ function jpComputeStreak(){
   while(log[d.toLocaleDateString('sv-SE')]){s++;d.setDate(d.getDate()-1);}
   return s;
 }
-/* settle the derived state after ANY list mutation (toggle/add/delete).
-   Pure — no sounds, no renders; returns whether TODAY's completion flipped. */
+/* whether a checklist item is scheduled for a given date, per its repeat rule. Items
+   default to 'daily' (back-compat: legacy items without a repeat field). Anchor = it.since
+   (the day it was created) for 每周/每两周/每月/自定义天数. */
+function jpItemDueOn(it, ds){
+  const r=it.repeat||'daily';
+  if(r==='daily')return true;
+  const d=new Date(ds+'T00:00:00'),dow=d.getDay();
+  if(r==='weekdays')return dow>=1&&dow<=5;
+  if(r==='weekends')return dow===0||dow===6;
+  const anchor=new Date((it.since||ds)+'T00:00:00');
+  const days=Math.round((d-anchor)/86400000);
+  if(days<0)return false;
+  if(r==='weekly')return dow===anchor.getDay();
+  if(r==='biweekly')return dow===anchor.getDay()&&Math.floor(days/7)%2===0;
+  if(r==='monthly')return d.getDate()===anchor.getDate();
+  if(r==='custom_days')return it.customDays>0&&days%it.customDays===0;
+  return true;
+}
+function jpDueToday(){return S.jp.list.filter(i=>jpItemDueOn(i,TODAY));}
+function toggleJpNewCustom(){const s=document.getElementById('jp-new-repeat'),i=document.getElementById('jp-new-custom');if(s&&i)i.style.display=s.value==='custom_days'?'inline-block':'none';}
+function toggleEjCustom(){const s=document.getElementById('ej-repeat'),i=document.getElementById('ej-custom');if(s&&i)i.style.display=s.value==='custom_days'?'inline-block':'none';}
+
+/* settle the derived state after ANY list mutation. Check-in = all of TODAY's DUE items
+   done (items not scheduled for today don't block). Pure — no sounds, no renders. */
 function jpSettle(){
-  const all=S.jp.list.length>0&&S.jp.list.every(i=>i.d);
+  const due=jpDueToday();
+  const all=due.length>0&&due.every(i=>i.d);
   const had=!!S.jp.log[TODAY];
   if(all&&!had)S.jp.log[TODAY]=true;
-  // only AUTO-uncheck when a checklist EXISTS and is now incomplete; an empty checklist
-  // must never wipe a manual check-in (jpCheckInToday owns TODAY in that case).
-  else if(!all&&had&&S.jp.list.length>0)delete S.jp.log[TODAY];
+  // only AUTO-uncheck when there ARE items due today (a real, incomplete checklist); on a
+  // day with nothing due, jpCheckInToday (manual) owns TODAY and must not be wiped.
+  else if(!all&&had&&due.length>0)delete S.jp.log[TODAY];
   S.jp.streak=jpComputeStreak();
   S.jp.last=Object.keys(S.jp.log).sort().reverse()[0]||null;
   return {changed:all!==had,all};
@@ -72,34 +95,59 @@ function rJP(){
     const cls=['jp-day-cell'];if(done)cls.push('done');if(fut)cls.push('future');if(isT)cls.push('today');
     return `<div class="jp-day"><div class="jp-day-label">${labs[i]}</div><div class="${cls.join(' ')}"></div></div>`;
   }).join('');
-  // status line (the old manual check-in button, now display-only): progress
-  // toward today's auto check-in, against the CURRENT list length
-  const doneN=S.jp.list.filter(i=>i.d).length,totalN=S.jp.list.length;
+  // check-in status against TODAY's DUE items. No items due today (empty list OR nothing
+  // scheduled) → the button is a manual "studied today" toggle so a streak can still be
+  // kept; with due items → auto check-in when all done, button is status only.
+  const due=jpDueToday();
+  const doneN=due.filter(i=>i.d).length,dueN=due.length;
   const ci=S.jp.log[TODAY],btn=document.getElementById('ci-btn');
-  // No checklist → the button is a manual "studied today" toggle (keep a streak by just
-  // reading daily). With a checklist → auto check-in when all done, button = status only.
-  if(totalN===0){
+  if(dueN===0){
     btn.textContent = ci ? '✓ 今日已打卡 · 点此取消' : '点此打卡 · 标记今日已学日文';
     btn.onclick = jpCheckInToday;
+    btn.style.pointerEvents='auto'; btn.style.cursor='pointer';
     btn.classList.add('jp-ci-tappable');
   } else {
-    btn.textContent = ci ? '— 今日已完成 —' : `今日练习 ${doneN}/${totalN} · 全清自动打卡`;
+    btn.textContent = ci ? '— 今日已完成 —' : `今日 ${doneN}/${dueN} · 全清自动打卡`;
     btn.onclick = null;
+    btn.style.pointerEvents='none'; btn.style.cursor='';
     btn.classList.remove('jp-ci-tappable');
   }
   btn.classList.toggle('done',!!ci);
+  const JP_REPS=[['daily','每日'],['weekdays','仅工作日'],['weekends','仅周末'],['weekly','每周'],['biweekly','每两周'],['monthly','每月'],['custom_days','自定义天数…']];
   document.getElementById('jp-checklist').innerHTML=S.jp.list.map(i=>{
     if(editingJP===i.id){
-      return `<div style="padding:5px 0;border-bottom:.5px solid var(--hair);"><div class="edit-box" style="flex-direction:row;padding:6px;align-items:center;">
-        <input id="ej-text" value="${escH(i.t)}" style="flex:1;">
-        <button class="primary fx-btn" onclick="saveJPEdit('${i.id}')">保存</button>
-        <button class="ghost fx-btn" onclick="cancelJPEdit()">×</button>
+      const rep=i.repeat||'daily';
+      return `<div style="padding:5px 0;border-bottom:.5px solid var(--hair);"><div class="edit-box" style="padding:6px;">
+        <input id="ej-text" value="${escH(i.t)}" style="width:100%;">
+        <div style="display:flex;gap:6px;align-items:center;">
+          <select id="ej-repeat" onchange="toggleEjCustom()" style="flex:1;">
+            ${JP_REPS.map(([v,l])=>`<option value="${v}" ${rep===v?'selected':''}>${l}</option>`).join('')}
+          </select>
+          <input id="ej-custom" type="number" min="1" max="365" value="${i.customDays||''}" placeholder="每N天" style="width:78px;${rep==='custom_days'?'':'display:none;'}">
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="primary fx-btn" onclick="saveJPEdit('${i.id}')" style="flex:1;">保存</button>
+          <button class="ghost fx-btn" onclick="cancelJPEdit()" style="flex:1;">取消</button>
+        </div>
       </div></div>`;
+    }
+    const due=jpItemDueOn(i,TODAY);
+    const repBadge=(i.repeat&&i.repeat!=='daily')?`<span class="ac-bell">↻ ${repeatLabel(i.repeat,i.customDays)}</span>`:'';
+    if(!due){
+      return `<div class="row" data-id="${i.id}" style="opacity:.42;">
+        <span class="drag-handle" onclick="event.stopPropagation()" aria-label="拖动排序">⠿</span>
+        <span style="display:inline-block;width:16px;text-align:center;color:var(--ghost);">·</span>
+        <div class="row-body"><span class="item-text">${escH(i.t)}</span> ${repBadge}<span class="ac-date">今日无需</span></div>
+        <div class="row-actions">
+          <button class="row-btn" onclick="startJPEdit('${i.id}')">编辑</button>
+          <button class="row-btn" onclick="delJP('${i.id}')">×</button>
+        </div>
+      </div>`;
     }
     return `<div class="row ${i.d?'item-done':''}" data-id="${i.id}">
       <span class="drag-handle" onclick="event.stopPropagation()" aria-label="拖动排序">⠿</span>
       <input type="checkbox" class="row-cb" ${i.d?'checked':''} onchange="toggleJP('${i.id}')">
-      <div class="row-body"><span class="item-text">${escH(i.t)}</span></div>
+      <div class="row-body"><span class="item-text">${escH(i.t)}</span> ${repBadge}</div>
       <div class="row-actions">
         <button class="row-btn" onclick="startJPEdit('${i.id}')">编辑</button>
         <button class="row-btn" onclick="delJP('${i.id}')">×</button>

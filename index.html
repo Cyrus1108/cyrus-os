@@ -356,9 +356,21 @@
         <button class="row-btn" onclick="toggleJPForm()">+ 添加</button>
       </div>
       <div id="jp-new-form" style="display:none;margin-bottom:8px;">
-        <div class="edit-box" style="flex-direction:row;padding:6px;align-items:center;">
-          <input id="jp-new-text" placeholder="新练习项目…" style="flex:1;">
-          <button class="primary fx-btn" onclick="addJPItem()">加</button>
+        <div class="edit-box" style="padding:6px;">
+          <input id="jp-new-text" placeholder="新练习项目…" style="width:100%;">
+          <div style="display:flex;gap:6px;align-items:center;">
+            <select id="jp-new-repeat" onchange="toggleJpNewCustom()" style="flex:1;">
+              <option value="daily">每日</option>
+              <option value="weekdays">仅工作日</option>
+              <option value="weekends">仅周末</option>
+              <option value="weekly">每周</option>
+              <option value="biweekly">每两周</option>
+              <option value="monthly">每月</option>
+              <option value="custom_days">自定义天数…</option>
+            </select>
+            <input id="jp-new-custom" type="number" min="1" max="365" placeholder="每N天" style="width:78px;display:none;">
+            <button class="primary fx-btn" onclick="addJPItem()">加</button>
+          </div>
         </div>
       </div>
       <div id="jp-checklist"></div>
