@@ -94,7 +94,7 @@ html[data-theme="monarch"] .header-top .stars,
 html[data-theme="monarch"] .header-top .eyebrow-mute{ display:none; }
 
 html[data-theme="monarch"] .sysw-frame{
-  position:relative; padding:18px 22px 20px;
+  position:relative; overflow:hidden; padding:18px 22px 20px;
   background:linear-gradient(180deg, rgba(26,19,48,0.74), rgba(12,9,24,0.74));
   border:1px solid var(--brass-ghost);
   box-shadow:0 0 0 0.5px var(--brass-ghost), 0 0 32px -10px var(--brass-glow), inset 0 0 46px -22px var(--brass-glow);
@@ -137,8 +137,22 @@ html[data-theme="monarch"] .sysw-abar{ height:4px; background:rgba(42,33,72,0.9)
 html[data-theme="monarch"] .sysw-abar i{ display:block; height:100%; background:var(--brass); }
 html[data-theme="monarch"] .sysw-av{ font-family:'Oswald',var(--font-sans); font-size:18px; color:var(--color-text-primary); flex-shrink:0; width:30px; text-align:right; }
 
+/* 暗影君主剪影 — faded backdrop center-right; content layers above it */
+html[data-theme="monarch"] .sysw-head,
+html[data-theme="monarch"] .sysw-top,
+html[data-theme="monarch"] .sysw-attrhd,
+html[data-theme="monarch"] .sysw-attrs{ position:relative; z-index:1; }
+html[data-theme="monarch"] .sysw-frame::before,
+html[data-theme="monarch"] .sysw-frame::after{ z-index:2; }
+html[data-theme="monarch"] .sysw-fig{ position:absolute; top:30px; left:46%; width:238px; height:184px; opacity:.62; pointer-events:none; z-index:0; }
+html[data-theme="monarch"] .sysw-fig svg{ width:100%; height:100%; display:block; }
+html[data-theme="monarch"] .sysw-stat{ max-width:44%; }
+html[data-theme="monarch"] .sysw-pow-n{ font-size:46px; text-shadow:0 0 26px var(--brass-glow); }
+
 @media (max-width:760px){
   html[data-theme="monarch"] .sysw-attrs{ grid-template-columns:repeat(2,1fr); }
   html[data-theme="monarch"] .sysw-top{ flex-direction:column; gap:12px; }
   html[data-theme="monarch"] .sysw-pow{ text-align:left; }
+  html[data-theme="monarch"] .sysw-fig{ display:none; }
+  html[data-theme="monarch"] .sysw-stat{ max-width:100%; }
 }

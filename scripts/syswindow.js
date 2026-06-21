@@ -18,6 +18,21 @@
   function ico(k){ return '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+ICONS[k]+'</svg>'; }
   function clamp(v){ return Math.max(0, Math.min(100, v)); }
 
+  /* 暗影君主剪影 — a shadowy hooded bust with glowing violet eyes + a soft amethyst
+     aura. Sits center-right of the window as a faded backdrop. */
+  var FIG = '<div class="sysw-fig" aria-hidden="true"><svg viewBox="0 0 240 240" preserveAspectRatio="xMidYMin meet">'+
+    '<defs><radialGradient id="swAura" cx="50%" cy="40%" r="58%">'+
+      '<stop offset="0%" stop-color="#7C4DD6" stop-opacity="0.55"/>'+
+      '<stop offset="52%" stop-color="#5B2FA8" stop-opacity="0.16"/>'+
+      '<stop offset="100%" stop-color="#5B2FA8" stop-opacity="0"/>'+
+    '</radialGradient></defs>'+
+    '<ellipse cx="120" cy="108" rx="98" ry="122" fill="url(#swAura)"/>'+
+    '<path d="M120 38 C108 36 100 44 99 56 L88 46 L95 63 C86 67 85 79 92 89 C96 99 108 105 120 105 C132 105 144 99 148 89 C155 79 154 67 145 63 L152 46 L141 56 C140 44 132 36 120 38 Z M96 101 C77 109 61 125 53 153 C45 179 43 208 45 227 L195 227 C197 208 195 179 187 153 C179 125 163 109 144 101 C138 113 102 113 96 101 Z" fill="#0B0718"/>'+
+    '<path d="M99 56 C86 67 85 79 92 89 M96 101 C77 109 61 125 53 153 C45 179 43 208 45 227" fill="none" stroke="#9D7BE6" stroke-opacity="0.45" stroke-width="1.4"/>'+
+    '<ellipse cx="108" cy="76" rx="9.5" ry="6" fill="#B892FF" opacity="0.4"/><ellipse cx="108" cy="76" rx="4.6" ry="2.8" fill="#F0E8FF"/>'+
+    '<ellipse cx="133" cy="76" rx="9.5" ry="6" fill="#B892FF" opacity="0.4"/><ellipse cx="133" cy="76" rx="4.6" ry="2.8" fill="#F0E8FF"/>'+
+    '</svg></div>';
+
   function ensure(){
     var e = document.getElementById('sys-window');
     if(!e){
@@ -44,7 +59,7 @@
         '<div class="sysw-av">'+v+'</div></div>';
     }).join('');
     e.innerHTML =
-      '<div class="sysw-frame">'+
+      '<div class="sysw-frame">'+ FIG +
         '<div class="sysw-head"><span class="sysw-sys">&#9672; SYSTEM <i class="sysw-kr">시스템 창</i></span>'+
           '<span class="sysw-online"><i></i>ONLINE</span></div>'+
         '<div class="sysw-top">'+
