@@ -41,10 +41,21 @@ function jpSettle(){
   const all=S.jp.list.length>0&&S.jp.list.every(i=>i.d);
   const had=!!S.jp.log[TODAY];
   if(all&&!had)S.jp.log[TODAY]=true;
-  else if(!all&&had)delete S.jp.log[TODAY];
+  // only AUTO-uncheck when a checklist EXISTS and is now incomplete; an empty checklist
+  // must never wipe a manual check-in (jpCheckInToday owns TODAY in that case).
+  else if(!all&&had&&S.jp.list.length>0)delete S.jp.log[TODAY];
   S.jp.streak=jpComputeStreak();
   S.jp.last=Object.keys(S.jp.log).sort().reverse()[0]||null;
   return {changed:all!==had,all};
+}
+/* Manual daily check-in — when there's no checklist, the streak is kept by simply marking
+   "studied today". Toggles TODAY only; historical days are never touched. */
+function jpCheckInToday(){
+  if(S.jp.log[TODAY])delete S.jp.log[TODAY];else S.jp.log[TODAY]=true;
+  S.jp.streak=jpComputeStreak();
+  S.jp.last=Object.keys(S.jp.log).sort().reverse()[0]||null;
+  if(window.Sfx){S.jp.log[TODAY]?Sfx.quest():Sfx.untick();}
+  saveJP();rJP();rMetrics();if(typeof rpgAfterChange==='function')rpgAfterChange();
 }
 let jpNT;function onJPNote(){S.jp.note=document.getElementById('jp-note').value;clearTimeout(jpNT);jpNT=setTimeout(saveJP,600);}
 
@@ -65,8 +76,17 @@ function rJP(){
   // toward today's auto check-in, against the CURRENT list length
   const doneN=S.jp.list.filter(i=>i.d).length,totalN=S.jp.list.length;
   const ci=S.jp.log[TODAY],btn=document.getElementById('ci-btn');
-  btn.textContent = ci ? '— 今日已完成 —'
-    : (totalN===0 ? '还没有练习 · 点「添加」建立你的清单' : `今日练习 ${doneN}/${totalN} · 全清自动打卡`);
+  // No checklist → the button is a manual "studied today" toggle (keep a streak by just
+  // reading daily). With a checklist → auto check-in when all done, button = status only.
+  if(totalN===0){
+    btn.textContent = ci ? '✓ 今日已打卡 · 点此取消' : '点此打卡 · 标记今日已学日文';
+    btn.onclick = jpCheckInToday;
+    btn.classList.add('jp-ci-tappable');
+  } else {
+    btn.textContent = ci ? '— 今日已完成 —' : `今日练习 ${doneN}/${totalN} · 全清自动打卡`;
+    btn.onclick = null;
+    btn.classList.remove('jp-ci-tappable');
+  }
   btn.classList.toggle('done',!!ci);
   document.getElementById('jp-checklist').innerHTML=S.jp.list.map(i=>{
     if(editingJP===i.id){

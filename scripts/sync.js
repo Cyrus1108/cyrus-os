@@ -74,6 +74,14 @@ async function pullAcademics(){
   }));
 }
 
+/* Union two JP check-in logs: a day recorded on EITHER side is never dropped. The log is
+   append-only history keyed by date, so BOTH pull and push union (never replace) it —
+   that is what stops a stale/thin copy on any device from shrinking the streak (the
+   recurring "连续打卡消失" data-loss bug). Per-key local wins; TODAY authority handled
+   explicitly by the push (the active device owns same-day check / un-check). */
+function jpUnionLog(cloudLog, localLog){
+  return Object.assign({}, cloudLog || {}, localLog || {});
+}
 async function pullJapanese(){
   const { data } = await sb.from('japanese').select('*')
     .eq('user_id', currentUser.id).maybeSingle();
@@ -82,7 +90,9 @@ async function pullJapanese(){
       date: data.date || null,
       streak: data.streak || 0,
       last: data.last_date || null,
-      log: data.log || {},
+      // union, never replace — a pull must not drop days this device logged but hasn't
+      // pushed yet (the original loss vector); post-fix the cloud is itself the union.
+      log: jpUnionLog(data.log, S.jp.log),
       note: data.note || '',
       // Keep the LS-hydrated/in-memory list when the cloud column is empty (matches
       // pullMorning/pullTrading) instead of clobbering it with the empty default.
@@ -541,12 +551,28 @@ async function syncPushMorning(){
 async function syncPushJP(){
   if(!currentUser) return;
   await waitForPull();
+  // MERGE, never replace: re-read the cloud log and union it with local so a concurrent
+  // device's days are never overwritten. The active device is authoritative for TODAY
+  // ONLY (same-day check / un-check); all earlier days are append-only and unioned.
+  let log = S.jp.log || {};
+  try{
+    const { data: cur } = await sb.from('japanese').select('log')
+      .eq('user_id', currentUser.id).maybeSingle();
+    if(cur && cur.log && typeof cur.log === 'object'){
+      const merged = jpUnionLog(cur.log, log);
+      if(log[TODAY]) merged[TODAY] = true; else delete merged[TODAY];
+      log = merged;
+    }
+  }catch(e){ /* cloud read failed → push local log as-is (no worse than the old behaviour) */ }
+  S.jp.log = log;                                              // heal local with the union
+  if(typeof jpComputeStreak === 'function') S.jp.streak = jpComputeStreak();
+  S.jp.last = Object.keys(log).sort().reverse()[0] || null;
   const res = await sb.from('japanese').upsert({
     user_id: currentUser.id,
     date: S.jp.date || TODAY,
     streak: S.jp.streak,
     last_date: S.jp.last || null,
-    log: S.jp.log || {},
+    log: log,
     note: S.jp.note || '',
     list: S.jp.list,
   });
