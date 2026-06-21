@@ -49,6 +49,10 @@ html[data-theme="monarch"]{
    headline text all read --brass/--brass-soft above, so they go violet automatically. */
 html[data-theme="monarch"] body{ background:#08060F; color:#ECE7FA; }
 
+/* monarch drops the cappa sketch-trail loops (glass-trails) — the little ring/swirl
+   doodles don't fit the SL void; the smooth violet energy flow carries the bg alone. */
+html[data-theme="monarch"] #glass-trails{ display:none !important; }
+
 /* the violet energy flow is the hero of this theme — keep it bright */
 html[data-theme="monarch"] #energy-flow{ opacity:.95; }
 
