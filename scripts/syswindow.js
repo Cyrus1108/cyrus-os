@@ -8,12 +8,12 @@
 
   var ORDER = ['STR','AGI','INT','WIS','VIT','CRE'];
   var ICONS = {
-    STR:'<path d="M4 20l3-3M7 17l9-9M16 8l4-4M12.5 7.5l4 4"/>',
-    AGI:'<path d="M13 3L6 13h5l-1 8 8-11h-6z"/>',
-    INT:'<circle cx="12" cy="8" r="3.4"/><path d="M6 20a6 6 0 0 1 12 0"/>',
-    WIS:'<path d="M12 3a6 6 0 0 0-4 10c1 1 1 2 1 3h6c0-1 0-2 1-3a6 6 0 0 0-4-10z"/><path d="M9.5 19h5M10.5 21.2h3"/>',
-    VIT:'<path d="M12 20S4 14.5 4 9a4 4 0 0 1 8-1 4 4 0 0 1 8 1c0 5.5-8 11-8 11z"/>',
-    CRE:'<path d="M12 3c1.2 3.5-2 4.5-2 7.5a3 3 0 0 0 6 0c0-1.2-.8-2-1.2-2.8C16.5 9 17.5 12 17.5 14a5.5 5.5 0 0 1-11 0C6.5 9 10 7.5 12 3z"/>'
+    STR:'<path d="M14.5 17.5 3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/><path d="M16 16l4 4"/><path d="M19 21l2-2"/>',
+    AGI:'<circle cx="14.5" cy="4.8" r="1.7"/><path d="M13.5 7 10 10.5l3.5 2-1 5.5"/><path d="M10 10.5 6.5 9.5"/><path d="M13.5 12l4.5 1.5 1 3.5"/>',
+    INT:'<circle cx="12" cy="7.5" r="3.2"/><path d="M6.5 20a5.5 5.5 0 0 1 11 0"/>',
+    WIS:'<path d="M9.5 4.5A2.5 2.5 0 0 0 7 7a2.3 2.3 0 0 0-1.2 4.3A2.3 2.3 0 0 0 7 15.5a2.3 2.3 0 0 0 4.5.6V5.8a2.5 2.5 0 0 0-2-1.3z"/><path d="M14.5 4.5A2.5 2.5 0 0 1 17 7a2.3 2.3 0 0 1 1.2 4.3A2.3 2.3 0 0 1 17 15.5a2.3 2.3 0 0 1-4.5.6"/>',
+    VIT:'<path d="M12 20.3 4.6 13a4.4 4.4 0 0 1 7.4-4.8A4.4 4.4 0 0 1 19.4 13z"/>',
+    CRE:'<path d="M12 3c0 3-2.2 4.2-2.2 7a3.2 3.2 0 0 0 6.4 0c0-1.3-.6-2.4-1.4-3.3C17.6 8 19 10.6 19 13.4a7 7 0 0 1-14 0C5 8.8 9 6.8 12 3z"/>'
   };
   function ico(k){ return '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+ICONS[k]+'</svg>'; }
   function clamp(v){ return Math.max(0, Math.min(100, v)); }
@@ -48,7 +48,9 @@
   function ensureFrame(){
     if(document.getElementById('monarch-frame')) return;
     var f = document.createElement('div'); f.id = 'monarch-frame'; f.setAttribute('aria-hidden','true');
-    f.innerHTML = '<span class="mf-c tl"></span><span class="mf-c tr"></span><span class="mf-c bl"></span><span class="mf-c br"></span>';
+    f.innerHTML = '<span class="mf-c tl"></span><span class="mf-c tr"></span><span class="mf-c bl"></span><span class="mf-c br"></span>'+
+      '<span class="mf-crest"><svg viewBox="0 0 40 40" fill="currentColor"><path d="M20 3c1.4 5-3 7-3 11.4a3 3 0 0 0 6 0c0-1.4-.7-2.6-1.5-3.7C24 12.4 26 15.4 26 19a8 8 0 0 1-16 0C10 11.6 17 9.6 20 3z"/></svg></span>'+
+      '<span class="mf-ver">◇ SYSTEM · CYRUS OS · ONLINE ◇</span>';
     (document.body || document.documentElement).appendChild(f);
   }
 

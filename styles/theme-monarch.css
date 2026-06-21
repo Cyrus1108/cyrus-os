@@ -179,3 +179,18 @@ body.has-focus #monarch-frame, body.fin-locked #monarch-frame, body.fit-locked #
 body.sys-locked #monarch-frame, body.cal-locked #monarch-frame, body.ai-locked #monarch-frame,
 body.store-locked #monarch-frame, body.motiv-locked #monarch-frame{ display:none; }
 @media (prefers-reduced-motion:reduce){ html[data-theme="monarch"] #monarch-frame{ animation:none; } }
+/* 顶部紫焰徽章 + 底部 SYSTEM 小字 */
+html[data-theme="monarch"] #monarch-frame .mf-crest{ position:absolute; top:-16px; left:50%; transform:translateX(-50%); width:32px; height:32px; color:var(--brass-soft); background:#08060F; border-radius:50%; padding:3px; filter:drop-shadow(0 0 7px var(--brass-glow)); }
+html[data-theme="monarch"] #monarch-frame .mf-crest svg{ width:100%; height:100%; display:block; }
+html[data-theme="monarch"] #monarch-frame .mf-ver{ position:absolute; bottom:-8px; left:50%; transform:translateX(-50%); font-family:var(--font-mono); font-size:10px; letter-spacing:.24em; color:var(--color-text-tertiary); background:#08060F; padding:0 14px; white-space:nowrap; }
+
+/* ════ DAY 90 等主面板 SYSTEM 化:紫光边 + 四角括号 ════ */
+html[data-theme="monarch"] .the90-panel{ border:1px solid var(--brass-ghost); }
+html[data-theme="monarch"] .the90-panel::before{
+  content:''; position:absolute; top:-1px; left:-1px; width:16px; height:16px;
+  border-top:1.5px solid var(--brass-soft); border-left:1.5px solid var(--brass-soft); pointer-events:none; z-index:3;
+}
+html[data-theme="monarch"] .the90-panel::after{
+  content:''; position:absolute; bottom:-1px; right:-1px; width:16px; height:16px;
+  border-bottom:1.5px solid var(--brass-soft); border-right:1.5px solid var(--brass-soft); pointer-events:none; z-index:3;
+}
