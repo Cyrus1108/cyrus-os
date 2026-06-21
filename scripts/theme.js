@@ -8,7 +8,7 @@ let _lifetreeLoading = false;
 
 /* Three themes now: cappa (brass/cream default) → sterile (light Endfield futurism)
    → terminal (dark Arknights tactical). The toggle cycles through them. */
-const THEMES = ['cappa', 'sterile', 'terminal'];
+const THEMES = ['cappa', 'sterile', 'terminal', 'monarch'];
 
 function currentTheme(){
   const t = document.documentElement.getAttribute('data-theme');
@@ -40,7 +40,7 @@ function toggleTheme(){
 function updateThemeBtn(t){
   const b = document.getElementById('theme-btn');
   // label shows the NEXT theme in the cycle
-  if(b) b.textContent = t === 'cappa' ? '◆ 终末' : t === 'sterile' ? '▣ 终端' : '☼ 经典';
+  if(b) b.textContent = t === 'cappa' ? '◆ 终末' : t === 'sterile' ? '▣ 终端' : t === 'terminal' ? '♛ 君主' : '☼ 经典';
 }
 
 /* Lazy-load the life-tree module (pulls in Three.js) only when needed. */

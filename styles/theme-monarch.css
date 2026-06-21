@@ -1,0 +1,82 @@
+/* ════════════════════════════════════════════════════════════
+   Theme: MONARCH · [data-theme="monarch"]   (v7.28 《我独自升级》暗影君主)
+   Solo-Leveling「系统窗」深紫 reskin — a scoped overlay loaded AFTER components.css.
+   Mostly a token remap (deep-violet ground + amethyst accent) so existing components
+   recolor automatically. UNLIKE terminal, it KEEPS every cappa decoration layer
+   (ambient blobs, glass-trails, hero cube, molten headline text) — they all read
+   --brass / --brass-soft and so turn violet on their own. Adds the lavish touches:
+   a violet "system-window" glow edge on panels + amethyst activation. cappa /
+   sterile / terminal are untouched.
+   ════════════════════════════════════════════════════════════ */
+
+html[data-theme="monarch"]{
+  --brass:#9D7BE6;
+  --brass-soft:#B892FF;
+  --brass-ghost:rgba(184,146,255,0.20);
+  --brass-glow:rgba(184,146,255,0.45);
+
+  --color-background-primary:#1A1330;
+  --color-background-secondary:#221A3E;
+  --color-background-tertiary:#0C0918;
+  --color-background-input:#15102A;
+  --color-background-success:rgba(56,217,208,0.12);
+  --color-background-danger:#2A1226;
+  --color-background-warning:#2A2218;
+
+  --color-text-primary:#ECE7FA;
+  --color-text-secondary:#A39BC4;
+  --color-text-tertiary:#6B6390;
+  --color-text-success:#5FE3CD;
+  --color-text-danger:#F08AA6;
+  --color-text-warning:#E6C879;
+
+  --color-border-tertiary:rgba(150,128,210,0.18);
+  --color-border-secondary:rgba(150,128,210,0.32);
+  --color-border-primary:rgba(150,128,210,0.48);
+  --color-border-danger:rgba(240,138,166,0.4);
+  --color-border-warning:rgba(230,200,121,0.4);
+  --color-border-success:rgba(95,227,205,0.5);
+
+  --border-radius-md:2px;
+  --border-radius-lg:3px;
+
+  --hair:var(--color-border-tertiary);
+  --hair-strong:var(--color-border-secondary);
+  color-scheme:dark;
+}
+
+/* deepest violet ground; the cappa ambient blobs, glass-trails, hero cube and molten
+   headline text all read --brass/--brass-soft above, so they go violet automatically. */
+html[data-theme="monarch"] body{ background:#08060F; color:#ECE7FA; }
+
+/* the violet energy flow is the hero of this theme — keep it bright */
+html[data-theme="monarch"] #energy-flow{ opacity:.95; }
+
+/* lavish「系统窗」edge — a thin violet rim + soft outer glow on every glass panel */
+html[data-theme="monarch"] .panel,
+html[data-theme="monarch"] .the90-panel,
+html[data-theme="monarch"] .hermes-panel,
+html[data-theme="monarch"] .principles-card,
+html[data-theme="monarch"] .lowday-card{
+  box-shadow:0 0 0 0.5px var(--brass-ghost), 0 0 22px -8px var(--brass-glow);
+}
+@media (hover:hover){
+  html[data-theme="monarch"] .panel:hover,
+  html[data-theme="monarch"] .the90-panel:hover{
+    box-shadow:0 0 0 0.5px var(--brass-glow), 0 0 26px -6px var(--brass-glow);
+  }
+}
+
+/* amethyst activation — check-ins, primary buttons, focus rings glow violet */
+html[data-theme="monarch"] .the90-cell.on{
+  background:var(--brass-soft) !important; border-color:var(--brass-soft) !important; color:#160E2A !important;
+}
+html[data-theme="monarch"] .primary{
+  background:var(--brass-soft); color:#160E2A; border:1px solid #C7A8FF; font-weight:600;
+}
+html[data-theme="monarch"] .mr-pill.done{ border-color:var(--brass-soft) !important; box-shadow:0 0 8px -2px var(--brass-glow); }
+html[data-theme="monarch"] input:focus,
+html[data-theme="monarch"] select:focus,
+html[data-theme="monarch"] textarea:focus{
+  border-color:var(--brass-soft) !important; box-shadow:0 0 0 1px var(--brass-soft); outline:none;
+}

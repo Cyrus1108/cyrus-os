@@ -25,6 +25,7 @@
 <link rel="stylesheet" href="./styles/animations.css">
 <link rel="stylesheet" href="./styles/theme-sterile.css">
 <link rel="stylesheet" href="./styles/theme-terminal.css">
+<link rel="stylesheet" href="./styles/theme-monarch.css">
 <link rel="stylesheet" href="./styles/finance.css">
 <link rel="stylesheet" href="./styles/fitness.css">
 <link rel="stylesheet" href="./styles/calendar.css">
@@ -41,7 +42,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;700&family=Oswald:wght@300;400;500;600&display=swap" rel="stylesheet">
 
 <!-- Pre-paint: apply the saved theme before first paint to avoid a flash -->
-<script>(function(){try{var t=JSON.parse(localStorage.getItem('cyrus_dashboard_v6_theme')||'"cappa"');document.documentElement.setAttribute('data-theme',(t==='sterile'||t==='terminal')?t:'cappa');}catch(e){document.documentElement.setAttribute('data-theme','cappa');}})();</script>
+<script>(function(){try{var t=JSON.parse(localStorage.getItem('cyrus_dashboard_v6_theme')||'"cappa"');document.documentElement.setAttribute('data-theme',(t==='sterile'||t==='terminal'||t==='monarch')?t:'cappa');}catch(e){document.documentElement.setAttribute('data-theme','cappa');}})();</script>
 
 <!-- Pre-paint: if the app lock is enabled, hide content until applock.js mounts the lock screen (no flash of private data) -->
 <script>(function(){try{var l=JSON.parse(localStorage.getItem('cyrus_lock')||'null');if(l&&l.enabled)document.documentElement.classList.add('app-locked-boot');}catch(e){}})();</script>
