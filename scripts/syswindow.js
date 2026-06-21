@@ -59,7 +59,7 @@
         '<div class="sysw-av">'+v+'</div></div>';
     }).join('');
     e.innerHTML =
-      '<div class="sysw-frame">'+ FIG +
+      '<div class="sysw-frame">'+ (window.SYSW_FIG_IMG ? '<div class="sysw-fig"><img src="'+window.SYSW_FIG_IMG+'" alt=""></div>' : '') +
         '<div class="sysw-head"><span class="sysw-sys">&#9672; SYSTEM <i class="sysw-kr">시스템 창</i></span>'+
           '<span class="sysw-online"><i></i>ONLINE</span></div>'+
         '<div class="sysw-top">'+
