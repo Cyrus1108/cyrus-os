@@ -43,8 +43,18 @@
     return e;
   }
 
+  /* 整页发光紫光框 + 四角发光括号 — monarch-only viewport frame (an approximation of
+     the reference's electric border; the precise lightning texture would need a PNG). */
+  function ensureFrame(){
+    if(document.getElementById('monarch-frame')) return;
+    var f = document.createElement('div'); f.id = 'monarch-frame'; f.setAttribute('aria-hidden','true');
+    f.innerHTML = '<span class="mf-c tl"></span><span class="mf-c tr"></span><span class="mf-c bl"></span><span class="mf-c br"></span>';
+    (document.body || document.documentElement).appendChild(f);
+  }
+
   function render(){
     if(document.documentElement.getAttribute('data-theme') !== 'monarch') return;   // monarch-only
+    ensureFrame();
     if(typeof computeRPG !== 'function') return;
     var r; try{ r = computeRPG(); }catch(err){ return; }
     var e = ensure();

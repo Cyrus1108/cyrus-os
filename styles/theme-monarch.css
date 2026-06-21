@@ -157,3 +157,25 @@ html[data-theme="monarch"] .sysw-pow-n{ font-size:46px; text-shadow:0 0 26px var
   html[data-theme="monarch"] .sysw-fig{ display:none; }
   html[data-theme="monarch"] .sysw-stat{ max-width:100%; }
 }
+
+/* ════ 整页发光紫光框 (monarch-frame, syswindow.js) ════ */
+#monarch-frame{ display:none; }
+html[data-theme="monarch"] #monarch-frame{
+  display:block; position:fixed; inset:9px; z-index:40; pointer-events:none;
+  border:1px solid rgba(184,146,255,0.30);
+  box-shadow:inset 0 0 66px -24px var(--brass-glow), inset 0 0 1px rgba(184,146,255,0.40), 0 0 22px -10px var(--brass-glow);
+  animation:monarchFramePulse 6.5s ease-in-out infinite;
+}
+@keyframes monarchFramePulse{
+  0%,100%{ box-shadow:inset 0 0 66px -24px var(--brass-glow), inset 0 0 1px rgba(184,146,255,0.40), 0 0 22px -10px var(--brass-glow); border-color:rgba(184,146,255,0.30); }
+  50%{ box-shadow:inset 0 0 92px -20px var(--brass-glow), inset 0 0 2px rgba(184,146,255,0.56), 0 0 30px -8px var(--brass-glow); border-color:rgba(184,146,255,0.46); }
+}
+html[data-theme="monarch"] #monarch-frame .mf-c{ position:absolute; width:26px; height:26px; border:2px solid var(--brass-soft); box-shadow:0 0 12px -2px var(--brass-glow); }
+html[data-theme="monarch"] #monarch-frame .mf-c.tl{ top:-1px; left:-1px; border-right:0; border-bottom:0; }
+html[data-theme="monarch"] #monarch-frame .mf-c.tr{ top:-1px; right:-1px; border-left:0; border-bottom:0; }
+html[data-theme="monarch"] #monarch-frame .mf-c.bl{ bottom:-1px; left:-1px; border-right:0; border-top:0; }
+html[data-theme="monarch"] #monarch-frame .mf-c.br{ bottom:-1px; right:-1px; border-left:0; border-top:0; }
+body.has-focus #monarch-frame, body.fin-locked #monarch-frame, body.fit-locked #monarch-frame,
+body.sys-locked #monarch-frame, body.cal-locked #monarch-frame, body.ai-locked #monarch-frame,
+body.store-locked #monarch-frame, body.motiv-locked #monarch-frame{ display:none; }
+@media (prefers-reduced-motion:reduce){ html[data-theme="monarch"] #monarch-frame{ animation:none; } }
