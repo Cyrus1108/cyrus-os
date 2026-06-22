@@ -27,14 +27,16 @@ function rMR(){
   document.getElementById('mr-bar').style.width=pct+'%';
   document.getElementById('mr-count').innerHTML=`${done}<span style="color:var(--brass-ghost);"> / ${list.length}</span>`;
   document.getElementById('mr-time').textContent=done===list.length?'All complete':`~ ${remMins} min remaining`;
-  document.getElementById('mr-list').innerHTML=list.map(i=>`
+  const _mrHtml=list.map(i=>`
     <div class="mr-pill ${i.d?'done':''}${i.detail&&i.detail.trim()?' has-detail':''}" data-id="${i.id}" onclick="toggleMR('${i.id}', event)">
       <span class="drag-handle" onclick="event.stopPropagation()" aria-label="拖动排序">⠿</span>
       <span class="mr-pill-name">${escH(i.t)}</span>
       <span class="mr-pill-time">${i.mins}m</span>
       <span class="mr-pill-expand" onclick="event.stopPropagation();mrExpand('${i.id}')" aria-label="详情">⌄</span>
     </div>`).join('');
-  makeSortable(document.getElementById('mr-list'), { itemSelector:'.mr-pill', handleSelector:'.drag-handle', onReorder:onReorderMR });
+  setStableHTML(document.getElementById('mr-list'), _mrHtml, el=>{
+    makeSortable(el, { itemSelector:'.mr-pill', handleSelector:'.drag-handle', onReorder:onReorderMR });
+  });
   rMRReady(done === list.length && list.length > 0);
 }
 

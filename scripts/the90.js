@@ -320,7 +320,7 @@ function rThe90(){
       <span class="the90-cell-mark">${mark}</span>
     </button>`;
   }).join('');
-  document.getElementById('the90-cells').innerHTML = cellsHtml;
+  setStableHTML(document.getElementById('the90-cells'), cellsHtml);
 
   // Target labels under cells
   document.getElementById('the90-labels').innerHTML = meta.targets.map(t =>

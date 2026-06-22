@@ -104,7 +104,7 @@ function rpgTargetMetCounts(anchor){
   }
   return counts;
 }
-// attribute = 10 + 30 × weighted-avg of its feeder activities' 30-day met-fraction (→ 10..40)
+// attribute = 10 + 90 × weighted-avg of its feeder activities' 30-day met-fraction (→ 10..100)
 function rpgAttrFromCounts(attrKey, counts){
   let wsum = 0, num = 0;
   for(const tid in RPG_ACTIVITY_ATTR){
@@ -112,7 +112,7 @@ function rpgAttrFromCounts(attrKey, counts){
     num += w * ((counts[tid] || 0) / 30);
     wsum += w;
   }
-  return wsum ? Math.round(10 + 30 * num / wsum) : 10;
+  return wsum ? Math.round(10 + 90 * num / wsum) : 10;
 }
 function rpgAttrValueAt(attrKey, anchor){ return rpgAttrFromCounts(attrKey, rpgTargetMetCounts(anchor)); }
 function rpgAttrValue(attrKey){ return rpgAttrValueAt(attrKey, TODAY); }
@@ -684,8 +684,8 @@ function rpgSmoothPath(pts){
 }
 
 /* ── attribute radar (SVG, hand-rolled to match the brass HUD) ──
-   Plots the 5 current attribute values as a pentagon (10→centre, 40→edge), with
-   a "30 days ago" ghost overlay (A), a 40-cap potential ring + sonar sweep +
+   Plots the current attribute values as a polygon (10→centre, 100→edge), with
+   a "30 days ago" ghost overlay (A), a 100-cap potential ring + sonar sweep +
    weakest-pillar pulse (B). */
 function rpgRadarSVG(rpg){
   const ids = RPG_ATTR_ORDER, n = ids.length;
@@ -693,11 +693,11 @@ function rpgRadarSVG(rpg){
   const ang = i => (-Math.PI/2) + i*(2*Math.PI/n);
   const P = (i,r)=>[cx+Math.cos(ang(i))*r, cy+Math.sin(ang(i))*r];
   const fmt = p => p[0].toFixed(1)+','+p[1].toFixed(1);
-  const rad = v => Math.max(0, Math.min(1,(v-10)/30)) * R;
+  const rad = v => Math.max(0, Math.min(1,(v-10)/90)) * R;
   const polyAt = r => ids.map((_,i)=>fmt(P(i,r))).join(' ');
 
   let rings=''; [0.25,0.5,0.75].forEach(f=>{ rings += `<polygon class="rdr-ring" points="${polyAt(f*R)}"/>`; });
-  rings += `<polygon class="rdr-cap" points="${polyAt(R)}"/>`;           // B · 40-cap potential ring
+  rings += `<polygon class="rdr-cap" points="${polyAt(R)}"/>`;           // B · 100-cap potential ring
   let spokes=''; ids.forEach((_,i)=>{ const p=P(i,R); spokes += `<line class="rdr-spoke" x1="${cx}" y1="${cy}" x2="${p[0].toFixed(1)}" y2="${p[1].toFixed(1)}"/>`; });
 
   // A · ghost polygon — attributes as of 30 days ago (one window scan, reused for all 5)
@@ -732,7 +732,7 @@ function rpgRadarSVG(rpg){
 }
 
 /* ── growth curve (SVG) ──
-   战力 (combat power) = Σ of the 5 attribute values (each 10–40, so 50–200).
+   战力 (combat power) = Σ of the 6 attribute values (each 10–100, so 60–600).
    Derived for each past anchor by sliding a 30-day window over the frozen The 90
    data and re-running the many-to-many attribute formula — no stored history.
    Smoothed curve + vertical-gradient area + The 90 phase milestones (C).
@@ -826,7 +826,7 @@ function rSysStatus(body){
   const ampSpark = (typeof lowdayAmpSparkSVG==='function') ? lowdayAmpSparkSVG(30) : '';
   const attrRows = RPG_ATTRS.map(m=>{
     const val = rpg.attrs[m.key];
-    const apct = Math.min(100, Math.max(0, Math.round((val-10)/30*100)));
+    const apct = Math.min(100, Math.max(0, Math.round((val-10)/90*100)));
     return `<div class="sys-attr sa-${m.key}">
       <span class="sys-attr-icon">${m.icon}</span>
       <span class="sys-attr-name">${m.name}<i>${m.key}</i></span>

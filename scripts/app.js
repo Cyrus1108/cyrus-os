@@ -321,6 +321,21 @@ function attachRipples(root){
   });
 }
 
+/* setStableHTML — assign innerHTML only when the markup ACTUALLY changed, then run the
+   optional after(el) re-init (drag-sort, ripples) only on that real change. A redundant
+   render — a Supabase realtime self-echo's pull+rerender, a focus-rehydrate, or any
+   renderAll pass that touched nothing on this surface — must NOT tear down and recreate
+   the very <button>/<input> the user is mid-tap on: the browser only dispatches
+   click/change when pointerdown and pointerup land on the SAME node, so a rebuild between
+   them silently swallows the first tap (the long-standing "have to tap twice to record"
+   bug). Generalises the90's the90HeatSig heatmap memo to every hot tap surface. */
+function setStableHTML(el, html, after){
+  if(!el || el._stableHTML === html) return;
+  el._stableHTML = html;
+  el.innerHTML = html;
+  if(typeof after === 'function') after(el);
+}
+
 function rDate(){
   const now=new Date();
   const enDays=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];

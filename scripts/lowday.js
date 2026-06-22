@@ -167,7 +167,7 @@ function rLowDay(){
   }
   // keep the90 panel's amplitude row in sync (it also carries the discreet entry link)
   const ampEl = document.getElementById('the90-amp');
-  if(ampEl) ampEl.innerHTML = lowdayAmpRowHtml();
+  if(ampEl) setStableHTML(ampEl, lowdayAmpRowHtml());
 }
 
 /* amplitude row for the The 90 panel (dots + discreet entry link when not active) */

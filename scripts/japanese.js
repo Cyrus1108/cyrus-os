@@ -114,7 +114,7 @@ function rJP(){
   }
   btn.classList.toggle('done',!!ci);
   const JP_REPS=[['daily','每日'],['weekdays','仅工作日'],['weekends','仅周末'],['weekly','每周'],['biweekly','每两周'],['monthly','每月'],['custom_days','自定义天数…']];
-  document.getElementById('jp-checklist').innerHTML=S.jp.list.map(i=>{
+  const _jpHtml=S.jp.list.map(i=>{
     if(editingJP===i.id){
       const rep=i.repeat||'daily';
       return `<div style="padding:5px 0;border-bottom:.5px solid var(--hair);"><div class="edit-box" style="padding:6px;">
@@ -155,8 +155,10 @@ function rJP(){
     </div>`;
   }).join('');
   const ne=document.getElementById('jp-note');if(ne&&document.activeElement!==ne)ne.value=S.jp.note||'';
-  attachRipples();
-  makeSortable(document.getElementById('jp-checklist'), { itemSelector:'.row', handleSelector:'.drag-handle', onReorder:onReorderJP });
+  setStableHTML(document.getElementById('jp-checklist'), _jpHtml, el=>{
+    attachRipples();
+    makeSortable(el, { itemSelector:'.row', handleSelector:'.drag-handle', onReorder:onReorderJP });
+  });
 }
 function onReorderJP(ids){
   S.jp.list = reorderById(S.jp.list, ids);

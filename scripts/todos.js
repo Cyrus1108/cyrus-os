@@ -118,10 +118,10 @@ function rTodos(){
     return (a.position||0) - (b.position||0);        // manual drag order
   });
 
-  if(!list.length){el.innerHTML='<div class="empty">— 暂无待办 —</div>';return;}
+  if(!list.length){setStableHTML(el, '<div class="empty">— 暂无待办 —</div>');return;}
   // (drag-to-reorder wired at the end of this function)
 
-  el.innerHTML = list.map(t=>{
+  const _tdHtml = list.map(t=>{
     if(editingTD === t.id){
       return `<div style="padding:6px 0;border-bottom:.5px solid var(--hair);">
         <div class="edit-box">
@@ -203,13 +203,15 @@ function rTodos(){
       </div>
     </div>`;
   }).join('');
-  attachRipples();
-  makeSortable(el, { itemSelector:'.todo-row', handleSelector:'.drag-handle', onReorder:onReorderTodos });
-  // Open form navigator on the edit box if an item is being edited
-  if(editingTD){
-    const box = el.querySelector('.edit-box');
-    if(box) requestAnimationFrame(()=>openFormNav(box));
-  }
+  setStableHTML(el, _tdHtml, ()=>{
+    attachRipples();
+    makeSortable(el, { itemSelector:'.todo-row', handleSelector:'.drag-handle', onReorder:onReorderTodos });
+    // Open form navigator on the edit box if an item is being edited
+    if(editingTD){
+      const box = el.querySelector('.edit-box');
+      if(box) requestAnimationFrame(()=>openFormNav(box));
+    }
+  });
 }
 function onReorderTodos(ids){
   S.todos = reorderById(S.todos, ids);
