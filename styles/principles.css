@@ -7,11 +7,14 @@
 .principles-modal.open{ opacity:1; pointer-events:auto; }
 .principles-modal-back{ position:absolute; inset:0; background:rgba(8,7,5,.7); backdrop-filter:blur(3px); }
 .principles-card{
-  position:relative; max-width:460px; width:100%; max-height:88vh; overflow:auto;
+  position:relative; max-width:460px; width:100%; max-height:88vh; overflow:hidden; display:flex; flex-direction:column;
   padding:22px 22px 20px; border:.5px solid var(--brass-ghost); border-radius:var(--border-radius-md);
   background:var(--color-background-secondary); box-shadow:0 24px 80px rgba(0,0,0,.5), inset 0 0 40px color-mix(in srgb, var(--brass) 4%, transparent);
   transform:scale(.96); transition:transform var(--dur-base) var(--ease-press); }
 .principles-modal.open .principles-card{ transform:scale(1); }
+/* only the body scrolls — the mode tabs + the 4 corner brackets stay pinned to the card
+   (previously the whole card scrolled, dragging the brackets down to mid-modal). */
+#pr-body{ flex:1 1 auto; min-height:0; overflow-y:auto; overflow-x:hidden; margin-right:-6px; padding-right:6px; }
 
 /* ── header: kicker + mode tabs + close ── */
 .pr-kicker{ font-family:var(--mono); font-size:10px; letter-spacing:.18em; color:var(--brass-soft); text-align:center; margin-bottom:12px; }
