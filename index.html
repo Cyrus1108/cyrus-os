@@ -55,10 +55,14 @@
   background:radial-gradient(125% 85% at 50% 40%,#2A1B52 0%,#140C28 44%,#08060F 100%);
   animation:coverOut .6s ease 1.2s forwards;}
 #app-cover .cover-aura{position:absolute;left:50%;top:40%;width:min(80vw,440px);aspect-ratio:1;transform:translate(-50%,-50%);
-  background:radial-gradient(circle,rgba(184,146,255,.32),rgba(184,146,255,0) 60%);filter:blur(8px);pointer-events:none;
+  background:radial-gradient(circle,rgba(184,146,255,.42),rgba(184,146,255,0) 62%);filter:blur(8px);pointer-events:none;
   animation:coverPulse 2.4s ease-in-out infinite;}
-#app-cover .cover-crest{position:relative;width:min(46vw,180px);height:auto;
-  filter:drop-shadow(0 0 24px rgba(157,123,230,.55));animation:coverRise .9s cubic-bezier(.2,.7,.2,1) both;}
+/* mix-blend screen drops the crest PNG's dark background; the radial mask feathers the
+   square edges so the crest floats seamlessly in the cosmic aura (no pasted-icon look). */
+#app-cover .cover-crest{position:relative;width:min(46vw,180px);height:auto;mix-blend-mode:screen;
+  -webkit-mask-image:radial-gradient(circle at 50% 49%,#000 50%,rgba(0,0,0,.6) 66%,transparent 80%);
+  mask-image:radial-gradient(circle at 50% 49%,#000 50%,rgba(0,0,0,.6) 66%,transparent 80%);
+  animation:coverRise .9s cubic-bezier(.2,.7,.2,1) both;}
 #app-cover .cover-word{position:relative;margin-top:24px;font-family:'Cormorant Garamond',Georgia,'Noto Serif SC',serif;
   font-size:32px;font-weight:500;letter-spacing:.46em;text-indent:.46em;color:#F1ECFF;
   animation:coverRise 1s cubic-bezier(.2,.7,.2,1) .08s both;}
