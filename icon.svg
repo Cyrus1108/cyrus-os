@@ -1,18 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" fill="#FDFCF9"/>
-  <text x="256" y="332"
-        font-family="Cormorant Garamond, Georgia, 'Songti SC', 'Noto Serif SC', serif"
-        font-size="300"
-        font-style="italic"
-        font-weight="400"
-        fill="#A88455"
-        text-anchor="middle"
-        letter-spacing="-4">C</text>
-  <text x="256" y="400"
-        font-family="Georgia, serif"
-        font-size="16"
-        letter-spacing="8"
-        fill="#A88455"
-        opacity="0.55"
-        text-anchor="middle">◆ ◆ ◆</text>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="58%">
+      <stop offset="0%" stop-color="#34245F"/>
+      <stop offset="52%" stop-color="#160E2A"/>
+      <stop offset="100%" stop-color="#08060F"/>
+    </radialGradient>
+    <linearGradient id="ink" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#EFE6FF"/>
+      <stop offset="100%" stop-color="#B892FF"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="7" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- diamond spikes (echo the crest) -->
+  <g fill="#B892FF" filter="url(#glow)">
+    <path d="M256 64 l18 40 -18 40 -18-40z" opacity="0.92"/>
+    <path d="M256 368 l18 40 -18 40 -18-40z" opacity="0.92"/>
+  </g>
+  <!-- crest ring -->
+  <circle cx="256" cy="256" r="120" fill="none" stroke="#8A6BD0" stroke-width="5" opacity="0.45" filter="url(#glow)"/>
+  <!-- C -->
+  <text x="256" y="322" font-family="Cormorant Garamond, Georgia, 'Noto Serif SC', serif" font-size="208" font-style="italic" font-weight="500" letter-spacing="-2" fill="url(#ink)" text-anchor="middle" filter="url(#glow)">C</text>
 </svg>

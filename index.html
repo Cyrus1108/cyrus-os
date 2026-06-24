@@ -8,10 +8,10 @@
 
 <link rel="manifest" href="./manifest.json">
 <link rel="icon" type="image/svg+xml" href="./icon.svg">
-<link rel="apple-touch-icon" href="./icon.svg">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
 
-<meta name="theme-color" content="#FDFCF9" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#1A1713" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#0C0918" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0C0918" media="(prefers-color-scheme: dark)">
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -48,6 +48,34 @@
 <script>(function(){try{var l=JSON.parse(localStorage.getItem('cyrus_lock')||'null');if(l&&l.enabled)document.documentElement.classList.add('app-locked-boot');}catch(e){}})();</script>
 <style>html.app-locked-boot .page-wrapper,html.app-locked-boot .drawer-tab-group,html.app-locked-boot #auth-overlay{visibility:hidden!important}html.app-locked .page-wrapper,html.app-locked .drawer-tab-group,html.app-locked #auth-overlay{visibility:hidden!important}</style>
 
+<!-- Launch cover (封面): cosmic-violet crest splash. Inline-styled so it paints on first frame
+     before any CSS loads; auto-fades by ~1.8s (pure CSS, can never trap the user). -->
+<style id="cover-style">
+#app-cover{position:fixed;inset:0;z-index:99990;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:radial-gradient(125% 85% at 50% 40%,#2A1B52 0%,#140C28 44%,#08060F 100%);
+  animation:coverOut .6s ease 1.2s forwards;}
+#app-cover .cover-aura{position:absolute;left:50%;top:40%;width:min(80vw,440px);aspect-ratio:1;transform:translate(-50%,-50%);
+  background:radial-gradient(circle,rgba(184,146,255,.32),rgba(184,146,255,0) 60%);filter:blur(8px);pointer-events:none;
+  animation:coverPulse 2.4s ease-in-out infinite;}
+#app-cover .cover-crest{position:relative;width:min(46vw,180px);height:auto;
+  filter:drop-shadow(0 0 24px rgba(157,123,230,.55));animation:coverRise .9s cubic-bezier(.2,.7,.2,1) both;}
+#app-cover .cover-word{position:relative;margin-top:24px;font-family:'Cormorant Garamond',Georgia,'Noto Serif SC',serif;
+  font-size:32px;font-weight:500;letter-spacing:.46em;text-indent:.46em;color:#F1ECFF;
+  animation:coverRise 1s cubic-bezier(.2,.7,.2,1) .08s both;}
+#app-cover .cover-sub{position:relative;margin-top:11px;font-family:ui-monospace,'JetBrains Mono',monospace;
+  font-size:9px;letter-spacing:.36em;text-indent:.36em;color:#9A8FC2;animation:coverRise 1s ease .16s both;}
+#app-cover .cover-load{position:absolute;bottom:12.5%;width:124px;height:2px;border-radius:2px;
+  background:rgba(184,146,255,.16);overflow:hidden;}
+#app-cover .cover-load span{position:absolute;top:0;bottom:0;width:42%;border-radius:2px;
+  background:linear-gradient(90deg,transparent,#B892FF,transparent);animation:coverSweep 1.2s ease-in-out infinite;}
+@keyframes coverOut{to{opacity:0;visibility:hidden}}
+@keyframes coverPulse{0%,100%{opacity:.65}50%{opacity:1}}
+@keyframes coverRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes coverSweep{0%{left:-42%}100%{left:100%}}
+@media (prefers-reduced-motion:reduce){#app-cover{animation:coverOut .4s ease 1s forwards}
+  #app-cover .cover-aura,#app-cover .cover-crest,#app-cover .cover-word,#app-cover .cover-sub,#app-cover .cover-load span{animation:none}}
+</style>
+
 <!-- Three.js (ES module) for the life-tree — resolved on demand by lifetree.js -->
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script>
 
@@ -56,6 +84,15 @@
 </head>
 <body>
 <h2 class="sr-only">Cyrus 个人仪表板 v6.2</h2>
+
+<!-- Launch cover (封面) — auto-fades; styles inline in <head> -->
+<div id="app-cover" aria-hidden="true">
+  <div class="cover-aura"></div>
+  <img class="cover-crest" src="./icons/icon-192.png" alt="" width="192" height="192">
+  <div class="cover-word">CYRUS</div>
+  <div class="cover-sub">PERSONAL OPERATING SYSTEM</div>
+  <div class="cover-load"><span></span></div>
+</div>
 
 <!-- Auth overlay — shown when no Supabase session -->
 <div id="auth-overlay" class="auth-overlay">
