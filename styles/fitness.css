@@ -17,7 +17,7 @@ body.fit-locked{ overflow:hidden; }
 
 /* ── view shell (base = sterile full pane, slide up from bottom) ── */
 .fit-view{
-  position:fixed; inset:0; z-index:1200;
+  position:fixed; inset:0; z-index:var(--z-hud);
   background:var(--color-background-primary);
   display:flex; flex-direction:column;
   transform:translateY(100%);
@@ -64,36 +64,36 @@ html[data-theme="sterile"] .fit-view select{ border-radius:0; }
    here .fit-view becomes a centering stage and the window reuses the
    System scroll-unfurl keyframes. Fade in (never translateY — that drags
    the half-transparent backdrop up from the bottom). ════════ */
-html:not([data-theme="sterile"]) .fit-view{
+html[data-fx~="deco"] .fit-view{
   display:flex; align-items:center; justify-content:center; padding:16px;
   background:transparent;
   transform:none; opacity:0;
   transition:opacity .4s var(--ease-silk), visibility .4s var(--ease-silk);
 }
-html:not([data-theme="sterile"]) .fit-view.open{ transform:none; opacity:1; }
-html:not([data-theme="sterile"]) .fit-view .sys-window.fit-hud{
+html[data-fx~="deco"] .fit-view.open{ transform:none; opacity:1; }
+html[data-fx~="deco"] .fit-view .sys-window.fit-hud{
   width:100%; max-width:1080px; max-height:94vh;
   overflow:auto; overscroll-behavior:contain;
   display:flex; flex-direction:column;
 }
-html:not([data-theme="sterile"]) .fit-view.open .fit-hud{
+html[data-fx~="deco"] .fit-view.open .fit-hud{
   animation:sysScrollOpen 1100ms linear both; transform-origin:center center;
 }
-html:not([data-theme="sterile"]) .fit-view.open .fit-hud::after{
+html[data-fx~="deco"] .fit-view.open .fit-hud::after{
   animation:sysFold 1100ms linear both;
 }
-html:not([data-theme="sterile"]) .fit-view.fit-closing .fit-hud{
+html[data-fx~="deco"] .fit-view.fit-closing .fit-hud{
   animation:sysScrollClose 480ms cubic-bezier(0.5,0,0.78,0.2) both; transform-origin:center center;
 }
-html:not([data-theme="sterile"]) .fit-view.fit-closing .fit-hud::after{
+html[data-fx~="deco"] .fit-view.fit-closing .fit-hud::after{
   animation:sysFoldClose 480ms ease both;
 }
-html:not([data-theme="sterile"]) .fit-view.fit-closing .sys-backdrop{
+html[data-fx~="deco"] .fit-view.fit-closing .sys-backdrop{
   animation:sysBackFade 480ms var(--ease-silk) both;
 }
 @media (prefers-reduced-motion:reduce){
-  html:not([data-theme="sterile"]) .fit-view.open .fit-hud,
-  html:not([data-theme="sterile"]) .fit-view.open .fit-hud::after{
+  html[data-fx~="deco"] .fit-view.open .fit-hud,
+  html[data-fx~="deco"] .fit-view.open .fit-hud::after{
     animation:none !important; clip-path:none !important; opacity:1 !important;
   }
 }

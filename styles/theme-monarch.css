@@ -50,8 +50,8 @@ html[data-theme="monarch"]{
 html[data-theme="monarch"] body{ background:#08060F; color:#ECE7FA; }
 
 /* monarch drops the cappa sketch-trail loops (glass-trails) — the little ring/swirl
-   doodles don't fit the SL void; the smooth violet energy flow carries the bg alone. */
-html[data-theme="monarch"] #glass-trails{ display:none !important; }
+   doodles don't fit the SL void; the smooth violet energy flow carries the bg alone.
+   Now hidden capability-wise (data-fx) in components.css — monarch lacks `trails`. */
 
 /* the violet energy flow is the hero of this theme — keep it bright */
 html[data-theme="monarch"] #energy-flow{ opacity:.95; }

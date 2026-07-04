@@ -24,7 +24,7 @@
   function readTheme(){
     var cs = getComputedStyle(document.documentElement);
     col = (cs.getPropertyValue('--brass-soft').trim()) || (cs.getPropertyValue('--brass').trim()) || '#C9A876';
-    additive = document.documentElement.getAttribute('data-theme') !== 'sterile';   // 浅色主题不用 additive(会过曝)
+    additive = document.documentElement.matches('[data-fx~="flow-additive"]');   // 浅色主题(sterile)无此标志→普通混合,不过曝
   }
   function rnd(a,b){ return a + Math.random()*(b-a); }
   function seed(){

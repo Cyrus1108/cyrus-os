@@ -54,16 +54,16 @@ html[data-theme="sterile"] .form-nav-hl{ border-radius:0; }
 .creed-close{display:block;font-family:var(--serif);font-style:italic;font-size:14px;color:var(--mute);margin-top:14px;letter-spacing:.02em;}
 
 /* Drawer */
-.drawer-tab-group{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:100;display:flex;flex-direction:column;gap:6px;}
+.drawer-tab-group{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:var(--z-nav-tabs);display:flex;flex-direction:column;gap:6px;}
 .drawer-tab{background:var(--color-background-primary);border:.5px solid var(--hair);border-right:none;padding:18px 10px;writing-mode:vertical-rl;cursor:pointer;font-size:10px;letter-spacing:.32em;text-transform:uppercase;color:var(--brass);font-family:var(--sans);font-weight:500;border-radius:6px 0 0 6px;transition:background var(--dur-base) var(--ease-silk),color var(--dur-base) var(--ease-silk),border-color var(--dur-base) var(--ease-silk);user-select:none;}
 .drawer-tab:hover{background:var(--brass);color:var(--color-background-primary);border-color:var(--brass);padding-right:14px;box-shadow:-2px 0 12px var(--brass-glow);}
 .drawer-tab:active{transform:scale(0.96);}
 .drawer-tab-icon{display:block;writing-mode:horizontal-tb;text-align:center;margin-bottom:8px;font-size:8px;color:var(--brass);transition:color .25s;}
 .drawer-tab:hover .drawer-tab-icon{color:var(--color-background-primary);}
 
-.drawer-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.35);opacity:0;pointer-events:none;transition:opacity .5s var(--ease-drawer);z-index:200;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);}
+.drawer-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.35);opacity:0;pointer-events:none;transition:opacity .5s var(--ease-drawer);z-index:var(--z-drawer-backdrop);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);}
 .drawer-backdrop.open{opacity:1;pointer-events:auto;}
-.drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,92vw);background:var(--color-background-primary);border-left:.5px solid var(--brass-ghost);transform:translateX(100%);transition:transform .55s var(--ease-drawer);z-index:201;overflow-y:auto;box-shadow:-12px 0 48px rgba(0,0,0,0.18);}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,92vw);background:var(--color-background-primary);border-left:.5px solid var(--brass-ghost);transform:translateX(100%);transition:transform .55s var(--ease-drawer);z-index:var(--z-drawer);overflow-y:auto;box-shadow:-12px 0 48px rgba(0,0,0,0.18);}
 .drawer.open{transform:translateX(0);}
 .drawer-inner{padding:2rem 1.75rem;}
 .drawer-head{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:1rem;margin-bottom:1.25rem;border-bottom:.5px solid var(--brass-ghost);}
@@ -558,7 +558,7 @@ button.check-btn.done{border-color:var(--brass);color:var(--brass);}
   position:fixed;inset:0;
   background:var(--color-background-tertiary);
   display:none;align-items:center;justify-content:center;
-  z-index:1450;
+  z-index:var(--z-auth);
   padding:2rem;
   animation:paneFade .5s var(--ease-silk);
 }
@@ -678,7 +678,7 @@ button.check-btn.done{border-color:var(--brass);color:var(--brass);}
 
 /* four 1px brass corner brackets, painted with background gradients —
    zero extra DOM, doesn't touch the pseudo-elements sterile uses */
-html:not([data-theme="sterile"]) .panel{
+html[data-fx~="deco"] .panel{
   background-image:
     linear-gradient(var(--brass), var(--brass)),
     linear-gradient(var(--brass), var(--brass)),
@@ -696,7 +696,7 @@ html:not([data-theme="sterile"]) .panel{
 /* hover: brass edge + soft outer glow — transform is owned by the v6.51 tilt
    (glass.js --rx/--ry); keeping a transform here would override the tilt */
 @media (hover:hover){
-  html:not([data-theme="sterile"]) .panel:hover{
+  html[data-fx~="deco"] .panel:hover{
     border-color:var(--brass-ghost);
     box-shadow:0 10px 30px -22px rgba(0,0,0,.30), 0 0 26px -14px var(--brass-glow),
                inset 0 1px 0 color-mix(in srgb, var(--brass-soft) 16%, transparent);
@@ -705,7 +705,7 @@ html:not([data-theme="sterile"]) .panel{
 
 /* kicker marker — the small brass diamond the System uses, ahead of the
    roman-numeral eyebrow (panel-label-row is already flex with gap:10px) */
-html:not([data-theme="sterile"]) .panel-label-row::before{
+html[data-fx~="deco"] .panel-label-row::before{
   content:''; flex:0 0 auto; width:5px; height:5px;
   background:var(--brass); transform:rotate(45deg);
   box-shadow:0 0 6px var(--brass-glow);
@@ -723,8 +723,8 @@ html:not([data-theme="sterile"]) .panel-label-row::before{
    sterile keeps its own language. */
 
 /* ambient field — three drifting brass glows far behind the content */
-html:not([data-theme="sterile"]) body::before{
-  content:''; position:fixed; inset:-20%; z-index:-1; pointer-events:none;
+html[data-fx~="deco"] body::before{
+  content:''; position:fixed; inset:-20%; z-index:var(--z-behind); pointer-events:none;
   background:
     radial-gradient(38% 30% at 18% 22%, color-mix(in srgb, var(--brass) 24%, transparent), transparent 70%),
     radial-gradient(30% 26% at 82% 12%, color-mix(in srgb, var(--brass-soft) 17%, transparent), transparent 70%),
@@ -738,43 +738,43 @@ html:not([data-theme="sterile"]) body::before{
   100%{ transform:translate(-2%,2.5%) scale(1.02); }
 }
 @media (prefers-reduced-motion:reduce){
-  html:not([data-theme="sterile"]) body::before{ animation:none; }
+  html[data-fx~="deco"] body::before{ animation:none; }
 }
 
 /* Phase B — sketch-trail canvas (created by glass.js): drifting brass ink
    threads between the ambient blobs and the glass panels */
 #glass-trails{
   position:fixed; inset:0; width:100vw; height:100vh;
-  z-index:-1; pointer-events:none;
+  z-index:var(--z-behind); pointer-events:none;
 }
 html[data-theme="sterile"] #glass-trails{ display:none; }
 /* perf: a full-screen HUD fully covers the page — stop animating the ambient field
    and compositing the trail canvas behind it (wasted GPU + stacked-backdrop jank). */
-html:not([data-theme="sterile"]) body.fin-locked::before,
-html:not([data-theme="sterile"]) body.sys-locked::before,
-html:not([data-theme="sterile"]) body.fit-locked::before,
-html:not([data-theme="sterile"]) body.motiv-locked::before,
-html:not([data-theme="sterile"]) body.has-focus::before{ animation:none; }
+html[data-fx~="deco"] body.fin-locked::before,
+html[data-fx~="deco"] body.sys-locked::before,
+html[data-fx~="deco"] body.fit-locked::before,
+html[data-fx~="deco"] body.motiv-locked::before,
+html[data-fx~="deco"] body.has-focus::before{ animation:none; }
 body.fin-locked #glass-trails, body.sys-locked #glass-trails,
 body.fit-locked #glass-trails, body.motiv-locked #glass-trails,
 body.has-focus #glass-trails{ display:none; }
 
 /* the glass itself — translucent ground + blur; corner brackets (background-image
    layers from v6.47) sit on top of the glass ground untouched */
-html:not([data-theme="sterile"]) .panel,
-html:not([data-theme="sterile"]) .the90-panel,
-html:not([data-theme="sterile"]) .hermes-panel,
-html:not([data-theme="sterile"]) .principles-card,
-html:not([data-theme="sterile"]) .lowday-card{
+html[data-fx~="deco"] .panel,
+html[data-fx~="deco"] .the90-panel,
+html[data-fx~="deco"] .hermes-panel,
+html[data-fx~="deco"] .principles-card,
+html[data-fx~="deco"] .lowday-card{
   background-color:color-mix(in srgb, var(--color-background-primary) 55%, transparent);
   -webkit-backdrop-filter:blur(26px) saturate(1.3);
   backdrop-filter:blur(26px) saturate(1.3);
 }
-html:not([data-theme="sterile"]) .panel{
+html[data-fx~="deco"] .panel{
   box-shadow:0 10px 30px -22px rgba(0,0,0,.30),
              inset 0 1px 0 color-mix(in srgb, var(--brass-soft) 16%, transparent);
 }
-html:not([data-theme="sterile"]) .the90-panel{
+html[data-fx~="deco"] .the90-panel{
   box-shadow:0 0 34px -18px var(--brass-glow), 0 12px 36px -26px rgba(0,0,0,.35),
              inset 0 1px 0 color-mix(in srgb, var(--brass-soft) 16%, transparent);
 }
@@ -782,17 +782,17 @@ html:not([data-theme="sterile"]) .the90-panel{
 /* pointer light-spot — a faint brass glow that follows the cursor across the
    glass (driven by --mx/--my from glass.js); hover-capable devices only */
 @media (hover:hover) and (pointer:fine){
-  html:not([data-theme="sterile"]) .panel::after{
+  html[data-fx~="deco"] .panel::after{
     content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
     background:radial-gradient(320px 260px at var(--mx,50%) var(--my,50%),
       color-mix(in srgb, var(--brass-soft) 17%, transparent), transparent 70%);
     opacity:0; transition:opacity .35s var(--ease-silk);
   }
-  html:not([data-theme="sterile"]) .panel:hover::after{ opacity:1; }
+  html[data-fx~="deco"] .panel:hover::after{ opacity:1; }
   /* tilt — glass.js lerps --rx/--ry per frame; transform must NOT be in the
      transition list (it would double-smooth against the JS lerp and fight
      GSAP's entrance tweens) */
-  html:not([data-theme="sterile"]) .panel{
+  html[data-fx~="deco"] .panel{
     transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));
     transition:box-shadow .35s var(--ease-silk), border-color .35s var(--ease-silk);
   }
@@ -802,16 +802,16 @@ html:not([data-theme="sterile"]) .the90-panel{
    in a .stack-card; sticky pinning + DOM order does the covering, GSAP scrub
    adds the scale/dim of the card being buried. Tall runway between cards so
    each one gets its moment. */
-html:not([data-theme="sterile"]) .stack-card{
+html[data-fx~="deco"] .stack-card{
   position:sticky;
   margin-bottom:clamp(64px, 14vh, 160px);
 }
-html:not([data-theme="sterile"]) .stack-card:last-of-type{ margin-bottom:24px; }
+html[data-fx~="deco"] .stack-card:last-of-type{ margin-bottom:24px; }
 
 /* v7.2 — 3D card flip (交易面板): perspective on the host, rotateY on the
    wrapper, backface-visibility keeps each face clean. Wrapper height is
    JS-synced to the active face (ResizeObserver). */
-html:not([data-theme="sterile"]) .flip-host{ perspective:1400px; }
+html[data-fx~="deco"] .flip-host{ perspective:1400px; }
 .flip3d{
   position:relative; transform-style:preserve-3d;
   transition:transform .7s var(--ease-press), height .45s var(--ease-silk);
@@ -831,10 +831,10 @@ html:not([data-theme="sterile"]) .flip-host{ perspective:1400px; }
 /* v7.2 — 3D perspective page transition: the page recedes while a protocol
    modal is up (class toggled by pageDepth(); modals live outside .page-wrapper
    so they stay crisp in front) */
-html:not([data-theme="sterile"]) .page-wrapper{
+html[data-fx~="deco"] .page-wrapper{
   transition:transform .65s var(--ease-press), opacity .65s var(--ease-silk), filter .65s var(--ease-silk);
 }
-html:not([data-theme="sterile"]) .page-wrapper.page-depth{
+html[data-fx~="deco"] .page-wrapper.page-depth{
   transform:perspective(1500px) translateZ(-120px) rotateX(1.5deg) scale(.965);
   transform-origin:50% 28%;
   opacity:.72; filter:saturate(.85) brightness(.85);
@@ -846,14 +846,14 @@ html:not([data-theme="sterile"]) .page-wrapper.page-depth{
    that blur was the jank. */
 .focusable{ cursor:pointer; }
 .focus-backdrop{
-  position:fixed; inset:0; z-index:1050; pointer-events:none; opacity:0;
+  position:fixed; inset:0; z-index:var(--z-focus-backdrop); pointer-events:none; opacity:0;
   background:rgba(8,7,5,.55); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
   transition:opacity .5s var(--ease-silk);
 }
 body.has-focus .focus-backdrop{ opacity:1; pointer-events:auto; }
 
 .panel-focused{
-  position:fixed !important; z-index:1060;
+  position:fixed !important; z-index:var(--z-focus);
   inset:0; margin:auto;
   width:min(94vw, 880px); height:min(92svh, 980px);
   overflow:auto; overscroll-behavior:contain;
@@ -883,26 +883,26 @@ body.has-focus .focus-backdrop{ opacity:1; pointer-events:auto; }
 
 /* smoothness: promote the glass to its own layers; lighter blur on touch
    devices where 26px genuinely drops frames */
-html:not([data-theme="sterile"]) .panel,
-html:not([data-theme="sterile"]) .the90-panel{ will-change:transform; }
+html[data-fx~="deco"] .panel,
+html[data-fx~="deco"] .the90-panel{ will-change:transform; }
 @media (pointer:coarse){
-  html:not([data-theme="sterile"]) .panel,
-  html:not([data-theme="sterile"]) .the90-panel,
-  html:not([data-theme="sterile"]) .hermes-panel,
-  html:not([data-theme="sterile"]) .principles-card,
-  html:not([data-theme="sterile"]) .lowday-card{
+  html[data-fx~="deco"] .panel,
+  html[data-fx~="deco"] .the90-panel,
+  html[data-fx~="deco"] .hermes-panel,
+  html[data-fx~="deco"] .principles-card,
+  html[data-fx~="deco"] .lowday-card{
     -webkit-backdrop-filter:blur(13px) saturate(1.25);
     backdrop-filter:blur(13px) saturate(1.25);
   }
 }
 
 /* v7.4 — 无退出键纪律: backdrop / Esc / 系统返回手势是唯一收回方式 */
-html:not([data-theme="sterile"]) .sys-back[aria-label="关闭"]{ display:none !important; }
-html:not([data-theme="sterile"]) .fin-back{ display:none !important; }
+html[data-fx~="deco"] .sys-back[aria-label="关闭"]{ display:none !important; }
+html[data-fx~="deco"] .fin-back{ display:none !important; }
 
 /* v7.0 — 五柱黄铜立方 (herocube.js): fixed ambient sculpture behind the glass */
 #herocube{
-  position:fixed; z-index:-1; pointer-events:none;
+  position:fixed; z-index:var(--z-behind); pointer-events:none;
   top:clamp(54px, 9vh, 130px); right:clamp(6px, 5vw, 78px);
   width:clamp(170px, 24vw, 330px); aspect-ratio:1/1;
   opacity:.95;
@@ -913,7 +913,7 @@ html[data-theme="sterile"] #herocube{ display:none; }
    shows faint 6px left-edge brackets (visible on touch devices too); hover
    lights them to full brass with a soft tint. Done rows inherit the row's
    opacity fade, so finished items dim brackets and all. */
-html:not([data-theme="sterile"]) .todo-row{
+html[data-fx~="deco"] .todo-row{
   padding-left:12px;
   background-image:
     linear-gradient(var(--brass-ghost), var(--brass-ghost)),
@@ -926,7 +926,7 @@ html:not([data-theme="sterile"]) .todo-row{
   transition:background-color .3s var(--ease-silk);
 }
 @media (hover:hover){
-  html:not([data-theme="sterile"]) .todo-row:hover{
+  html[data-fx~="deco"] .todo-row:hover{
     background-color:rgba(168,132,85,0.035);
     background-image:
       linear-gradient(var(--brass), var(--brass)),
@@ -1021,7 +1021,7 @@ html:not([data-theme="sterile"]) .todo-row{
   66%  { background-position:30% 100%; }
   100% { background-position:0% 20%; }
 }
-html:not([data-theme="sterile"]) .creed-pillars, html:not([data-theme="sterile"]) #the90-tagline{
+html[data-fx~="deco"] .creed-pillars, html[data-fx~="deco"] #the90-tagline{
   background:linear-gradient(115deg,
     color-mix(in srgb, var(--brass), #000 38%) 0%,
     var(--brass) 16%,
@@ -1076,14 +1076,14 @@ html:not([data-theme="sterile"]) .creed-pillars, html:not([data-theme="sterile"]
 .mr-pill-expand:hover{ color:var(--brass); }
 .mr-pill.has-detail .mr-pill-expand{ color:var(--brass); }   /* this step has notes */
 
-.mr-detail-bd{ position:fixed; inset:0; z-index:1050; opacity:0; pointer-events:none;
+.mr-detail-bd{ position:fixed; inset:0; z-index:var(--z-focus-backdrop); opacity:0; pointer-events:none;
   background:rgba(8,7,5,.55); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);
   transition:opacity .4s var(--ease-silk); }
 body.mr-detail-open .mr-detail-bd{ opacity:1; pointer-events:auto; }
 body.mr-detail-open{ overflow:hidden; }
 
 .mr-pill-expanded{
-  position:fixed !important; z-index:1060; inset:0; margin:auto;
+  position:fixed !important; z-index:var(--z-focus); inset:0; margin:auto;
   width:min(440px, 92vw); height:max-content; max-height:80vh; overflow:auto;
   flex-direction:column; align-items:stretch; gap:4px;
   padding:22px; cursor:default; border-radius:var(--border-radius-md);
@@ -1108,7 +1108,7 @@ body.mr-detail-open{ overflow:hidden; }
 .mr-detail-text::placeholder{ color:var(--ghost); }
 ::view-transition-group(mr-fly){ animation-duration:.55s; animation-timing-function:cubic-bezier(.65,0,.35,1); }
 
-html:not([data-theme="sterile"]) #dateline{
+html[data-fx~="deco"] #dateline{
   background:linear-gradient(115deg,
     var(--ink) 0%, var(--ink) 20%,
     var(--brass-soft) 33%,
@@ -1132,7 +1132,7 @@ html:not([data-theme="sterile"]) #dateline{
 
 /* same per-item bracket language for the JP / trading / academics checklists —
    they all render rows as .row (japanese.js / trading.js / academics.js) */
-html:not([data-theme="sterile"]) .row{
+html[data-fx~="deco"] .row{
   padding-left:12px;
   background-image:
     linear-gradient(var(--brass-ghost), var(--brass-ghost)),
@@ -1145,7 +1145,7 @@ html:not([data-theme="sterile"]) .row{
   transition:background-color .3s var(--ease-silk);
 }
 @media (hover:hover){
-  html:not([data-theme="sterile"]) .row:hover{
+  html[data-fx~="deco"] .row:hover{
     background-color:rgba(168,132,85,0.035);
     background-image:
       linear-gradient(var(--brass), var(--brass)),
@@ -1275,10 +1275,19 @@ html[data-theme="terminal"] .navd-item:focus-visible{ border-color:var(--brass-s
    isolate),让 body 自身背景画在它的负 z 子元素「之下」,能量层才显现。cappa 早已成上下文,
    所以先前只有它可见。isolation 不为 fixed 子元素建立包含块,弹窗/HUD 的层级顺序不受影响。*/
 body{ isolation:isolate; }
-#energy-flow{ position:fixed; inset:0; width:100vw; height:100vh; z-index:-1; pointer-events:none; opacity:.9; }
+#energy-flow{ position:fixed; inset:0; width:100vw; height:100vh; z-index:var(--z-behind); pointer-events:none; opacity:.9; }
 html[data-theme="terminal"] #energy-flow{ opacity:.8; }
 html[data-theme="sterile"]  #energy-flow{ opacity:.5; }
 body.has-focus #energy-flow, body.fin-locked #energy-flow, body.fit-locked #energy-flow,
 body.sys-locked #energy-flow, body.cal-locked #energy-flow, body.ai-locked #energy-flow,
 body.store-locked #energy-flow, body.motiv-locked #energy-flow{ display:none; }
 @media (prefers-reduced-motion:reduce){ #energy-flow{ opacity:.35; } }
+
+/* Hero decorations show only where their capability flag is set. Was the
+   per-theme `html[data-theme="terminal"] #herocube,#glass-trails{display:none}`
+   + `html[data-theme="monarch"] #glass-trails{display:none}` overrides — now
+   capability-based via data-fx. #herocube JS only ever mounts under `cube`
+   (cappa); #glass-trails is created for every `glass` theme but only shown
+   under `trails` (cappa). */
+html:not([data-fx~="cube"])   #herocube    { display:none !important; }
+html:not([data-fx~="trails"]) #glass-trails{ display:none !important; }

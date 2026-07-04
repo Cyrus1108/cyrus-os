@@ -82,42 +82,10 @@ function jpCheckInToday(){
 }
 let jpNT;function onJPNote(){S.jp.note=document.getElementById('jp-note').value;clearTimeout(jpNT);jpNT=setTimeout(saveJP,600);}
 
-function rJP(){
-  S.jp.streak=jpComputeStreak();   // derived — also corrects stale server values after a pull
-  document.getElementById('streak-n').textContent=S.jp.streak;
-  const _jpT=document.getElementById('jp-total'); if(_jpT) _jpT.textContent=Object.keys(S.jp.log||{}).length;   // 累计打卡天数(全部历史,证明记录没被删)
-  const now=new Date(),dow=now.getDay();
-  const mon=new Date(now);mon.setDate(now.getDate()-(dow===0?6:dow-1));
-  const labs=['M','T','W','T','F','S','S'];
-  document.getElementById('week-grid').innerHTML=Array.from({length:7},(_,i)=>{
-    const d=new Date(mon);d.setDate(mon.getDate()+i);
-    const ds=d.toLocaleDateString('sv-SE'),isT=ds===TODAY,done=S.jp.log[ds],fut=ds>TODAY;
-    const cls=['jp-day-cell'];if(done)cls.push('done');if(fut)cls.push('future');if(isT)cls.push('today');
-    return `<div class="jp-day"><div class="jp-day-label">${labs[i]}</div><div class="${cls.join(' ')}"></div></div>`;
-  }).join('');
-  // check-in status against TODAY's DUE items. No items due today (empty list OR nothing
-  // scheduled) → the button is a manual "studied today" toggle so a streak can still be
-  // kept; with due items → auto check-in when all done, button is status only.
-  const due=jpDueToday();
-  const doneN=due.filter(i=>i.d).length,dueN=due.length;
-  const ci=S.jp.log[TODAY],btn=document.getElementById('ci-btn');
-  if(dueN===0){
-    btn.textContent = ci ? '✓ 今日已打卡 · 点此取消' : '点此打卡 · 标记今日已学日文';
-    btn.onclick = jpCheckInToday;
-    btn.style.pointerEvents='auto'; btn.style.cursor='pointer';
-    btn.classList.add('jp-ci-tappable');
-  } else {
-    btn.textContent = ci ? '— 今日已完成 —' : `今日 ${doneN}/${dueN} · 全清自动打卡`;
-    btn.onclick = null;
-    btn.style.pointerEvents='none'; btn.style.cursor='';
-    btn.classList.remove('jp-ci-tappable');
-  }
-  btn.classList.toggle('done',!!ci);
-  const JP_REPS=[['daily','每日'],['weekdays','仅工作日'],['weekends','仅周末'],['weekly','每周'],['biweekly','每两周'],['monthly','每月'],['custom_days','自定义天数…']];
-  const _jpHtml=S.jp.list.map(i=>{
-    if(editingJP===i.id){
-      const rep=i.repeat||'daily';
-      return `<div style="padding:5px 0;border-bottom:.5px solid var(--hair);"><div class="edit-box" style="padding:6px;">
+const JP_REPS=[['daily','每日'],['weekdays','仅工作日'],['weekends','仅周末'],['weekly','每周'],['biweekly','每两周'],['monthly','每月'],['custom_days','自定义天数…']];
+function jpEditInner(i){
+  const rep=i.repeat||'daily';
+  return `<div class="edit-box" style="padding:6px;">
         <input id="ej-text" value="${escH(i.t)}" style="width:100%;">
         <div style="display:flex;gap:6px;align-items:center;">
           <select id="ej-repeat" onchange="toggleEjCustom()" style="flex:1;">
@@ -129,36 +97,84 @@ function rJP(){
           <button class="primary fx-btn" onclick="saveJPEdit('${i.id}')" style="flex:1;">保存</button>
           <button class="ghost fx-btn" onclick="cancelJPEdit()" style="flex:1;">取消</button>
         </div>
-      </div></div>`;
-    }
-    const due=jpItemDueOn(i,TODAY);
-    const repBadge=(i.repeat&&i.repeat!=='daily')?`<span class="ac-bell">↻ ${repeatLabel(i.repeat,i.customDays)}</span>`:'';
-    if(!due){
-      return `<div class="row" data-id="${i.id}" style="opacity:.42;">
-        <span class="drag-handle" onclick="event.stopPropagation()" aria-label="拖动排序">⠿</span>
+      </div>`;
+}
+function jpNotDueInner(i,repBadge){
+  return `<span class="drag-handle" onclick="event.stopPropagation()" aria-label="拖动排序">⠿</span>
         <span style="display:inline-block;width:16px;text-align:center;color:var(--ghost);">·</span>
         <div class="row-body"><span class="item-text">${escH(i.t)}</span> ${repBadge}<span class="ac-date">今日无需</span></div>
         <div class="row-actions">
           <button class="row-btn" onclick="startJPEdit('${i.id}')">编辑</button>
           <button class="row-btn" onclick="delJP('${i.id}')">×</button>
-        </div>
-      </div>`;
-    }
-    return `<div class="row ${i.d?'item-done':''}" data-id="${i.id}">
-      <span class="drag-handle" onclick="event.stopPropagation()" aria-label="拖动排序">⠿</span>
+        </div>`;
+}
+function jpDueInner(i,repBadge){
+  return `<span class="drag-handle" onclick="event.stopPropagation()" aria-label="拖动排序">⠿</span>
       <input type="checkbox" class="row-cb" ${i.d?'checked':''} onchange="toggleJP('${i.id}')">
       <div class="row-body"><span class="item-text">${escH(i.t)}</span> ${repBadge}</div>
       <div class="row-actions">
         <button class="row-btn" onclick="startJPEdit('${i.id}')">编辑</button>
         <button class="row-btn" onclick="delJP('${i.id}')">×</button>
-      </div>
-    </div>`;
-  }).join('');
+      </div>`;
+}
+
+function rJP(){
+  S.jp.streak=jpComputeStreak();   // derived — also corrects stale server values after a pull
+  setText(document.getElementById('streak-n'), S.jp.streak);
+  const _jpT=document.getElementById('jp-total'); if(_jpT) setText(_jpT, Object.keys(S.jp.log||{}).length);   // 累计打卡天数(全部历史,证明记录没被删)
+  const now=new Date(),dow=now.getDay();
+  const mon=new Date(now);mon.setDate(now.getDate()-(dow===0?6:dow-1));
+  const labs=['M','T','W','T','F','S','S'];
+  setHTML(document.getElementById('week-grid'), Array.from({length:7},(_,i)=>{
+    const d=new Date(mon);d.setDate(mon.getDate()+i);
+    const ds=d.toLocaleDateString('sv-SE'),isT=ds===TODAY,done=S.jp.log[ds],fut=ds>TODAY;
+    const cls=['jp-day-cell'];if(done)cls.push('done');if(fut)cls.push('future');if(isT)cls.push('today');
+    return `<div class="jp-day"><div class="jp-day-label">${labs[i]}</div><div class="${cls.join(' ')}"></div></div>`;
+  }).join(''));
+  // check-in status against TODAY's DUE items. No items due today (empty list OR nothing
+  // scheduled) → the button is a manual "studied today" toggle so a streak can still be
+  // kept; with due items → auto check-in when all done, button is status only.
+  const due=jpDueToday();
+  const doneN=due.filter(i=>i.d).length,dueN=due.length;
+  const ci=S.jp.log[TODAY],btn=document.getElementById('ci-btn');
+  if(dueN===0){
+    setText(btn, ci ? '✓ 今日已打卡 · 点此取消' : '点此打卡 · 标记今日已学日文');
+    btn.onclick = jpCheckInToday;
+    btn.style.pointerEvents='auto'; btn.style.cursor='pointer';   // v7.27.7: manual check-in must stay tappable
+    setClass(btn,'jp-ci-tappable',true);
+  } else {
+    setText(btn, ci ? '— 今日已完成 —' : `今日 ${doneN}/${dueN} · 全清自动打卡`);
+    btn.onclick = null;
+    btn.style.pointerEvents='none'; btn.style.cursor='';
+    setClass(btn,'jp-ci-tappable',false);
+  }
+  setClass(btn,'done',!!ci);
   const ne=document.getElementById('jp-note');if(ne&&document.activeElement!==ne)ne.value=S.jp.note||'';
-  setStableHTML(document.getElementById('jp-checklist'), _jpHtml, el=>{
-    attachRipples();
-    makeSortable(el, { itemSelector:'.row', handleSelector:'.drag-handle', onReorder:onReorderJP });
+  const cl=document.getElementById('jp-checklist');
+  reconcileList(cl, S.jp.list, {
+    key:i=>i.id,
+    create:i=>{ const d=document.createElement('div'); d.dataset.id=i.id; return d; },
+    update:(d,i)=>{
+      if(editingJP===i.id){
+        setAttr(d,'class','');
+        setAttr(d,'style','padding:5px 0;border-bottom:.5px solid var(--hair);');
+        setHTML(d, jpEditInner(i));
+        return;
+      }
+      const repBadge=(i.repeat&&i.repeat!=='daily')?`<span class="ac-bell">↻ ${repeatLabel(i.repeat,i.customDays)}</span>`:'';
+      if(!jpItemDueOn(i,TODAY)){
+        setAttr(d,'class','row');
+        setAttr(d,'style','opacity:.42;');
+        setHTML(d, jpNotDueInner(i,repBadge));
+        return;
+      }
+      setAttr(d,'class','row'+(i.d?' item-done':''));
+      setAttr(d,'style',null);
+      setHTML(d, jpDueInner(i,repBadge));
+    }
   });
+  attachRipples();
+  makeSortable(cl, { itemSelector:'.row', handleSelector:'.drag-handle', onReorder:onReorderJP });
 }
 function onReorderJP(ids){
   S.jp.list = reorderById(S.jp.list, ids);

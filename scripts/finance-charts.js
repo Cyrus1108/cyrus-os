@@ -176,7 +176,7 @@ function finAnaDrawDonut(){
     g.total += finToBase(t.amount, t.currency);
   }
   const arr = Object.values(groups).sort((a,b)=>b.total-a.total);
-  const sterile = document.documentElement.getAttribute('data-theme')==='sterile';
+  const sterile = !document.documentElement.matches('[data-fx~="deco"]');   // sterile = no decorative palette → mono ramp
   const ramp = sterile ? finMonoRamp(finCss('--brass'), arr.length) : null;
   const colors = arr.map((g,i)=> ramp ? ramp[i] : (g.color||FIN_PALETTE[i%FIN_PALETTE.length]));
   const total = arr.reduce((s,g)=>s+g.total,0);

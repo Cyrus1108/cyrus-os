@@ -36,13 +36,15 @@
 <link rel="stylesheet" href="./styles/lowday.css">
 <link rel="stylesheet" href="./styles/principles.css">
 
-<!-- Web fonts for the Sterile / Endfield theme -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;700&family=Oswald:wght@300;400;500;600&display=swap" rel="stylesheet">
+<!-- Web fonts (Inter / JetBrains Mono / Oswald) — self-hosted variable woff2 in
+     vendor/fonts/, precached by the SW so themes keep their type offline -->
+<link rel="stylesheet" href="./styles/fonts.css">
 
-<!-- Pre-paint: apply the saved theme before first paint to avoid a flash -->
-<script>(function(){try{var t=JSON.parse(localStorage.getItem('cyrus_dashboard_v6_theme')||'"cappa"');document.documentElement.setAttribute('data-theme',(t==='sterile'||t==='terminal'||t==='monarch')?t:'cappa');}catch(e){document.documentElement.setAttribute('data-theme','cappa');}})();</script>
+<!-- Pre-paint: apply the saved theme + its capability flags (data-fx) before first
+     paint, so both the theme colors AND the decorative-layer guards are correct with
+     no flash. ⚠️ The FX map below is a COPY of scripts/theme.js's THEME_FX — keep the
+     two in sync (this one must run pre-CSS, so it cannot import from theme.js). -->
+<script>(function(){var FX={cappa:'glass cube trails flow-additive deco',sterile:'lifetree',terminal:'glass flow-additive deco',monarch:'glass flow-additive deco'};var t;try{t=JSON.parse(localStorage.getItem('cyrus_dashboard_v6_theme')||'"cappa"');}catch(e){t='cappa';}if(t!=='sterile'&&t!=='terminal'&&t!=='monarch')t='cappa';var d=document.documentElement;d.setAttribute('data-theme',t);d.setAttribute('data-fx',FX[t]);})();</script>
 
 <!-- Pre-paint: if the app lock is enabled, hide content until applock.js mounts the lock screen (no flash of private data) -->
 <script>(function(){try{var l=JSON.parse(localStorage.getItem('cyrus_lock')||'null');if(l&&l.enabled)document.documentElement.classList.add('app-locked-boot');}catch(e){}})();</script>
@@ -695,6 +697,7 @@
      5. app.js          calls initAuth() at the bottom; init() is deferred until session ready -->
 <script src="./scripts/supabase.js"></script>
 <script src="./scripts/state.js"></script>
+<script src="./scripts/render-core.js"></script>
 <script src="./scripts/dragsort.js"></script>
 <script src="./scripts/swipe.js"></script>
 <script src="./scripts/notifications.js"></script>

@@ -9,7 +9,7 @@ body.ai-locked{ overflow:hidden; }
 
 /* ── view shell (base = sterile / fallback: opaque sheet) ── */
 .ai-view{
-  position:fixed; inset:0; z-index:1200;
+  position:fixed; inset:0; z-index:var(--z-hud);
   background:var(--color-background-primary);
   display:flex; flex-direction:column;
   transform:translateY(100%);
@@ -69,7 +69,7 @@ html[data-theme="sterile"] .ai-kind-shipped{ color:var(--brass); background:var(
 .ai-kind-legend{ display:flex; gap:6px; align-items:center; justify-content:center; font-size:11px; color:var(--ghost); flex-wrap:wrap; }
 
 /* ── modal ── */
-.ai-modal{ position:absolute; inset:0; z-index:1230; display:none; align-items:center; justify-content:center; padding:16px; background:color-mix(in srgb, var(--color-background-primary) 55%, transparent); }
+.ai-modal{ position:absolute; inset:0; z-index:var(--z-hud-modal); display:none; align-items:center; justify-content:center; padding:16px; background:color-mix(in srgb, var(--color-background-primary) 55%, transparent); }
 .ai-modal.open{ display:flex; }
 .ai-modal-card{ width:100%; max-width:380px; background:var(--color-background-primary); border:.5px solid var(--hair); border-radius:var(--border-radius-lg,14px); padding:18px; display:flex; flex-direction:column; gap:10px; box-shadow:0 18px 50px rgba(0,0,0,0.3); }
 .ai-modal-title{ font-family:var(--serif); font-size:17px; color:var(--ink); margin-bottom:2px; }
@@ -79,29 +79,29 @@ html[data-theme="sterile"] .ai-kind-shipped{ color:var(--brass); background:var(
 #ai-btn.has-today::after{ content:""; position:absolute; top:4px; right:4px; width:6px; height:6px; border-radius:50%; background:var(--brass); box-shadow:0 0 6px var(--brass-glow); }
 
 /* ════ default theme (cappa): glass .sys-window.ai-hud + scroll-unfurl ════ */
-html:not([data-theme="sterile"]) .ai-view{
+html[data-fx~="deco"] .ai-view{
   display:flex; align-items:center; justify-content:center; padding:16px;
   background:transparent;
   transform:none; opacity:0;
   transition:opacity .4s var(--ease-silk), visibility .4s var(--ease-silk);
 }
-html:not([data-theme="sterile"]) .ai-view.open{ transform:none; opacity:1; }
-html:not([data-theme="sterile"]) .ai-view .sys-window.ai-hud{
+html[data-fx~="deco"] .ai-view.open{ transform:none; opacity:1; }
+html[data-fx~="deco"] .ai-view .sys-window.ai-hud{
   width:100%; max-width:600px; max-height:94vh;
   overflow:auto; overscroll-behavior:contain;
 }
-html:not([data-theme="sterile"]) .ai-view.open .ai-hud{ animation:sysScrollOpen 1100ms linear both; transform-origin:center center; }
-html:not([data-theme="sterile"]) .ai-view.open .ai-hud::after{ animation:sysFold 1100ms linear both; }
-html:not([data-theme="sterile"]) .ai-view.ai-closing .ai-hud{ animation:sysScrollClose 480ms cubic-bezier(0.5,0,0.78,0.2) both; transform-origin:center center; }
-html:not([data-theme="sterile"]) .ai-view.ai-closing .ai-hud::after{ animation:sysFoldClose 480ms ease both; }
-html:not([data-theme="sterile"]) .ai-view.ai-closing .sys-backdrop{ animation:sysBackFade 480ms var(--ease-silk) both; }
-html:not([data-theme="sterile"]) .ai-view .ai-top{ background:transparent; }
+html[data-fx~="deco"] .ai-view.open .ai-hud{ animation:sysScrollOpen 1100ms linear both; transform-origin:center center; }
+html[data-fx~="deco"] .ai-view.open .ai-hud::after{ animation:sysFold 1100ms linear both; }
+html[data-fx~="deco"] .ai-view.ai-closing .ai-hud{ animation:sysScrollClose 480ms cubic-bezier(0.5,0,0.78,0.2) both; transform-origin:center center; }
+html[data-fx~="deco"] .ai-view.ai-closing .ai-hud::after{ animation:sysFoldClose 480ms ease both; }
+html[data-fx~="deco"] .ai-view.ai-closing .sys-backdrop{ animation:sysBackFade 480ms var(--ease-silk) both; }
+html[data-fx~="deco"] .ai-view .ai-top{ background:transparent; }
 @media (prefers-reduced-motion:reduce){
-  html:not([data-theme="sterile"]) .ai-view.open .ai-hud,
-  html:not([data-theme="sterile"]) .ai-view.open .ai-hud::after{ animation:none !important; clip-path:none !important; opacity:1 !important; }
+  html[data-fx~="deco"] .ai-view.open .ai-hud,
+  html[data-fx~="deco"] .ai-view.open .ai-hud::after{ animation:none !important; clip-path:none !important; opacity:1 !important; }
 }
 @media(max-width:559px){
-  html:not([data-theme="sterile"]) .ai-view .sys-window.ai-hud{ max-height:96vh; }
+  html[data-fx~="deco"] .ai-view .sys-window.ai-hud{ max-height:96vh; }
 }
 
 /* ════ AI logo 开场动效（仿系统 HUD sys-cover；卷轴展开时播，淡出露内容）════ */
@@ -118,11 +118,11 @@ html:not([data-theme="sterile"]) .ai-view .ai-top{ background:transparent; }
   text-shadow:0 0 9px var(--brass-glow,transparent); }
 .ai-wordmark span{ display:inline-block; opacity:0; }
 
-html:not([data-theme="sterile"]) .ai-view.open .ai-cover{ animation:aiCover 2600ms var(--ease-silk) both; }
-html:not([data-theme="sterile"]) .ai-view.open .ai-l-ring{ animation:aiSpin 9s linear infinite; }
-html:not([data-theme="sterile"]) .ai-view.open .ai-l-net { animation:aiSpin 6s linear infinite reverse; }
-html:not([data-theme="sterile"]) .ai-view.open .ai-wordmark span{ animation:aiFlicker 900ms steps(1,end) both; }
-html:not([data-theme="sterile"]) .ai-view.open .ai-wordmark span:nth-child(2){ animation-delay:.17s; }
+html[data-fx~="deco"] .ai-view.open .ai-cover{ animation:aiCover 2600ms var(--ease-silk) both; }
+html[data-fx~="deco"] .ai-view.open .ai-l-ring{ animation:aiSpin 9s linear infinite; }
+html[data-fx~="deco"] .ai-view.open .ai-l-net { animation:aiSpin 6s linear infinite reverse; }
+html[data-fx~="deco"] .ai-view.open .ai-wordmark span{ animation:aiFlicker 900ms steps(1,end) both; }
+html[data-fx~="deco"] .ai-view.open .ai-wordmark span:nth-child(2){ animation-delay:.17s; }
 
 @keyframes aiCover  { 0%,80%{opacity:1;visibility:visible} 100%{opacity:0;visibility:hidden} }
 @keyframes aiSpin   { to{ transform:rotate(360deg) } }
@@ -133,14 +133,14 @@ html:not([data-theme="sterile"]) .ai-view.open .ai-wordmark span:nth-child(2){ a
 .ai-tagline{ display:flex; gap:.34em; font-family:var(--mono); font-size:11px; letter-spacing:.12em;
   color:var(--brass-ghost,var(--brass)); }
 .ai-tagline span{ display:inline-block; opacity:0; }
-html:not([data-theme="sterile"]) .ai-view.open .ai-tagline span{ animation:aiFlicker 900ms steps(1,end) both; }
-html:not([data-theme="sterile"]) .ai-view.open .ai-tagline span:nth-child(1){ animation-delay:.28s; }
-html:not([data-theme="sterile"]) .ai-view.open .ai-tagline span:nth-child(2){ animation-delay:.33s; }
-html:not([data-theme="sterile"]) .ai-view.open .ai-tagline span:nth-child(3){ animation-delay:.37s; }
-html:not([data-theme="sterile"]) .ai-view.open .ai-tagline span:nth-child(4){ animation-delay:.42s; }
-html:not([data-theme="sterile"]) .ai-view.open .ai-tagline span:nth-child(5){ animation-delay:.46s; }
-html:not([data-theme="sterile"]) .ai-view.open .ai-tagline span:nth-child(6){ animation-delay:.51s; }
-html:not([data-theme="sterile"]) .ai-view.open .ai-tagline span:nth-child(7){ animation-delay:.55s; }
-html:not([data-theme="sterile"]) .ai-view.open .ai-tagline span:nth-child(8){ animation-delay:.60s; }
-html:not([data-theme="sterile"]) .ai-view.open .ai-tagline span:nth-child(9){ animation-delay:.64s; }
-html:not([data-theme="sterile"]) .ai-view.open .ai-tagline span:nth-child(10){ animation-delay:.69s; }
+html[data-fx~="deco"] .ai-view.open .ai-tagline span{ animation:aiFlicker 900ms steps(1,end) both; }
+html[data-fx~="deco"] .ai-view.open .ai-tagline span:nth-child(1){ animation-delay:.28s; }
+html[data-fx~="deco"] .ai-view.open .ai-tagline span:nth-child(2){ animation-delay:.33s; }
+html[data-fx~="deco"] .ai-view.open .ai-tagline span:nth-child(3){ animation-delay:.37s; }
+html[data-fx~="deco"] .ai-view.open .ai-tagline span:nth-child(4){ animation-delay:.42s; }
+html[data-fx~="deco"] .ai-view.open .ai-tagline span:nth-child(5){ animation-delay:.46s; }
+html[data-fx~="deco"] .ai-view.open .ai-tagline span:nth-child(6){ animation-delay:.51s; }
+html[data-fx~="deco"] .ai-view.open .ai-tagline span:nth-child(7){ animation-delay:.55s; }
+html[data-fx~="deco"] .ai-view.open .ai-tagline span:nth-child(8){ animation-delay:.60s; }
+html[data-fx~="deco"] .ai-view.open .ai-tagline span:nth-child(9){ animation-delay:.64s; }
+html[data-fx~="deco"] .ai-view.open .ai-tagline span:nth-child(10){ animation-delay:.69s; }

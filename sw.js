@@ -5,7 +5,7 @@
    - TradingView widgets and external CDNs: stale-while-revalidate.
    Bump CACHE_VERSION on every shell change to force clients to drop the old cache. */
 
-const CACHE_VERSION = 'cyrus-os-v7.31.0';
+const CACHE_VERSION = 'cyrus-os-v7.32.0';
 const APP_SHELL = [
   './',
   './index.html',
@@ -23,6 +23,7 @@ const APP_SHELL = [
   './icons/nav/cal.png',
   './icons/nav/pwr.png',
   './styles/tokens.css',
+  './styles/fonts.css',
   './styles/base.css',
   './styles/components.css?v=7.27.3',
   './styles/animations.css',
@@ -40,6 +41,7 @@ const APP_SHELL = [
   './styles/store.css',
   './scripts/supabase.js',
   './scripts/state.js',
+  './scripts/render-core.js',
   './scripts/notifications.js',
   './scripts/drawer.js',
   './scripts/markets.js',
@@ -71,6 +73,12 @@ const APP_SHELL = [
   './vendor/three.module.js',
   './vendor/supabase.js',
   './vendor/chart.umd.min.js',
+  './vendor/fonts/inter-var-latin.woff2',
+  './vendor/fonts/inter-var-latin-ext.woff2',
+  './vendor/fonts/jetbrains-mono-var-latin.woff2',
+  './vendor/fonts/jetbrains-mono-var-latin-ext.woff2',
+  './vendor/fonts/oswald-var-latin.woff2',
+  './vendor/fonts/oswald-var-latin-ext.woff2',
   './scripts/applock.js',
   './scripts/theme.js',
   './scripts/ambient.js',

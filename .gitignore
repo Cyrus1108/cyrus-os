@@ -12,3 +12,8 @@ node_modules/
 dist/
 .env
 .env.local
+
+# TypeUI generated skill packages (workspace-generated specs, not for public redistribution)
+.agents/
+.claude/skills/typeui-design-system/
+.claude/skills/typeui-fundamentals/

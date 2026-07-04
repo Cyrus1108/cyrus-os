@@ -9,7 +9,7 @@ body.cal-locked{ overflow:hidden; }
 
 /* ── view shell (base = sterile / fallback: opaque sheet) ── */
 .cal-view{
-  position:fixed; inset:0; z-index:1200;
+  position:fixed; inset:0; z-index:var(--z-hud);
   background:var(--color-background-primary);
   display:flex; flex-direction:column;
   transform:translateY(100%);
@@ -107,7 +107,7 @@ html[data-theme="sterile"] .cal-tag-ac{ color:var(--brass); background:var(--bra
 
 /* ── event modal ── */
 .cal-modal{
-  position:absolute; inset:0; z-index:1230; display:none;
+  position:absolute; inset:0; z-index:var(--z-hud-modal); display:none;
   align-items:center; justify-content:center; padding:16px;
   background:color-mix(in srgb, var(--color-background-primary) 55%, transparent);
 }
@@ -147,43 +147,43 @@ html[data-theme="sterile"] .cal-tag-ac{ color:var(--brass); background:var(--bra
 /* ════ default theme (cappa): glass .sys-window.cal-hud + scroll-unfurl ════
    glass.js wraps #calendar-view into .sys-backdrop + .sys-window.cal-hud at init;
    the .cal-view becomes a transparent centering stage. Mirrors finance.css. */
-html:not([data-theme="sterile"]) .cal-view{
+html[data-fx~="deco"] .cal-view{
   display:flex; align-items:center; justify-content:center; padding:16px;
   background:transparent;
   transform:none; opacity:0;
   transition:opacity .4s var(--ease-silk), visibility .4s var(--ease-silk);
 }
-html:not([data-theme="sterile"]) .cal-view.open{ transform:none; opacity:1; }
-html:not([data-theme="sterile"]) .cal-view .sys-window.cal-hud{
+html[data-fx~="deco"] .cal-view.open{ transform:none; opacity:1; }
+html[data-fx~="deco"] .cal-view .sys-window.cal-hud{
   width:100%; max-width:600px; max-height:94vh;
   overflow:auto; overscroll-behavior:contain;
 }
-html:not([data-theme="sterile"]) .cal-view.open .cal-hud{
+html[data-fx~="deco"] .cal-view.open .cal-hud{
   animation:sysScrollOpen 1100ms linear both; transform-origin:center center;
 }
-html:not([data-theme="sterile"]) .cal-view.open .cal-hud::after{
+html[data-fx~="deco"] .cal-view.open .cal-hud::after{
   animation:sysFold 1100ms linear both;
 }
-html:not([data-theme="sterile"]) .cal-view.cal-closing .cal-hud{
+html[data-fx~="deco"] .cal-view.cal-closing .cal-hud{
   animation:sysScrollClose 480ms cubic-bezier(0.5,0,0.78,0.2) both; transform-origin:center center;
 }
-html:not([data-theme="sterile"]) .cal-view.cal-closing .cal-hud::after{
+html[data-fx~="deco"] .cal-view.cal-closing .cal-hud::after{
   animation:sysFoldClose 480ms ease both;
 }
-html:not([data-theme="sterile"]) .cal-view.cal-closing .sys-backdrop{
+html[data-fx~="deco"] .cal-view.cal-closing .sys-backdrop{
   animation:sysBackFade 480ms var(--ease-silk) both;
 }
 /* the sticky top inside the glass window: keep it transparent so the window's
    own glass shows through (mirrors how content sits on the unfurled scroll) */
-html:not([data-theme="sterile"]) .cal-view .cal-top{ background:transparent; }
+html[data-fx~="deco"] .cal-view .cal-top{ background:transparent; }
 @media (prefers-reduced-motion:reduce){
-  html:not([data-theme="sterile"]) .cal-view.open .cal-hud,
-  html:not([data-theme="sterile"]) .cal-view.open .cal-hud::after{
+  html[data-fx~="deco"] .cal-view.open .cal-hud,
+  html[data-fx~="deco"] .cal-view.open .cal-hud::after{
     animation:none !important; clip-path:none !important; opacity:1 !important;
   }
 }
 
 @media(max-width:559px){
   .cal-cell{ min-height:34px; font-size:12px; }
-  html:not([data-theme="sterile"]) .cal-view .sys-window.cal-hud{ max-height:96vh; }
+  html[data-fx~="deco"] .cal-view .sys-window.cal-hud{ max-height:96vh; }
 }

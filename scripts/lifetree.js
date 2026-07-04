@@ -114,7 +114,7 @@ function tick(t){
 
 function loop(t){ if(!running) return; if(shouldRun()) tick(t); raf = requestAnimationFrame(loop); }
 function shouldRun(){
-  return !document.hidden && visible && document.documentElement.getAttribute('data-theme')==='sterile';
+  return !document.hidden && visible && document.documentElement.matches('[data-fx~="lifetree"]');
 }
 
 window.initLifeTree = function(){
@@ -134,7 +134,7 @@ window.initLifeTree = function(){
   mount.appendChild(renderer.domElement);
   // GL context recovery — loss otherwise leaves a dead canvas with no recovery path
   renderer.domElement.addEventListener('webglcontextlost', e => { e.preventDefault(); running=false; });
-  renderer.domElement.addEventListener('webglcontextrestored', () => { renderer = null; if(document.documentElement.getAttribute('data-theme')==='sterile') window.initLifeTree(); });
+  renderer.domElement.addEventListener('webglcontextrestored', () => { renderer = null; if(document.documentElement.matches('[data-fx~="lifetree"]')) window.initLifeTree(); });
   group = new THREE.Group(); scene.add(group);
   pos = new Float32Array(N*3); col = new Float32Array(N*3);
   geo = new THREE.BufferGeometry();

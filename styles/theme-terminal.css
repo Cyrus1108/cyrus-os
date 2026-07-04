@@ -54,16 +54,15 @@ html[data-theme="terminal"]{
 /* dark ground + faint 44px technical grid; kill the cappa brass ambient wash */
 html[data-theme="terminal"] body{ background:#0a0b06; color:#ECECDD; }
 html[data-theme="terminal"] body::before{
-  content:''; position:fixed; inset:0; z-index:-1; pointer-events:none; animation:none;
+  content:''; position:fixed; inset:0; z-index:var(--z-behind); pointer-events:none; animation:none;
   background-image:
     linear-gradient(rgba(122,122,92,.05) 1px, transparent 1px),
     linear-gradient(90deg, rgba(122,122,92,.05) 1px, transparent 1px);
   background-size:44px 44px;
 }
 html[data-theme="terminal"] body::after{ display:none !important; }
-/* cappa-only decoration layers have no place in the terminal */
-html[data-theme="terminal"] #herocube,
-html[data-theme="terminal"] #glass-trails{ display:none !important; }
+/* #herocube / #glass-trails now hidden capability-wise (data-fx) in components.css
+   — terminal simply lacks the `cube` and `trails` flags. */
 
 /* ── angular chamfered slabs: the core Arknights panel shape ── */
 html[data-theme="terminal"] .panel,

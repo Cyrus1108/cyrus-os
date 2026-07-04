@@ -24,7 +24,7 @@ body.fin-locked{ overflow:hidden; }
 
 /* ── view shell ── */
 .fin-view{
-  position:fixed; inset:0; z-index:1200;
+  position:fixed; inset:0; z-index:var(--z-hud);
   background:var(--color-background-primary);
   display:flex; flex-direction:column;
   transform:translateY(100%);
@@ -58,7 +58,7 @@ body.fin-locked{ overflow:hidden; }
 
 /* ── FAB ── */
 .fin-fab{
-  position:absolute; right:22px; bottom:calc(24px + env(safe-area-inset-bottom)); z-index:1210;
+  position:absolute; right:22px; bottom:calc(24px + env(safe-area-inset-bottom)); z-index:var(--z-hud-fab);
   width:56px; height:56px; border-radius:50%;
   background:var(--brass); color:var(--color-background-primary);
   border:none; cursor:pointer; padding:0;
@@ -289,7 +289,7 @@ html[data-theme="sterile"] .fin-bud-cats{ border-radius:0; }
 .fin-bud-cat input{ width:auto !important; }
 
 /* ── app lock ── */
-.applock{ position:fixed; inset:0; z-index:99999; display:none; align-items:center; justify-content:center;
+.applock{ position:fixed; inset:0; z-index:var(--z-applock); display:none; align-items:center; justify-content:center;
   background:var(--color-background-primary); }
 .applock.show{ display:flex; }
 .applock-card{ width:100%; max-width:320px; text-align:center; padding:24px; }
@@ -366,7 +366,7 @@ html[data-theme="sterile"] .fin-view select{ border-radius:0; }
 
 /* ── modal ── */
 .fin-modal{
-  position:fixed; inset:0; z-index:1230;
+  position:fixed; inset:0; z-index:var(--z-hud-modal);
   background:rgba(0,0,0,0.45); display:none;
   align-items:flex-end; justify-content:center;
 }
@@ -457,7 +457,7 @@ html[data-theme="sterile"] .fin-datebtn{ border-radius:0; }
 }
 
 .fin-cal{
-  position:fixed; inset:0; z-index:2400; display:none;
+  position:fixed; inset:0; z-index:var(--z-modal-tall); display:none;
   background:rgba(0,0,0,0.5); align-items:center; justify-content:center; padding:20px;
 }
 
@@ -534,7 +534,7 @@ html[data-theme="sterile"] .fin-wiz-catico{ border-radius:0; }
 /* ── toast ── */
 .fin-toast{ position:absolute; left:50%; bottom:92px; transform:translateX(-50%) translateY(12px);
   background:var(--ink); color:var(--color-background-primary); font-size:13px; padding:10px 18px;
-  border-radius:22px; opacity:0; pointer-events:none; z-index:1260; white-space:nowrap;
+  border-radius:22px; opacity:0; pointer-events:none; z-index:var(--z-hud-toast); white-space:nowrap;
   transition:opacity .25s var(--ease-silk), transform .25s var(--ease-silk); }
 html[data-theme="sterile"] .fin-toast{ border-radius:0; border:.5px solid var(--brass); }
 .fin-toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
@@ -555,7 +555,7 @@ html[data-theme="sterile"] .fin-fx-auto{ border-radius:0; }
    init; here the .fin-view becomes a centering stage and the window reuses
    the System's scroll-unfurl keyframes (sysScrollOpen/Close + sysFold from
    system.css are global). Default theme only — sterile keeps the old pane. */
-html:not([data-theme="sterile"]) .fin-view{
+html[data-fx~="deco"] .fin-view{
   display:flex; align-items:center; justify-content:center; padding:16px;
   background:transparent;
   /* kill the Phase-1 translateY(100%) sheet slide — with a half-transparent
@@ -564,29 +564,29 @@ html:not([data-theme="sterile"]) .fin-view{
   transform:none; opacity:0;
   transition:opacity .4s var(--ease-silk), visibility .4s var(--ease-silk);
 }
-html:not([data-theme="sterile"]) .fin-view.open{ transform:none; opacity:1; }
-html:not([data-theme="sterile"]) .fin-view .sys-window.fin-hud{
+html[data-fx~="deco"] .fin-view.open{ transform:none; opacity:1; }
+html[data-fx~="deco"] .fin-view .sys-window.fin-hud{
   width:100%; max-width:1080px; max-height:94vh;
   overflow:auto; overscroll-behavior:contain;
 }
-html:not([data-theme="sterile"]) .fin-view.open .fin-hud{
+html[data-fx~="deco"] .fin-view.open .fin-hud{
   animation:sysScrollOpen 1100ms linear both; transform-origin:center center;
 }
-html:not([data-theme="sterile"]) .fin-view.open .fin-hud::after{
+html[data-fx~="deco"] .fin-view.open .fin-hud::after{
   animation:sysFold 1100ms linear both;
 }
-html:not([data-theme="sterile"]) .fin-view.fin-closing .fin-hud{
+html[data-fx~="deco"] .fin-view.fin-closing .fin-hud{
   animation:sysScrollClose 480ms cubic-bezier(0.5,0,0.78,0.2) both; transform-origin:center center;
 }
-html:not([data-theme="sterile"]) .fin-view.fin-closing .fin-hud::after{
+html[data-fx~="deco"] .fin-view.fin-closing .fin-hud::after{
   animation:sysFoldClose 480ms ease both;
 }
-html:not([data-theme="sterile"]) .fin-view.fin-closing .sys-backdrop{
+html[data-fx~="deco"] .fin-view.fin-closing .sys-backdrop{
   animation:sysBackFade 480ms var(--ease-silk) both;
 }
 @media (prefers-reduced-motion:reduce){
-  html:not([data-theme="sterile"]) .fin-view.open .fin-hud,
-  html:not([data-theme="sterile"]) .fin-view.open .fin-hud::after{
+  html[data-fx~="deco"] .fin-view.open .fin-hud,
+  html[data-fx~="deco"] .fin-view.open .fin-hud::after{
     animation:none !important; clip-path:none !important; opacity:1 !important;
   }
 }

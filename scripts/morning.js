@@ -24,19 +24,31 @@ function rMR(){
   const list=S.mr.list,done=list.filter(i=>i.d).length;
   const pct=Math.round(done/list.length*100);
   const remMins=list.filter(i=>!i.d).reduce((a,i)=>a+i.mins,0);
-  document.getElementById('mr-bar').style.width=pct+'%';
-  document.getElementById('mr-count').innerHTML=`${done}<span style="color:var(--brass-ghost);"> / ${list.length}</span>`;
-  document.getElementById('mr-time').textContent=done===list.length?'All complete':`~ ${remMins} min remaining`;
-  const _mrHtml=list.map(i=>`
-    <div class="mr-pill ${i.d?'done':''}${i.detail&&i.detail.trim()?' has-detail':''}" data-id="${i.id}" onclick="toggleMR('${i.id}', event)">
+  const bar=document.getElementById('mr-bar'); if(bar && bar.style.width!==pct+'%') bar.style.width=pct+'%';
+  setHTML(document.getElementById('mr-count'), `${done}<span style="color:var(--brass-ghost);"> / ${list.length}</span>`);
+  setText(document.getElementById('mr-time'), done===list.length?'All complete':`~ ${remMins} min remaining`);
+  // Keyed reconcile: each pill is a persistent node (so the FLIP detail-lift can
+  // grab it by id and reinsert it without a rebuild) — a toggle only re-writes the
+  // pill whose data changed, never the one under the finger.
+  const mrList=document.getElementById('mr-list');
+  reconcileList(mrList, list, {
+    key:i=>i.id,
+    create:i=>{
+      const d=document.createElement('div');
+      d.dataset.id=i.id;
+      d.setAttribute('onclick', `toggleMR('${i.id}', event)`);
+      return d;
+    },
+    update:(d,i)=>{
+      setAttr(d,'class', `mr-pill ${i.d?'done':''}${i.detail&&i.detail.trim()?' has-detail':''}`);
+      setHTML(d, `
       <span class="drag-handle" onclick="event.stopPropagation()" aria-label="拖动排序">⠿</span>
       <span class="mr-pill-name">${escH(i.t)}</span>
       <span class="mr-pill-time">${i.mins}m</span>
-      <span class="mr-pill-expand" onclick="event.stopPropagation();mrExpand('${i.id}')" aria-label="详情">⌄</span>
-    </div>`).join('');
-  setStableHTML(document.getElementById('mr-list'), _mrHtml, el=>{
-    makeSortable(el, { itemSelector:'.mr-pill', handleSelector:'.drag-handle', onReorder:onReorderMR });
+      <span class="mr-pill-expand" onclick="event.stopPropagation();mrExpand('${i.id}')" aria-label="详情">⌄</span>`);
+    }
   });
+  makeSortable(mrList, { itemSelector:'.mr-pill', handleSelector:'.drag-handle', onReorder:onReorderMR });
   rMRReady(done === list.length && list.length > 0);
 }
 

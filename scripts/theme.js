@@ -10,6 +10,30 @@ let _lifetreeLoading = false;
    → terminal (dark Arknights tactical). The toggle cycles through them. */
 const THEMES = ['cappa', 'sterile', 'terminal', 'monarch'];
 
+/* ── Capability flags (data-fx) — THE authoritative map of "which decorative
+   layers each theme turns on". applyTheme writes these onto <html data-fx="…">
+   and every guard (JS + CSS) reads a flag instead of pattern-matching theme
+   names. Flag semantics (archaeology of the pre-existing guards):
+     glass         — glass.js maximalist interaction layer + sys-window HUD shell
+                     run (was: everything-except-sterile).
+     cube          — herocube Three.js hero cube renders (was: cappa only —
+                     herocube.js early-returned for sterile/terminal/monarch).
+     trails        — glass-trails ink canvas is visible (was: cappa only —
+                     terminal & monarch hid #glass-trails via CSS).
+     flow-additive — energyflow uses 'lighter' additive blending (was:
+                     everything-except-sterile; sterile used source-over).
+     lifetree      — sterile life-tree + ambient run (was: sterile only).
+     deco          — default-theme panel/body decorations apply (was the CSS
+                     `html:not([data-theme="sterile"])` guard).
+   ⚠️ index.html's pre-paint inline script embeds a COPY of this map so data-fx
+   is correct before first paint — keep the two in sync. */
+const THEME_FX = {
+  cappa:    'glass cube trails flow-additive deco',
+  sterile:  'lifetree',
+  terminal: 'glass flow-additive deco',
+  monarch:  'glass flow-additive deco',
+};
+
 function currentTheme(){
   const t = document.documentElement.getAttribute('data-theme');
   return THEMES.includes(t) ? t : 'cappa';
@@ -18,16 +42,18 @@ function currentTheme(){
 function applyTheme(name, persist){
   const t = THEMES.includes(name) ? name : 'cappa';
   document.documentElement.setAttribute('data-theme', t);
+  document.documentElement.setAttribute('data-fx', THEME_FX[t] || THEME_FX.cappa);
   try { localStorage.setItem('cyrus_dashboard_v6_theme', JSON.stringify(t)); } catch(e){}
   // sync to Supabase settings (saveLS is defined in state.js and triggers push)
   if(persist && typeof saveLS === 'function') saveLS('theme', t);
   updateThemeBtn(t);
 
-  if(t === 'sterile'){
+  // life-tree + ambient run only where the 'lifetree' capability is set (sterile).
+  if(document.documentElement.matches('[data-fx~="lifetree"]')){
     ensureLifeTree();
     if(typeof initAmbient === 'function') initAmbient();
   } else if(typeof window.destroyLifeTree === 'function'){
-    // both cappa and terminal drop the life-tree (terminal has its own dark chrome)
+    // cappa/terminal/monarch drop the life-tree
     window.destroyLifeTree();
   }
 }

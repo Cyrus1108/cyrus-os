@@ -45,49 +45,61 @@ function rTRSeal(){
   if(S.tr.sealed){
     const tm=S.tr.sealedAt?new Date(S.tr.sealedAt):null;
     const tstr=tm?`${String(tm.getHours()).padStart(2,'0')}:${String(tm.getMinutes()).padStart(2,'0')}`:'';
-    bar.innerHTML=`<div class="tr-seal" role="status">
+    setHTML(bar, `<div class="tr-seal" role="status">
         <div class="tr-seal-stamp">封</div>
         <div class="tr-seal-meta"><div class="tr-seal-title">盘前已封存</div><div class="tr-seal-sub">${tstr} · 今日承诺已锁定</div></div>
         <button class="tr-break-btn fx-btn" onclick="trBreak()">破封</button>
-      </div>`;
+      </div>`);
   } else {
-    bar.innerHTML=`<button class="tr-seal-btn fx-btn" onclick="trSeal()">🔒 盘前封存</button>${S.tr.broke?'<span class="tr-broke-badge">今日已破封</span>':''}`;
+    setHTML(bar, `<button class="tr-seal-btn fx-btn" onclick="trSeal()">🔒 盘前封存</button>${S.tr.broke?'<span class="tr-broke-badge">今日已破封</span>':''}`);
   }
 }
-
-function rTR(){
-  const sealed=!!S.tr.sealed;
-  document.getElementById('tr-list').innerHTML=S.tr.list.map(i=>{
-    if(editingTR===i.id && !sealed){
-      return `<div style="padding:5px 0;border-bottom:.5px solid var(--hair);"><div class="edit-box" style="flex-direction:row;padding:6px;align-items:center;">
+function trEditInner(i){
+  return `<div class="edit-box" style="flex-direction:row;padding:6px;align-items:center;">
         <input id="et-text" value="${escH(i.t)}" style="flex:1;">
         <button class="primary fx-btn" onclick="saveTREdit('${i.id}')">保存</button>
         <button class="ghost fx-btn" onclick="cancelTREdit()">×</button>
-      </div></div>`;
-    }
-    if(sealed){
-      return `<div class="row ${i.d?'item-done':''}" data-id="${i.id}">
-        <input type="checkbox" class="row-cb" ${i.d?'checked':''} disabled>
-        <div class="row-body"><span class="item-text">${escH(i.t)}</span></div>
       </div>`;
-    }
-    return `<div class="row ${i.d?'item-done':''}" data-id="${i.id}">
-      <span class="drag-handle" onclick="event.stopPropagation()" aria-label="拖动排序">⠿</span>
+}
+function trSealedInner(i){
+  return `<input type="checkbox" class="row-cb" ${i.d?'checked':''} disabled>
+        <div class="row-body"><span class="item-text">${escH(i.t)}</span></div>`;
+}
+function trRowInner(i){
+  return `<span class="drag-handle" onclick="event.stopPropagation()" aria-label="拖动排序">⠿</span>
       <input type="checkbox" class="row-cb" ${i.d?'checked':''} onchange="toggleTR('${i.id}')">
       <div class="row-body"><span class="item-text">${escH(i.t)}</span></div>
       <div class="row-actions">
         <button class="row-btn" onclick="startTREdit('${i.id}')">编辑</button>
         <button class="row-btn" onclick="delTR('${i.id}')">×</button>
-      </div>
-    </div>`;
-  }).join('');
+      </div>`;
+}
+
+function rTR(){
+  const sealed=!!S.tr.sealed;
+  const el=document.getElementById('tr-list');
+  reconcileList(el, S.tr.list, {
+    key:i=>i.id,
+    create:i=>{ const d=document.createElement('div'); d.dataset.id=i.id; return d; },
+    update:(d,i)=>{
+      if(editingTR===i.id && !sealed){
+        setAttr(d,'class','');
+        setAttr(d,'style','padding:5px 0;border-bottom:.5px solid var(--hair);');
+        setHTML(d, trEditInner(i));
+        return;
+      }
+      setAttr(d,'class','row'+(i.d?' item-done':''));
+      setAttr(d,'style',null);
+      setHTML(d, sealed ? trSealedInner(i) : trRowInner(i));
+    }
+  });
   const be=document.getElementById('t-bias');
   if(be){ be.readOnly=sealed; if(document.activeElement!==be) be.value=S.tr.bias||''; }
   const ab=document.getElementById('tr-add-btn'); if(ab) ab.style.display=sealed?'none':'';
   if(sealed){ const f=document.getElementById('tr-new-form'); if(f) f.style.display='none'; trOpen=false; }
   rTRSeal();
   attachRipples();
-  if(!sealed) makeSortable(document.getElementById('tr-list'), { itemSelector:'.row', handleSelector:'.drag-handle', onReorder:onReorderTR });
+  if(!sealed) makeSortable(el, { itemSelector:'.row', handleSelector:'.drag-handle', onReorder:onReorderTR });
 }
 function onReorderTR(ids){
   S.tr.list = reorderById(S.tr.list, ids);

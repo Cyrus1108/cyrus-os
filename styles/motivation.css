@@ -5,7 +5,7 @@ body.motiv-locked{ overflow:hidden; }
 
 /* ── view shell ── */
 .motiv-view{
-  position:fixed; inset:0; z-index:1200;
+  position:fixed; inset:0; z-index:var(--z-hud);
   background:var(--color-background-primary);
   display:flex; flex-direction:column;
   transform:translateY(100%);
@@ -97,7 +97,7 @@ body.motiv-locked{ overflow:hidden; }
 
 /* ── player overlay ── */
 .motiv-player{
-  position:fixed; inset:0; z-index:1300;
+  position:fixed; inset:0; z-index:var(--z-modal);
   background:rgba(0,0,0,.82);
   display:flex; align-items:center; justify-content:center;
   padding:24px; opacity:0; visibility:hidden;

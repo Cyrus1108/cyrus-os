@@ -7,9 +7,11 @@
 import * as THREE from 'three';
 
 (function(){
-  const sterile = ['sterile','terminal','monarch'].includes(document.documentElement.getAttribute('data-theme'));
+  // renders only where the 'cube' capability is set (cappa) — was the
+  // ['sterile','terminal','monarch'] theme-name blacklist.
+  const noCube = !document.documentElement.matches('[data-fx~="cube"]');
   const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if(sterile || reduced) return;
+  if(noCube || reduced) return;
 
   const host = document.createElement('div');
   host.id = 'herocube';
@@ -82,8 +84,8 @@ import * as THREE from 'three';
 
   function frame(){
     raf = requestAnimationFrame(frame);
-    // stop rendering WebGL behind the hidden canvas after a switch to sterile/terminal
-    if(['sterile','terminal','monarch'].includes(document.documentElement.getAttribute('data-theme'))) return;
+    // stop rendering WebGL once the theme no longer has the 'cube' capability
+    if(!document.documentElement.matches('[data-fx~="cube"]')) return;
     t += 0.016;
     // scroll velocity feeds the tumble (Lenis-damped native scroll)
     const y = window.scrollY;

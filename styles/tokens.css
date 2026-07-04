@@ -56,6 +56,28 @@ html{ color-scheme: light dark; }
   --dur-base:   200ms;
   --dur-slow:   320ms;
   --dur-slower: 480ms;
+
+  /* ── z-index ladder — the app-wide stacking layers, named by layer semantics.
+     Values are FROZEN (only the spelling changes; layer order is unchanged).
+     Purely-local child paint order (z-index:1..10 inside a component's own
+     stacking context) stays literal — it is not part of this global ladder. ── */
+  --z-behind:          -1;     /* 装饰: energyflow / body::before 流光 / herocube / page-wrapper */
+  --z-cursor:          60;     /* sterile 自绘光标 */
+  --z-nav-tabs:        100;    /* 导览把手 (drawer-tab-group) */
+  --z-drawer-backdrop: 200;    /* 抽屉遮罩 */
+  --z-drawer:          201;    /* 抽屉面板 */
+  --z-focus-backdrop:  1050;   /* 聚焦/详情 背板 */
+  --z-focus:           1060;   /* 聚焦面板 / 详情卡 */
+  --z-hud:             1200;   /* HUD 全屏视图 (finance/fitness/system/calendar/ai/store/motivation/lowday) */
+  --z-hud-fab:         1210;   /* HUD 内浮动按钮 */
+  --z-hud-modal:       1230;   /* HUD 内弹层 */
+  --z-hud-toast:       1260;   /* HUD 内 toast */
+  --z-modal:           1300;   /* 信条 / 动机 弹窗 */
+  --z-cele:            1400;   /* 系统庆祝弹窗 */
+  --z-auth:            1450;   /* 登录覆盖层 */
+  --z-cele-burst:      1500;   /* 庆祝粒子爆发 */
+  --z-modal-tall:      2400;   /* 财务大弹窗 (fin-modal) */
+  --z-applock:         99999;  /* 应用锁 / ambient boot 扫描线 */
 }
 @media (prefers-color-scheme:dark){
   :root{

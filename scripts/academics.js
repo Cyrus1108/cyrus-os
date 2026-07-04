@@ -67,14 +67,38 @@ function saveAcEdit(id){
   closeFormNav();editingAC=null;saveAC();rAC();rMetrics();
 }
 
-function rAC(){
-  const el=document.getElementById('ac-list');
-  const all=[...S.ac].sort((a,b)=> a.done!==b.done ? (a.done?1:-1) : (a.position||0)-(b.position||0));
-  if(!all.length){el.innerHTML='<div class="empty">— 暂无待办 —</div>';return;}
-  el.innerHTML=all.map(t=>{
-    if(editingAC===t.id){
-      return `<div style="padding:6px 0;border-bottom:.5px solid var(--hair);">
-        <div class="edit-box">
+/* skeleton-once + keyed reconcile (render-core). The panel shell lives in
+   index.html; here we only own #ac-list. Empty vs non-empty is a structural
+   skeleton key (empty → static message, list → keyed-row host). Each row is a
+   persistent element keyed by id; its inner markup is re-written row-level only
+   when that row's own data signature changes, so an unrelated re-render (realtime
+   echo, rMetrics) never tears the row the user is mid-tap / mid-edit on. */
+function acRowInner(t){
+  const days=Math.ceil((new Date(t.date+'T23:59:59')-new Date())/86400000);
+  let tagCls='tag-ok',tagTxt=days+' days';
+  if(t.done){tagCls='tag-done';tagTxt='Done';}
+  else if(days<=0){tagCls='tag-urgent';tagTxt='Overdue';}
+  else if(days<=3){tagCls='tag-warn';tagTxt=days+' days';}
+  const priColor=t.pri==='high'?'var(--color-text-danger)':t.pri==='low'?'var(--ghost)':'var(--brass)';
+  return `<span class="drag-handle" onclick="event.stopPropagation()" aria-label="拖动排序">⠿</span>
+      <input type="checkbox" class="row-cb" ${t.done?'checked':''} onchange="toggleAC('${t.id}')">
+      <span class="ac-pri" style="background:${priColor};"></span>
+      <div class="row-body">
+        <div class="ac-subject">${escH(t.sub)}</div>
+        <div class="ac-name">${escH(t.name)}</div>
+        <div class="ac-meta">
+          <span class="ac-date">${t.date}${t.time?' '+t.time.slice(0,5):''}</span>
+          <span class="tag ${tagCls}">${tagTxt}</span>
+          ${t.remind>0?`<span class="ac-bell">⏰ ${formatRemind(t.remind)}</span>`:''}
+        </div>
+      </div>
+      <div class="row-actions">
+        <button class="row-btn" onclick="startAcEdit('${t.id}')">编辑</button>
+        <button class="row-btn" onclick="delAC('${t.id}')">×</button>
+      </div>`;
+}
+function acEditInner(t){
+  return `<div class="edit-box">
           <input id="ea-sub" value="${escH(t.sub)}" placeholder="科目" list="ac-subjects-list" style="width:100%;">
           <input id="ea-name" value="${escH(t.name)}" placeholder="内容" style="width:100%;">
           <div class="field-row">
@@ -92,37 +116,35 @@ function rAC(){
             <button class="primary fx-btn" onclick="saveAcEdit('${t.id}')" style="flex:1;">保存</button>
             <button class="ghost fx-btn" onclick="cancelAcEdit()" style="flex:1;">取消</button>
           </div>
-        </div>
-      </div>`;
+        </div>`;
+}
+function rAC(){
+  const el=document.getElementById('ac-list');
+  const all=[...S.ac].sort((a,b)=> a.done!==b.done ? (a.done?1:-1) : (a.position||0)-(b.position||0));
+  if(!all.length){
+    ensureSkeleton(el,'ac-empty',()=>'<div class="empty">— 暂无待办 —</div>');
+    renderSubjects();
+    return;
+  }
+  ensureSkeleton(el,'ac-list',()=>'');   // clears any prior empty message; container then holds only keyed rows
+  reconcileList(el, all, {
+    key:t=>t.id,
+    create:t=>{ const d=document.createElement('div'); d.dataset.id=t.id; return d; },
+    update:(d,t)=>{
+      if(editingAC===t.id){
+        setAttr(d,'class','');
+        setAttr(d,'style','padding:6px 0;border-bottom:.5px solid var(--hair);');
+        setHTML(d, acEditInner(t));
+        return;
+      }
+      setAttr(d,'class','row'+(t.done?' item-done':''));
+      setAttr(d,'style', t.done?'opacity:.4;':null);
+      setHTML(d, acRowInner(t));
     }
-    const days=Math.ceil((new Date(t.date+'T23:59:59')-new Date())/86400000);
-    let tagCls='tag-ok',tagTxt=days+' days';
-    if(t.done){tagCls='tag-done';tagTxt='Done';}
-    else if(days<=0){tagCls='tag-urgent';tagTxt='Overdue';}
-    else if(days<=3){tagCls='tag-warn';tagTxt=days+' days';}
-    const priColor=t.pri==='high'?'var(--color-text-danger)':t.pri==='low'?'var(--ghost)':'var(--brass)';
-    return `<div class="row ${t.done?'item-done':''}" data-id="${t.id}" style="${t.done?'opacity:.4;':''}">
-      <span class="drag-handle" onclick="event.stopPropagation()" aria-label="拖动排序">⠿</span>
-      <input type="checkbox" class="row-cb" ${t.done?'checked':''} onchange="toggleAC('${t.id}')">
-      <span class="ac-pri" style="background:${priColor};"></span>
-      <div class="row-body">
-        <div class="ac-subject">${escH(t.sub)}</div>
-        <div class="ac-name">${escH(t.name)}</div>
-        <div class="ac-meta">
-          <span class="ac-date">${t.date}${t.time?' '+t.time.slice(0,5):''}</span>
-          <span class="tag ${tagCls}">${tagTxt}</span>
-          ${t.remind>0?`<span class="ac-bell">⏰ ${formatRemind(t.remind)}</span>`:''}
-        </div>
-      </div>
-      <div class="row-actions">
-        <button class="row-btn" onclick="startAcEdit('${t.id}')">编辑</button>
-        <button class="row-btn" onclick="delAC('${t.id}')">×</button>
-      </div>
-    </div>`;
-  }).join('');
+  });
+  makeSortable(el, { itemSelector:'.row', handleSelector:'.drag-handle', onReorder:onReorderAC });
   renderSubjects();
   attachRipples();
-  makeSortable(el, { itemSelector:'.row', handleSelector:'.drag-handle', onReorder:onReorderAC });
   if(editingAC){
     const box = el.querySelector('.edit-box');
     if(box) requestAnimationFrame(()=>openFormNav(box));

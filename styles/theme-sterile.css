@@ -52,7 +52,7 @@ html[data-theme="sterile"] body{ background:#FAFAFA; color:#18181B; }
 
 /* 40px technical grid background */
 html[data-theme="sterile"] body::before{
-  content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  content:''; position:fixed; inset:0; z-index:var(--z-behind); pointer-events:none;
   background-image:linear-gradient(rgba(24,24,27,.022) 1px,transparent 1px),
                    linear-gradient(90deg,rgba(24,24,27,.022) 1px,transparent 1px);
   background-size:40px 40px;
@@ -196,7 +196,7 @@ html[data-theme="sterile"]{ --amb:0.6; }
 
 /* page atmosphere — slow drifting colour wash behind the whole dashboard */
 html[data-theme="sterile"] body::after{
-  content:''; position:fixed; inset:-12%; z-index:-1; pointer-events:none;
+  content:''; position:fixed; inset:-12%; z-index:var(--z-behind); pointer-events:none;
   background:
     radial-gradient(38% 30% at 24% 18%, rgba(16,185,129, calc(0.06 * var(--amb))), transparent 70%),
     radial-gradient(34% 28% at 82% 72%, rgba(251,251,69, calc(0.05 * var(--amb))), transparent 70%),
@@ -208,7 +208,7 @@ html[data-theme="sterile"] body::after{
 /* faint scan line sweeping the whole terminal (injected by ambient.js) */
 #amb-scan{ display:none; }
 html[data-theme="sterile"] #amb-scan{
-  display:block; position:fixed; left:0; right:0; top:0; height:160px; z-index:-1; pointer-events:none;
+  display:block; position:fixed; left:0; right:0; top:0; height:160px; z-index:var(--z-behind); pointer-events:none;
   background:linear-gradient(180deg, transparent, rgba(98,240,245,.045), transparent);
   animation:amb-sweep 11s linear infinite;
 }
@@ -216,14 +216,14 @@ html[data-theme="sterile"] #amb-scan{
 
 /* global cursor "lens" — a soft light that follows the pointer (injected by ambient.js) */
 #amb-cursor{ display:none; }
-html[data-theme="sterile"] #amb-cursor{ display:block; position:fixed; top:0; left:0; width:0; height:0; z-index:60; pointer-events:none; }
+html[data-theme="sterile"] #amb-cursor{ display:block; position:fixed; top:0; left:0; width:0; height:0; z-index:var(--z-cursor); pointer-events:none; }
 html[data-theme="sterile"] #amb-cursor::before{
   content:''; position:absolute; left:-300px; top:-300px; width:600px; height:600px; border-radius:50%;
   background:radial-gradient(circle, rgba(251,251,69,.08), rgba(16,185,129,.045) 34%, transparent 64%);
 }
 
 /* one-time "system boot" sweep when entering sterile (injected by ambient.js) */
-.amb-boot{ position:fixed; left:0; right:0; top:0; height:3px; z-index:99999; pointer-events:none;
+.amb-boot{ position:fixed; left:0; right:0; top:0; height:3px; z-index:var(--z-applock); pointer-events:none;
   background:linear-gradient(180deg, rgba(251,251,69,0), #FBFB45, rgba(251,251,69,0));
   box-shadow:0 0 26px 5px rgba(251,251,69,.5); animation:amb-boot 1.2s ease-out forwards; }
 @keyframes amb-boot{ 0%{top:-4px;opacity:1} 90%{opacity:.9} 100%{top:101vh;opacity:0} }

@@ -8,7 +8,9 @@
 let _ambReady = false;
 
 function _ambOnMove(e){
-  if(typeof currentTheme === 'function' && currentTheme() !== 'sterile') return;
+  // ambient is part of the sterile immersive layer — same 'lifetree' capability
+  // that gates initAmbient()/ensureLifeTree() in applyTheme.
+  if(!document.documentElement.matches('[data-fx~="lifetree"]')) return;
   const c = document.getElementById('amb-cursor');
   if(c) c.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
 }

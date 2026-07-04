@@ -12,7 +12,10 @@
    Sterile theme: everything here is skipped. prefers-reduced-motion: skipped
    (OS-level accessibility wins over maximalism). */
 
-function glassSterile(){ return document.documentElement.getAttribute('data-theme') === 'sterile'; }
+/* The whole glass interaction layer runs only where the 'glass' capability is
+   set (everything except sterile). Renamed from glassSterile() — it now reads
+   the capability flag, not the theme name. */
+function glassDisabled(){ return !document.documentElement.matches('[data-fx~="glass"]'); }
 function glassReducedMotion(){
   return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
@@ -384,73 +387,21 @@ function unfocusPanel(){
 }
 window.unfocusPanel = unfocusPanel;
 
-/* ── Finance → System HUD unification: same backdrop, same .sys-window shell
-   (corners/border/glass/seam), same scroll-unfurl open and furl close.
-   DOM is wrapped here at init so finance.js internals stay untouched. ── */
-function glassInitFinanceHUD(){
-  const v = document.getElementById('finance-view');
+/* ── HUD shell factory — Finance/Fitness/Calendar/AI/Store all get the SAME
+   System HUD chrome: same backdrop, same .sys-window shell (corners/border/
+   glass/seam), same scroll-unfurl open and furl close. The DOM is wrapped here
+   at init so each module's internals stay untouched. The five call-sites
+   (below, in initGlass) were byte-for-byte identical except three tokens:
+   the view id, the sys-window suffix class, and the close callback. #system-view
+   is the native master and is NOT wrapped here. ── */
+function mountHudShell(viewId, opts){
+  const v = document.getElementById(viewId);
   if(!v || v.querySelector('.sys-window')) return;
   const bd = document.createElement('div');
   bd.className = 'sys-backdrop';
-  bd.addEventListener('click', () => { if(typeof closeFinance === 'function') closeFinance(); });
+  bd.addEventListener('click', () => { if(typeof opts.onClose === 'function') opts.onClose(); });
   const win = document.createElement('div');
-  win.className = 'sys-window fin-hud';
-  win.innerHTML = '<div class="sys-corner tl"></div><div class="sys-corner tr"></div><div class="sys-corner bl"></div><div class="sys-corner br"></div>';
-  while(v.firstChild) win.appendChild(v.firstChild);
-  v.appendChild(bd); v.appendChild(win);
-}
-
-/* ── Fitness → same HUD shell as Finance/System (sys-window + backdrop). ── */
-function glassInitFitnessHUD(){
-  const v = document.getElementById('fitness-view');
-  if(!v || v.querySelector('.sys-window')) return;
-  const bd = document.createElement('div');
-  bd.className = 'sys-backdrop';
-  bd.addEventListener('click', () => { if(typeof closeFitness === 'function') closeFitness(); });
-  const win = document.createElement('div');
-  win.className = 'sys-window fit-hud';
-  win.innerHTML = '<div class="sys-corner tl"></div><div class="sys-corner tr"></div><div class="sys-corner bl"></div><div class="sys-corner br"></div>';
-  while(v.firstChild) win.appendChild(v.firstChild);
-  v.appendChild(bd); v.appendChild(win);
-}
-
-/* ── Calendar → same HUD shell (sys-window + backdrop). ── */
-function glassInitCalendarHUD(){
-  const v = document.getElementById('calendar-view');
-  if(!v || v.querySelector('.sys-window')) return;
-  const bd = document.createElement('div');
-  bd.className = 'sys-backdrop';
-  bd.addEventListener('click', () => { if(typeof closeCalendar === 'function') closeCalendar(); });
-  const win = document.createElement('div');
-  win.className = 'sys-window cal-hud';
-  win.innerHTML = '<div class="sys-corner tl"></div><div class="sys-corner tr"></div><div class="sys-corner bl"></div><div class="sys-corner br"></div>';
-  while(v.firstChild) win.appendChild(v.firstChild);
-  v.appendChild(bd); v.appendChild(win);
-}
-
-/* ── AI Automation → same HUD shell (sys-window + backdrop). ── */
-function glassInitAiHUD(){
-  const v = document.getElementById('ai-view');
-  if(!v || v.querySelector('.sys-window')) return;
-  const bd = document.createElement('div');
-  bd.className = 'sys-backdrop';
-  bd.addEventListener('click', () => { if(typeof closeAi === 'function') closeAi(); });
-  const win = document.createElement('div');
-  win.className = 'sys-window ai-hud';
-  win.innerHTML = '<div class="sys-corner tl"></div><div class="sys-corner tr"></div><div class="sys-corner bl"></div><div class="sys-corner br"></div>';
-  while(v.firstChild) win.appendChild(v.firstChild);
-  v.appendChild(bd); v.appendChild(win);
-}
-
-/* ── 心愿单 Store → same HUD shell (sys-window + backdrop). ── */
-function glassInitStoreHUD(){
-  const v = document.getElementById('store-view');
-  if(!v || v.querySelector('.sys-window')) return;
-  const bd = document.createElement('div');
-  bd.className = 'sys-backdrop';
-  bd.addEventListener('click', () => { if(typeof closeStore === 'function') closeStore(); });
-  const win = document.createElement('div');
-  win.className = 'sys-window store-hud';
+  win.className = 'sys-window ' + opts.hudClass;
   win.innerHTML = '<div class="sys-corner tl"></div><div class="sys-corner tr"></div><div class="sys-corner bl"></div><div class="sys-corner br"></div>';
   while(v.firstChild) win.appendChild(v.firstChild);
   v.appendChild(bd); v.appendChild(win);
@@ -474,7 +425,7 @@ function glassInitTilt(){
     }
     p.addEventListener('pointerenter', () => { hovering = true; if(!raf) raf = requestAnimationFrame(tick); });
     p.addEventListener('pointermove', e => {
-      if(glassSterile() || p.classList.contains('panel-focused')) return;
+      if(glassDisabled() || p.classList.contains('panel-focused')) return;
       const r = p.getBoundingClientRect();
       const nx = (e.clientX - r.left) / r.width - 0.5;
       const ny = (e.clientY - r.top) / r.height - 0.5;
@@ -573,16 +524,16 @@ function glassInitTrails(){
 
 /* called from app.js init() after the first renderAll — once per page load */
 function initGlass(){
-  if(glassSterile()) return;             // sterile keeps the old opaque panes — no glass HUD
+  if(glassDisabled()) return;            // sterile keeps the old opaque panes — no glass HUD
   // The HUD DOM restructure (wrap #finance-view / #fitness-view into a .sys-window)
   // must run even under reduced-motion: the default-theme CSS styles .fin-view/.fit-view
   // as a transparent centering stage that EXPECTS the wrapper to carry the window chrome.
   // Only the unfurl ANIMATION is motion-gated, not the DOM structure.
-  glassInitFinanceHUD();
-  glassInitFitnessHUD();
-  glassInitCalendarHUD();
-  glassInitAiHUD();
-  glassInitStoreHUD();
+  mountHudShell('finance-view',  { hudClass:'fin-hud',   onClose:()=>{ if(typeof closeFinance  === 'function') closeFinance();  } });
+  mountHudShell('fitness-view',  { hudClass:'fit-hud',   onClose:()=>{ if(typeof closeFitness  === 'function') closeFitness();  } });
+  mountHudShell('calendar-view', { hudClass:'cal-hud',   onClose:()=>{ if(typeof closeCalendar === 'function') closeCalendar(); } });
+  mountHudShell('ai-view',       { hudClass:'ai-hud',    onClose:()=>{ if(typeof closeAi       === 'function') closeAi();       } });
+  mountHudShell('store-view',    { hudClass:'store-hud', onClose:()=>{ if(typeof closeStore    === 'function') closeStore();    } });
   if(glassReducedMotion()) return;
   glassInitLenis();
   glassInitFlip();       // restructure the trading panel before measuring

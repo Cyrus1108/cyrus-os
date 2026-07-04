@@ -294,56 +294,77 @@ function rThe90(){
     if(typeof animateNumber==='function') animateNumber(dayB, prevDay, day, 500);
     else dayB.textContent = day;
   }
-  document.getElementById('the90-phase').textContent = the90PhaseLabel(phase);
+  setText(document.getElementById('the90-phase'), the90PhaseLabel(phase));
 
   // Identity statement removed per Cyrus's request — only the tagline (date + countdown) shows.
 
   // Tagline — countdown to August 9
   const daysLeft = the90DaysUntil(THE_90_END, new Date().toLocaleDateString('sv-SE'));   // 读实时日期,跨午夜不会停在昨天
-  document.getElementById('the90-tagline').textContent = daysLeft > 0
+  setText(document.getElementById('the90-tagline'), daysLeft > 0
     ? `8/9 那个 Cyrus 正在向你走来 · ${daysLeft} 天`
-    : '8/9 到了。回顾你成为的人。';
+    : '8/9 到了。回顾你成为的人。');
 
-  // Today's check-in cells (one per target)
-  const cellsHtml = meta.targets.map(t => {
-    const score = todayScores[t.id];
-    let mark, cls;
-    if(phase === 'stabilize'){
-      mark = score === undefined ? '·' : String(score);
-      cls = score > 0 ? 'on' : score === 0 ? 'off' : '';
-    } else {
-      mark = score ? '✓' : (score === false ? '✗' : '·');
-      cls = score ? 'on' : (score === false ? 'off' : '');
+  // Today's check-in cells (one per target) — persistent keyed DOM: only the tapped cell's
+  // class/mark change in place, so a redundant render never rebuilds the very <button> a
+  // finger is mid-tap on (the "tap twice" class of bug), and the .celebrate class on the
+  // container survives untouched.
+  reconcileList(document.getElementById('the90-cells'), meta.targets, {
+    key: t => t.id,
+    create: t => {
+      const b = document.createElement('button');
+      b.className = 'the90-cell';
+      b.setAttribute('onclick', `toggleThe90('${t.id}')`);
+      b.innerHTML = `<span class="the90-cell-id">${t.id}</span><span class="the90-cell-mark"></span>`;
+      return b;
+    },
+    update: (b, t) => {
+      const score = todayScores[t.id];
+      let mark, on, off;
+      if(phase === 'stabilize'){
+        mark = score === undefined ? '·' : String(score);
+        on = score > 0; off = score === 0;
+      } else {
+        mark = score ? '✓' : (score === false ? '✗' : '·');
+        on = !!score; off = score === false;
+      }
+      setClass(b, 'on', on);
+      setClass(b, 'off', off);
+      setAttr(b, 'title', t.label);
+      setText(b.querySelector('.the90-cell-mark'), mark);
     }
-    return `<button class="the90-cell ${cls}" onclick="toggleThe90('${t.id}')" title="${escH(t.label)}">
-      <span class="the90-cell-id">${t.id}</span>
-      <span class="the90-cell-mark">${mark}</span>
-    </button>`;
-  }).join('');
-  setStableHTML(document.getElementById('the90-cells'), cellsHtml);
+  });
 
   // Target labels under cells
-  document.getElementById('the90-labels').innerHTML = meta.targets.map(t =>
+  setHTML(document.getElementById('the90-labels'), meta.targets.map(t =>
     `<span class="the90-label" title="${escH(t.label)}">${escH(t.label)}</span>`
-  ).join('');
+  ).join(''));
 
   // Hard-standard boxes (one per target) — collapsed shows ⌄, expanded reveals the standard.
   // Toggle by click or number keys 1–5 (left→right). Default standard falls back when missing.
+  // Persistent keyed buttons so toggling one open only flips that button's class in place,
+  // never rebuilding the sibling boxes.
   const stdEl = document.getElementById('the90-standards');
   if(stdEl){
-    stdEl.innerHTML = meta.targets.map((t,i)=>{
-      const std = t.standard || (THE_90_TARGETS_DEFAULT[i] && THE_90_TARGETS_DEFAULT[i].standard) || '';
-      const open = !!the90StdOpen[t.id];
-      return `<button class="the90-std ${open?'open':''}" onclick="toggleThe90Std('${t.id}')"
-        title="硬标准 · ${escH(t.label)}（按 ${i+1}）" aria-expanded="${open}">
-        <span class="the90-std-arrow">⌄</span>
-        <div class="the90-std-body">
-          <div class="the90-std-inner">
-            <span class="the90-std-text">${escH(std)}</span>
-          </div>
-        </div>
-      </button>`;
-    }).join('');
+    reconcileList(stdEl, meta.targets, {
+      key: t => t.id,
+      create: t => {
+        const b = document.createElement('button');
+        b.className = 'the90-std';
+        b.setAttribute('onclick', `toggleThe90Std('${t.id}')`);
+        b.innerHTML = `<span class="the90-std-arrow">⌄</span>`
+          + `<div class="the90-std-body"><div class="the90-std-inner"><span class="the90-std-text"></span></div></div>`;
+        return b;
+      },
+      update: (b, t) => {
+        const i = meta.targets.indexOf(t);
+        const std = t.standard || (THE_90_TARGETS_DEFAULT[i] && THE_90_TARGETS_DEFAULT[i].standard) || '';
+        const open = !!the90StdOpen[t.id];
+        setClass(b, 'open', open);
+        setAttr(b, 'title', `硬标准 · ${t.label}（按 ${i+1}）`);
+        setAttr(b, 'aria-expanded', open ? 'true' : 'false');
+        setText(b.querySelector('.the90-std-text'), std);
+      }
+    });
   }
 
   // This week (rolling Mon→Sun) — count met per target
@@ -355,19 +376,28 @@ function rThe90(){
     return d.toLocaleDateString('sv-SE');
   });
   // ⑤ N/7 number rolls up + a thin brass bar fills proportionally.
-  const weekMet = meta.targets.map(t =>
-    weekDates.filter(d => the90ScoreMet(S.the90.daily[d]?.scores?.[t.id], the90Phase(the90Day(d)))).length
-  );
-  const weekEl = document.getElementById('the90-week');
-  const prevWk = [...weekEl.querySelectorAll('.n')].map(e => parseInt(e.textContent) || 0);
-  weekEl.innerHTML = weekMet.map((met,i) =>
-    `<span class="the90-week-stat"><b class="n">${prevWk[i] || 0}</b>/7<i class="the90-week-bar" style="--p:${met/7}"></i></span>`
-  ).join('');
-  if(typeof animateNumber==='function'){
-    [...weekEl.querySelectorAll('.n')].forEach((b,i)=> animateNumber(b, prevWk[i] || 0, weekMet[i], 400));
-  } else {
-    [...weekEl.querySelectorAll('.n')].forEach((b,i)=> b.textContent = weekMet[i]);
-  }
+  // Persistent keyed stats: the <b class="n"> node survives across renders, so the count-up
+  // naturally rolls from its current value to the new one (no innerHTML rebuild each pass).
+  const weekItems = meta.targets.map(t => ({
+    id: t.id,
+    met: weekDates.filter(d => the90ScoreMet(S.the90.daily[d]?.scores?.[t.id], the90Phase(the90Day(d)))).length
+  }));
+  reconcileList(document.getElementById('the90-week'), weekItems, {
+    key: it => it.id,
+    create: () => {
+      const s = document.createElement('span');
+      s.className = 'the90-week-stat';
+      s.innerHTML = `<b class="n">0</b>/7<i class="the90-week-bar"></i>`;
+      return s;
+    },
+    update: (s, it) => {
+      const bEl = s.querySelector('.n');
+      const prev = parseInt(bEl.textContent) || 0;
+      if(typeof animateNumber === 'function') animateNumber(bEl, prev, it.met, 400);
+      else setText(bEl, it.met);
+      setAttr(s.querySelector('.the90-week-bar'), 'style', `--p:${it.met/7}`);
+    }
+  });
 
   // Streak + Best week + next milestone
   const newStreak = computeThe90Streak();
@@ -421,11 +451,11 @@ function rThe90(){
   // Life-tree cultivation-chamber telemetry HUD (sterile theme)
   const ltGrow = document.getElementById('lt-grow');
   if(ltGrow){
-    ltGrow.textContent = (day < 1 ? 0 : Math.min(100, Math.round(day / 90 * 100))) + '%';
-    document.getElementById('lt-streak').textContent = computeThe90Streak();
-    document.getElementById('lt-phase').textContent = the90PhaseLabel(phase);
-    document.getElementById('lt-left').textContent = (daysLeft > 0 ? daysLeft : 0) + '天';
-    document.getElementById('lt-today').textContent = metToday + '/' + meta.targets.length;
+    setText(ltGrow, (day < 1 ? 0 : Math.min(100, Math.round(day / 90 * 100))) + '%');
+    setText(document.getElementById('lt-streak'), computeThe90Streak());
+    setText(document.getElementById('lt-phase'), the90PhaseLabel(phase));
+    setText(document.getElementById('lt-left'), (daysLeft > 0 ? daysLeft : 0) + '天');
+    setText(document.getElementById('lt-today'), metToday + '/' + meta.targets.length);
     const ch = document.getElementById('lifetree-chamber');
     if(ch) ch.classList.toggle('milestone', day === 30 || day === 60 || day === 90);
     // state-reactive ambient: more complete today → warmer/brighter whole-system glow
@@ -456,21 +486,23 @@ function rThe90(){
   // heatmap actually scrolls into view (one-shot per load). See the90ArmCascade.
   the90ArmCascade();
 
-  // Drawer contents (two-min entries + bad day minimums)
-  document.getElementById('the90-twomin-body').innerHTML = meta.targets.map(t =>
+  // Drawer contents (two-min entries + bad day minimums) — guarded so unrelated renders skip.
+  setHTML(document.getElementById('the90-twomin-body'), meta.targets.map(t =>
     `<div class="the90-drawer-row"><span class="the90-drawer-id">${t.id}</span><span class="the90-drawer-label">${escH(t.label)}</span><span class="the90-drawer-text">${escH(t.twoMin)}</span></div>`
-  ).join('');
-  document.getElementById('the90-badday-body').innerHTML = meta.targets.map(t =>
+  ).join(''));
+  setHTML(document.getElementById('the90-badday-body'), meta.targets.map(t =>
     `<div class="the90-drawer-row"><span class="the90-drawer-id">${t.id}</span><span class="the90-drawer-label">${escH(t.label)}</span><span class="the90-drawer-text">${escH(t.badDay)}</span></div>`
-  ).join('');
+  ).join(''));
 
   // Today's note
   const noteEl = document.getElementById('the90-note');
   if(noteEl && document.activeElement !== noteEl) noteEl.value = todayNote;
 
-  // Today's amplitude (1–5) row + discreet Low Day entry — owned by lowday.js
+  // Today's amplitude (1–5) row + discreet Low Day entry — owned by lowday.js.
+  // setStableHTML shares lowday.js's cache key (el._stableHTML) so the two writers stay
+  // consistent and neither rebuilds the low-day entry button mid-tap.
   const ampEl = document.getElementById('the90-amp');
-  if(ampEl && typeof lowdayAmpRowHtml === 'function') ampEl.innerHTML = lowdayAmpRowHtml();
+  if(ampEl && typeof lowdayAmpRowHtml === 'function') setStableHTML(ampEl, lowdayAmpRowHtml());
 }
 
 function computeThe90Streak(){

@@ -8,7 +8,7 @@ body.sys-locked{ overflow:hidden; }
 
 /* ── HUD shell: a glass window floating over the dimmed/blurred page ── */
 .sys-view{
-  position:fixed; inset:0; z-index:1200;
+  position:fixed; inset:0; z-index:var(--z-hud);
   display:flex; align-items:center; justify-content:center; padding:18px;
   opacity:0; visibility:hidden;
   transition:opacity var(--dur-base) var(--ease-silk),visibility var(--dur-base) var(--ease-silk);
@@ -445,7 +445,7 @@ body.sys-locked{ overflow:hidden; }
 
 /* ── celebration modal (level-up / achievement) ── */
 .sys-modal{
-  position:fixed; inset:0; z-index:1400;
+  position:fixed; inset:0; z-index:var(--z-cele);
   display:flex; align-items:center; justify-content:center; padding:24px;
   opacity:0; visibility:hidden; transition:opacity var(--dur-base) var(--ease-silk),visibility var(--dur-base) var(--ease-silk);
 }
@@ -487,7 +487,7 @@ body.sys-locked{ overflow:hidden; }
 /* ── global toast ── */
 .sys-toast{
   position:fixed; left:50%; bottom:92px; transform:translate(-50%, 14px);
-  z-index:1500; pointer-events:none;
+  z-index:var(--z-cele-burst); pointer-events:none;
   font-family:var(--mono); font-size:12px; letter-spacing:.04em;
   background:var(--ink); color:var(--color-background-primary);
   border:.5px solid var(--brass); border-radius:var(--border-radius-md);

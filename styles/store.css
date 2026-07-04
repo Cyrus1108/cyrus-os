@@ -9,7 +9,7 @@ body.store-locked{ overflow:hidden; }
 
 /* ── view shell (base = sterile / fallback: opaque sheet) ── */
 .store-view{
-  position:fixed; inset:0; z-index:1200;
+  position:fixed; inset:0; z-index:var(--z-hud);
   background:var(--color-background-primary);
   display:flex; flex-direction:column;
   transform:translateY(100%);
@@ -93,7 +93,7 @@ body.store-locked{ overflow:hidden; }
 
 /* ── modal (add / edit) ── */
 .store-modal{
-  position:absolute; inset:0; z-index:1230; display:none;
+  position:absolute; inset:0; z-index:var(--z-hud-modal); display:none;
   align-items:center; justify-content:center; padding:16px; overflow:auto;
   background:color-mix(in srgb, var(--color-background-primary) 55%, transparent);
 }
@@ -126,36 +126,36 @@ body.store-locked{ overflow:hidden; }
    glass.js wraps #store-view into .sys-backdrop + .sys-window.store-hud at init;
    .store-view becomes a transparent centering stage. Mirrors calendar.css/finance.css.
    NB: never add .store-closing{opacity:1;visibility:visible} — that breaks the furl-hold. */
-html:not([data-theme="sterile"]) .store-view{
+html[data-fx~="deco"] .store-view{
   display:flex; align-items:center; justify-content:center; padding:16px;
   background:transparent;
   transform:none; opacity:0;
   transition:opacity .4s var(--ease-silk), visibility .4s var(--ease-silk);
 }
-html:not([data-theme="sterile"]) .store-view.open{ transform:none; opacity:1; }
-html:not([data-theme="sterile"]) .store-view .sys-window.store-hud{
+html[data-fx~="deco"] .store-view.open{ transform:none; opacity:1; }
+html[data-fx~="deco"] .store-view .sys-window.store-hud{
   width:100%; max-width:640px; max-height:94vh;
   overflow:auto; overscroll-behavior:contain;
 }
-html:not([data-theme="sterile"]) .store-view.open .store-hud{
+html[data-fx~="deco"] .store-view.open .store-hud{
   animation:sysScrollOpen 1100ms linear both; transform-origin:center center;
 }
-html:not([data-theme="sterile"]) .store-view.open .store-hud::after{
+html[data-fx~="deco"] .store-view.open .store-hud::after{
   animation:sysFold 1100ms linear both;
 }
-html:not([data-theme="sterile"]) .store-view.store-closing .store-hud{
+html[data-fx~="deco"] .store-view.store-closing .store-hud{
   animation:sysScrollClose 480ms cubic-bezier(0.5,0,0.78,0.2) both; transform-origin:center center;
 }
-html:not([data-theme="sterile"]) .store-view.store-closing .store-hud::after{
+html[data-fx~="deco"] .store-view.store-closing .store-hud::after{
   animation:sysFoldClose 480ms ease both;
 }
-html:not([data-theme="sterile"]) .store-view.store-closing .sys-backdrop{
+html[data-fx~="deco"] .store-view.store-closing .sys-backdrop{
   animation:sysBackFade 480ms var(--ease-silk) both;
 }
-html:not([data-theme="sterile"]) .store-view .store-top{ background:transparent; }
+html[data-fx~="deco"] .store-view .store-top{ background:transparent; }
 @media (prefers-reduced-motion:reduce){
-  html:not([data-theme="sterile"]) .store-view.open .store-hud,
-  html:not([data-theme="sterile"]) .store-view.open .store-hud::after{
+  html[data-fx~="deco"] .store-view.open .store-hud,
+  html[data-fx~="deco"] .store-view.open .store-hud::after{
     animation:none !important; clip-path:none !important; opacity:1 !important;
   }
 }
@@ -164,5 +164,5 @@ html:not([data-theme="sterile"]) .store-view .store-top{ background:transparent;
   .store-stats{ gap:6px; }
   .store-stat-n{ font-size:13px; }
   .store-grid{ grid-template-columns:repeat(auto-fill,minmax(132px,1fr)); gap:10px; }
-  html:not([data-theme="sterile"]) .store-view .sys-window.store-hud{ max-height:96vh; }
+  html[data-fx~="deco"] .store-view .sys-window.store-hud{ max-height:96vh; }
 }

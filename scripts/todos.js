@@ -8,7 +8,7 @@ function rCats(){
     html += `<button class="cat-pill ${isActive?'active':''}" onclick="setActiveCat('${c.id}')">${escH(c.name)}</button>`;
   });
   html += `<button class="cat-pill cat-pill-manage" onclick="toggleCatManage()">+ 类别</button>`;
-  pills.innerHTML = html;
+  setHTML(pills, html);   // guarded: unrelated renderAll passes don't rebuild the pill buttons mid-tap
 
   const selOptions = S.cats.map(c=>`<option value="${c.id}">${escH(c.name)}</option>`).join('');
   const sel = document.getElementById('td-cat');
@@ -18,9 +18,9 @@ function rCats(){
     if([...sel.options].some(o=>o.value===currentVal)) sel.value = currentVal;
   }
 
-  document.getElementById('cat-list').innerHTML = S.cats.map(c=>
+  setHTML(document.getElementById('cat-list'), S.cats.map(c=>
     `<div class="cat-item">${escH(c.name)}<button class="cat-del" onclick="delCategory('${c.id}')">×</button></div>`
-  ).join('');
+  ).join(''));
 }
 function setActiveCat(id){S.activeCat=id;rCats();rTodos();}
 function toggleCatManage(){document.getElementById('cat-manage').classList.toggle('open');}
@@ -105,26 +105,10 @@ function updateShowDoneBtn(){
   }
 }
 
-function rTodos(){
-  const el = document.getElementById('td-list');
-  updateArchivedBtn();
-  rTodosArchived();
-  let list = S.todos.slice();
-  list = list.filter(t=>!t.archived);                          // archived (expired & swept) live in their own drawer
-  if(S.activeCat !== 'all') list = list.filter(t=>t.cat===S.activeCat);
-  if(!showDone) list = list.filter(t=>!t.done);
-  list.sort((a,b)=>{
-    if(a.done !== b.done) return a.done?1:-1;       // done sink to bottom
-    return (a.position||0) - (b.position||0);        // manual drag order
-  });
-
-  if(!list.length){setStableHTML(el, '<div class="empty">— 暂无待办 —</div>');return;}
-  // (drag-to-reorder wired at the end of this function)
-
-  const _tdHtml = list.map(t=>{
-    if(editingTD === t.id){
-      return `<div style="padding:6px 0;border-bottom:.5px solid var(--hair);">
-        <div class="edit-box">
+/* ── Row fragment builders (inner HTML only; the outer keyed .todo-row element
+      is owned by reconcileList and reused across renders) ── */
+function tdEditInner(t){
+  return `<div class="edit-box">
           <input id="etd-text" value="${escH(t.text)}" style="width:100%;">
           <select id="etd-cat" style="width:100%;">
             ${S.cats.map(c=>`<option value="${c.id}" ${c.id===t.cat?'selected':''}>${escH(c.name)}</option>`).join('')}
@@ -158,31 +142,30 @@ function rTodos(){
             <button class="primary fx-btn" onclick="saveTdEdit('${t.id}')" style="flex:1;">保存</button>
             <button class="ghost fx-btn" onclick="cancelTdEdit()" style="flex:1;">取消</button>
           </div>
-        </div>
-      </div>`;
-    }
-    const cat = S.cats.find(c=>c.id===t.cat);
-    const priColor = t.pri==='high'?'var(--color-text-danger)':t.pri==='low'?'var(--ghost)':'var(--brass)';
-    let dateStr = '';
-    let tagCls='tag-ok', tagTxt='';
-    if(t.date){
-      // Defensive: t.time may be 'HH:MM' (input) or 'HH:MM:SS' (from Postgres) — strip to 'HH:MM'
-      const hhmm = t.time ? t.time.slice(0,5) : null;
-      const dueTime = hhmm ? `${t.date}T${hhmm}:00` : `${t.date}T23:59:59`;
-      const diff = new Date(dueTime) - new Date();
-      const hours = Math.ceil(diff/3600000);
-      const days = Math.ceil(diff/86400000);
-      if(t.done){tagCls='tag-done';tagTxt='Done';}
-      else if(diff<0){tagCls='tag-urgent';tagTxt='Overdue';}
-      else if(hours<=24){tagCls='tag-warn';tagTxt=hours+'h';}
-      else{tagCls='tag-ok';tagTxt=days+'d';}
-      dateStr = t.date + (hhmm ? ' '+hhmm : '');
-    } else {
-      tagTxt = t.done?'Done':'No due';
-      tagCls = t.done?'tag-done':'tag-ok';
-    }
-    return `<div class="todo-row ${t.done?'todo-done':''}" data-id="${t.id}" style="${t.done?'opacity:.4;':''}">
-      <div class="todo-main">
+        </div>`;
+}
+function tdRowInner(t){
+  const cat = S.cats.find(c=>c.id===t.cat);
+  const priColor = t.pri==='high'?'var(--color-text-danger)':t.pri==='low'?'var(--ghost)':'var(--brass)';
+  let dateStr = '';
+  let tagCls='tag-ok', tagTxt='';
+  if(t.date){
+    // Defensive: t.time may be 'HH:MM' (input) or 'HH:MM:SS' (from Postgres) — strip to 'HH:MM'
+    const hhmm = t.time ? t.time.slice(0,5) : null;
+    const dueTime = hhmm ? `${t.date}T${hhmm}:00` : `${t.date}T23:59:59`;
+    const diff = new Date(dueTime) - new Date();
+    const hours = Math.ceil(diff/3600000);
+    const days = Math.ceil(diff/86400000);
+    if(t.done){tagCls='tag-done';tagTxt='Done';}
+    else if(diff<0){tagCls='tag-urgent';tagTxt='Overdue';}
+    else if(hours<=24){tagCls='tag-warn';tagTxt=hours+'h';}
+    else{tagCls='tag-ok';tagTxt=days+'d';}
+    dateStr = t.date + (hhmm ? ' '+hhmm : '');
+  } else {
+    tagTxt = t.done?'Done':'No due';
+    tagCls = t.done?'tag-done':'tag-ok';
+  }
+  return `<div class="todo-main">
         <span class="drag-handle" onclick="event.stopPropagation()" aria-label="拖动排序">⠿</span>
         <input type="checkbox" class="row-cb" ${t.done?'checked':''} onchange="toggleTd('${t.id}')">
         <span class="ac-pri" style="background:${priColor};"></span>
@@ -200,18 +183,68 @@ function rTodos(){
           <button class="row-btn" onclick="startTdEdit('${t.id}')">编辑</button>
           <button class="row-btn" onclick="delTodo('${t.id}')">×</button>
         </div>
-      </div>
-    </div>`;
-  }).join('');
-  setStableHTML(el, _tdHtml, ()=>{
-    attachRipples();
-    makeSortable(el, { itemSelector:'.todo-row', handleSelector:'.drag-handle', onReorder:onReorderTodos });
-    // Open form navigator on the edit box if an item is being edited
-    if(editingTD){
-      const box = el.querySelector('.edit-box');
-      if(box) requestAnimationFrame(()=>openFormNav(box));
+      </div>`;
+}
+
+let _tdNavFor = null;   // which editing row we've already armed the form-navigator on (once per edit-open)
+function rTodos(){
+  const el = document.getElementById('td-list');
+  updateArchivedBtn();
+  rTodosArchived();
+
+  // Static skeleton: a persistent rows container (keyed reconcile target) + a persistent
+  // empty-state node. Built once; makeSortable binds to the rows container a single time.
+  if(ensureSkeleton(el, 'td-v1', ()=>`<div id="td-rows"></div><div class="empty" id="td-empty">— 暂无待办 —</div>`)){
+    const rows0 = el.querySelector('#td-rows');
+    makeSortable(rows0, { itemSelector:'.todo-row', handleSelector:'.drag-handle', onReorder:onReorderTodos });
+  }
+  const rowsEl = el.querySelector('#td-rows');
+  const emptyEl = el.querySelector('#td-empty');
+
+  let list = S.todos.slice();
+  list = list.filter(t=>!t.archived);                          // archived (expired & swept) live in their own drawer
+  if(S.activeCat !== 'all') list = list.filter(t=>t.cat===S.activeCat);
+  if(!showDone) list = list.filter(t=>!t.done);
+  list.sort((a,b)=>{
+    if(a.done !== b.done) return a.done?1:-1;       // done sink to bottom
+    return (a.position||0) - (b.position||0);        // manual drag order
+  });
+
+  emptyEl.style.display = list.length ? 'none' : '';
+
+  // Keyed row reconciliation: reuse each row's DOM across renders. A row's inner markup is
+  // rewritten (setHTML) only when its own data changed → an unrelated render (realtime echo,
+  // renderAll pass) never tears down the <input>/<button> a user is mid-tap on, and an
+  // .editing row's inputs/focus survive untouched (its edit-box HTML string is unchanged
+  // until save, so setHTML no-ops).
+  reconcileList(rowsEl, list, {
+    key: t => t.id,
+    create: t => { const d = document.createElement('div'); d.dataset.id = t.id; return d; },
+    update: (d, t) => {
+      if(editingTD === t.id){
+        d.classList.remove('todo-row','todo-done');
+        setAttr(d, 'style', 'padding:6px 0;border-bottom:.5px solid var(--hair);');
+        setHTML(d, tdEditInner(t));
+      } else {
+        d.classList.add('todo-row');
+        d.classList.toggle('todo-done', !!t.done);
+        setAttr(d, 'style', t.done ? 'opacity:.4;' : null);
+        setHTML(d, tdRowInner(t));
+      }
     }
   });
+
+  attachRipples(rowsEl);
+  // Open form navigator on the edit box the moment a row enters editing (once per open).
+  if(editingTD){
+    if(_tdNavFor !== editingTD){
+      _tdNavFor = editingTD;
+      const box = rowsEl.querySelector('.edit-box');
+      if(box) requestAnimationFrame(()=>openFormNav(box));
+    }
+  } else {
+    _tdNavFor = null;
+  }
 }
 function onReorderTodos(ids){
   S.todos = reorderById(S.todos, ids);
@@ -339,10 +372,10 @@ function updateArchivedBtn(){
 function toggleArchived(){ showArchived = !showArchived; rTodos(); }
 function rTodosArchived(){
   const box = document.getElementById('td-archived'); if(!box) return;
-  if(!showArchived){ box.innerHTML=''; return; }
+  if(!showArchived){ setStableHTML(box, ''); return; }
   const list = archivedTodos();
-  if(!list.length){ box.innerHTML='<div class="empty">— 无已过期任务 —</div>'; return; }
-  box.innerHTML = `<div class="td-archived-head">已过期 · 未顺延（${list.length}）</div>` + list.map(t=>{
+  if(!list.length){ setStableHTML(box, '<div class="empty">— 无已过期任务 —</div>'); return; }
+  const html = `<div class="td-archived-head">已过期 · 未顺延（${list.length}）</div>` + list.map(t=>{
     const cat = S.cats.find(c=>c.id===t.cat);
     return `<div class="todo-row td-archived-row" data-id="${t.id}" style="opacity:.55;">
       <div class="todo-main">
@@ -362,7 +395,7 @@ function rTodosArchived(){
       </div>
     </div>`;
   }).join('');
-  if(typeof attachRipples==='function') attachRipples(box);
+  setStableHTML(box, html, b=>{ if(typeof attachRipples==='function') attachRipples(b); });
 }
 function restoreTodo(id){
   const t = S.todos.find(t=>t.id===id); if(!t) return;
