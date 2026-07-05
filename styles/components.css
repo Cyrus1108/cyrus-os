@@ -6,7 +6,6 @@
   position:relative;
   z-index:1;
 }
-html[data-theme="sterile"] .form-nav-hl{ border-radius:0; }
 
 /* Creed */
 .creed-wrap{margin-top:2rem;position:relative;}
@@ -113,7 +112,7 @@ html[data-theme="sterile"] .form-nav-hl{ border-radius:0; }
 .panel{background:var(--color-background-primary);border:.5px solid var(--hair);border-radius:var(--border-radius-lg);padding:1.5rem 1.5rem;position:relative;}
 .panel-head{margin-bottom:16px;}
 .panel-label-row{display:flex;align-items:center;gap:10px;margin-bottom:4px;}
-.panel-label-row::after{content:'';flex:1;height:.5px;background:var(--brass-ghost);margin-left:4px;}
+.panel-label-row::after{content:'';flex:1;height:1px;background:linear-gradient(90deg, var(--hair), transparent);margin-left:8px;}
 .panel-stat-row{display:flex;justify-content:space-between;align-items:flex-end;margin-top:10px;}
 .stat-sub{font-size:9px;letter-spacing:.28em;text-transform:uppercase;color:var(--mute);margin-top:6px;}
 
@@ -126,11 +125,9 @@ html[data-theme="sterile"] .form-nav-hl{ border-radius:0; }
 .fx-btn{position:relative;overflow:hidden;}
 .ripple{position:absolute;border-radius:50%;background:var(--brass-glow);pointer-events:none;transform:scale(0);animation:ripple 0.6s var(--ease-press);}
 
-.mr-pill{display:flex;align-items:center;gap:11px;padding:9px 14px;border-radius:2px;border:.5px solid var(--hair);background:var(--color-background-primary);cursor:pointer;user-select:none;transition:background var(--dur-base) var(--ease-press),border-color var(--dur-base) var(--ease-press),opacity var(--dur-base) var(--ease-press);position:relative;overflow:hidden;}
-.mr-pill::before{content:'';position:absolute;inset:0;background:linear-gradient(120deg,transparent 30%,var(--brass-glow) 50%,transparent 70%);transform:translateX(-100%);transition:transform .6s var(--ease-silk);pointer-events:none;opacity:0.5;}
-.mr-pill:hover{border-color:var(--brass);transform:translateY(-1px);box-shadow:0 2px 8px rgba(168,132,85,0.1);}
-.mr-pill:hover::before{transform:translateX(100%);}
-.mr-pill:active{transform:translateY(0) scale(0.97);transition-duration:.1s;}
+.mr-pill{display:flex;align-items:center;gap:11px;padding:9px 14px;border-radius:4px;border:.5px solid var(--hair-strong);background:var(--color-background-primary);cursor:pointer;user-select:none;transition:background var(--dur-base) var(--ease-silk),border-color var(--dur-base) var(--ease-silk),opacity var(--dur-base) var(--ease-silk);position:relative;}
+.mr-pill:hover{border-color:var(--brass);background:color-mix(in srgb, var(--brass) 8%, var(--color-background-primary));}
+.mr-pill:active{transform:scale(0.97);transition-duration:.1s;}
 .mr-pill-name{font-size:13px;color:var(--ink);letter-spacing:.01em;}
 .mr-pill-time{font-family:var(--serif);font-style:italic;font-size:12px;color:var(--brass);letter-spacing:.02em;}
 .mr-pill.done{background:transparent;border-color:var(--brass-ghost);}
@@ -148,16 +145,16 @@ html[data-theme="sterile"] .form-nav-hl{ border-radius:0; }
 .row-cb{
   -webkit-appearance:none;appearance:none;
   width:15px;height:15px;margin-top:3px;flex-shrink:0;cursor:pointer;
-  border:1px solid var(--hair-strong);border-radius:2px;
+  border:1px solid var(--hair-strong);border-radius:4px;
   background:var(--color-background-secondary);
   position:relative;
-  transition:transform .15s, border-color .25s var(--ease-silk), background .25s var(--ease-silk), box-shadow .25s var(--ease-silk);
+  transition:transform .15s, border-color .25s var(--ease-silk), background .25s var(--ease-silk);
 }
 .row-cb:hover{border-color:var(--brass);}
 .row-cb:active{transform:scale(1.2);}
+.row-cb:focus-visible{outline:none;box-shadow:0 0 0 2px var(--color-background-secondary),0 0 0 4px var(--brass);}
 .row-cb:checked{
   background:var(--brass);border-color:var(--brass);
-  box-shadow:0 0 8px -2px var(--brass-glow);
 }
 .row-cb:checked::after{
   content:'';position:absolute;left:3.5px;top:4px;
@@ -211,29 +208,28 @@ html[data-theme="sterile"] .form-nav-hl{ border-radius:0; }
 .sess-name.on{color:var(--ink);font-style:normal;font-family:var(--serif);font-weight:400;}
 .sess-time{font-family:var(--mono);font-size:10px;color:var(--ghost);margin-left:auto;letter-spacing:.05em;}
 
-/* Buttons */
-button.ghost{background:transparent;border:.5px solid var(--hair);color:var(--mute);font-size:10px;letter-spacing:.18em;text-transform:uppercase;padding:6px 14px;border-radius:0;cursor:pointer;transition:background var(--dur-base) var(--ease-press),border-color var(--dur-base) var(--ease-press),color var(--dur-base) var(--ease-press);position:relative;overflow:hidden;}
-button.ghost::before{content:'';position:absolute;inset:0;background:linear-gradient(120deg,transparent 30%,var(--brass-glow) 50%,transparent 70%);transform:translateX(-100%);transition:transform .6s var(--ease-silk);pointer-events:none;opacity:0.4;}
-button.ghost:hover{border-color:var(--brass);color:var(--brass);background:rgba(168,132,85,0.03);}
-button.ghost:hover::before{transform:translateX(100%);}
+/* Buttons — SOVEREIGN: 4px 组件壳,无阴影无扫光,hover 只变填充/边线,
+   focus 环 = 0 0 0 2px 底色, 0 0 0 4px var(--brass)(样张公式);active 押压保留 */
+button.ghost{background:transparent;border:.5px solid var(--hair-strong);color:var(--mute);font-size:10px;letter-spacing:.18em;text-transform:uppercase;padding:6px 14px;border-radius:4px;cursor:pointer;transition:background var(--dur-base) var(--ease-silk),border-color var(--dur-base) var(--ease-silk),color var(--dur-base) var(--ease-silk);position:relative;}
+button.ghost:hover{border-color:var(--brass);color:var(--brass);background:color-mix(in srgb, var(--brass) 8%, transparent);}
 button.ghost:active{transform:scale(0.96);}
+button.ghost:focus-visible{outline:none;box-shadow:0 0 0 2px var(--color-background-secondary),0 0 0 4px var(--brass);}
 
-button.primary{background:var(--brass);border:.5px solid var(--brass);color:var(--color-background-primary);font-size:10px;padding:7px 14px;border-radius:0;cursor:pointer;letter-spacing:.18em;text-transform:uppercase;transition:background var(--dur-base) var(--ease-press),opacity var(--dur-base) var(--ease-press),transform var(--dur-fast) var(--ease-press);position:relative;overflow:hidden;box-shadow:0 1px 0 rgba(0,0,0,0.05);}
-button.primary::before{content:'';position:absolute;inset:0;background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,0.2) 50%,transparent 70%);transform:translateX(-100%);transition:transform .6s var(--ease-silk);pointer-events:none;}
-button.primary:hover{background:var(--ink);border-color:var(--ink);box-shadow:0 3px 10px rgba(0,0,0,0.12);transform:translateY(-1px);}
-button.primary:hover::before{transform:translateX(100%);}
-button.primary:active{transform:translateY(0) scale(0.97);box-shadow:0 1px 2px rgba(0,0,0,0.08);transition-duration:.1s;}
+button.primary{background:var(--brass);border:.5px solid var(--brass);color:var(--color-background-primary);font-size:10px;padding:7px 14px;border-radius:4px;cursor:pointer;letter-spacing:.18em;text-transform:uppercase;transition:background var(--dur-base) var(--ease-silk),border-color var(--dur-base) var(--ease-silk),transform var(--dur-fast) var(--ease-press);position:relative;}
+button.primary:hover{background:var(--brass-soft);border-color:var(--brass-soft);}
+button.primary:active{transform:scale(0.97);transition-duration:.1s;}
+button.primary:focus-visible{outline:none;box-shadow:0 0 0 2px var(--color-background-secondary),0 0 0 4px var(--brass);}
 
-button.check-btn{width:100%;padding:11px;font-size:11px;letter-spacing:.2em;margin-bottom:18px;text-transform:uppercase;background:transparent;border:.5px solid var(--brass-ghost);color:var(--brass);border-radius:0;cursor:pointer;transition:background var(--dur-base) var(--ease-press),border-color var(--dur-base) var(--ease-press);position:relative;overflow:hidden;}
-button.check-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(120deg,transparent 30%,var(--brass-glow) 50%,transparent 70%);transform:translateX(-100%);transition:transform .8s var(--ease-silk);pointer-events:none;}
-button.check-btn:hover{background:var(--brass);color:var(--color-background-primary);border-color:var(--brass);letter-spacing:.24em;}
-button.check-btn:hover::before{transform:translateX(100%);}
+button.check-btn{width:100%;padding:11px;font-size:11px;letter-spacing:.2em;margin-bottom:18px;text-transform:uppercase;background:transparent;border:.5px solid var(--brass-ghost);color:var(--brass);border-radius:4px;cursor:pointer;transition:background var(--dur-base) var(--ease-silk),border-color var(--dur-base) var(--ease-silk),color var(--dur-base) var(--ease-silk);position:relative;}
+button.check-btn:hover{background:var(--brass);color:var(--color-background-primary);border-color:var(--brass);}
 button.check-btn:active{transform:scale(0.98);}
+button.check-btn:focus-visible{outline:none;box-shadow:0 0 0 2px var(--color-background-secondary),0 0 0 4px var(--brass);}
 button.check-btn.done{border-color:var(--brass);color:var(--brass);}
 
-.drawer-close{background:transparent;border:.5px solid var(--hair);color:var(--mute);font-size:10px;padding:5px 11px;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;border-radius:0;font-family:var(--sans);transition:background var(--dur-base) var(--ease-press),border-color var(--dur-base) var(--ease-press);}
-.drawer-close:hover{border-color:var(--brass);color:var(--brass);background:rgba(168,132,85,0.05);}
+.drawer-close{background:transparent;border:.5px solid var(--hair-strong);color:var(--mute);font-size:10px;padding:5px 11px;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;border-radius:4px;font-family:var(--sans);transition:background var(--dur-base) var(--ease-silk),border-color var(--dur-base) var(--ease-silk),color var(--dur-base) var(--ease-silk);}
+.drawer-close:hover{border-color:var(--brass);color:var(--brass);background:color-mix(in srgb, var(--brass) 8%, transparent);}
 .drawer-close:active{transform:scale(0.95);}
+.drawer-close:focus-visible{outline:none;box-shadow:0 0 0 2px var(--color-background-secondary),0 0 0 4px var(--brass);}
 
 /* Todos */
 .todo-row{padding:10px 0;border-bottom:.5px solid var(--hair);}
@@ -245,7 +241,7 @@ button.check-btn.done{border-color:var(--brass);color:var(--brass);}
 .todo-meta{display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap;}
 
 .cat-pills{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px;}
-.cat-pill{padding:4px 10px;border:.5px solid var(--hair);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);cursor:pointer;background:transparent;font-family:var(--sans);transition:background var(--dur-base) var(--ease-press),border-color var(--dur-base) var(--ease-press),color var(--dur-base) var(--ease-press);border-radius:0;}
+.cat-pill{padding:4px 10px;border:.5px solid var(--hair-strong);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);cursor:pointer;background:transparent;font-family:var(--sans);transition:background var(--dur-base) var(--ease-silk),border-color var(--dur-base) var(--ease-silk),color var(--dur-base) var(--ease-silk);border-radius:4px;}
 .cat-pill.active{background:var(--brass);color:var(--color-background-primary);border-color:var(--brass);}
 .cat-pill:hover{border-color:var(--brass);color:var(--brass);}
 .cat-pill.active:hover{color:var(--color-background-primary);}
@@ -306,14 +302,7 @@ button.check-btn.done{border-color:var(--brass);color:var(--brass);}
   border-radius: var(--border-radius-lg);
   position: relative;
 }
-.the90-panel::before,
-.the90-panel::after{
-  content:'';position:absolute;left:50%;
-  width:6px;height:6px;background:var(--brass);
-  transform:translateX(-50%) rotate(45deg);
-}
-.the90-panel::before{top:-3.5px;}
-.the90-panel::after{bottom:-3.5px;}
+/* 顶/底居中菱形退役 → sovereign.js 斜切框 + 左上短刻线(.sov-frame/.sov-tick) */
 
 .the90-head{
   display:flex;justify-content:space-between;align-items:baseline;
@@ -347,7 +336,8 @@ button.check-btn.done{border-color:var(--brass);color:var(--brass);}
 }
 
 .brass-rule-the90{
-  height:.5px;background:var(--brass-ghost);margin:14px 0;
+  height:1px;border:0;margin:16px 0;
+  background:linear-gradient(90deg, transparent, var(--hair) 18%, var(--hair) 82%, transparent);
 }
 
 .the90-sub-label{
@@ -377,8 +367,9 @@ button.check-btn.done{border-color:var(--brass);color:var(--brass);}
 }
 /* Direct checked state; no fill animation. */
 .the90-cell::before{display:none;}
-.the90-cell:hover{border-color:var(--brass);transform:translateY(-2px);}
-.the90-cell:active{transform:translateY(0) scale(.94);}
+.the90-cell:hover{border-color:var(--brass);}
+.the90-cell:active{transform:scale(.94);}
+.the90-cell:focus-visible{outline:none;box-shadow:0 0 0 2px var(--color-background-secondary),0 0 0 4px var(--brass);}
 .the90-cell-id{
   font-family:var(--serif);font-size:11px;color:var(--mute);
   letter-spacing:.05em;
@@ -676,39 +667,13 @@ button.check-btn.done{border-color:var(--brass);color:var(--brass);}
    System-exclusive — if everything glows, nothing glows. Scoped away from
    the sterile theme, which has its own corner accent + hover language. */
 
-/* four 1px brass corner brackets, painted with background gradients —
-   zero extra DOM, doesn't touch the pseudo-elements sterile uses */
-html[data-fx~="deco"] .panel{
-  background-image:
-    linear-gradient(var(--brass), var(--brass)),
-    linear-gradient(var(--brass), var(--brass)),
-    linear-gradient(var(--brass), var(--brass)),
-    linear-gradient(var(--brass), var(--brass)),
-    linear-gradient(var(--brass), var(--brass)),
-    linear-gradient(var(--brass), var(--brass)),
-    linear-gradient(var(--brass), var(--brass)),
-    linear-gradient(var(--brass), var(--brass));
-  background-repeat:no-repeat;
-  background-size:12px 1px, 1px 12px, 12px 1px, 1px 12px, 12px 1px, 1px 12px, 12px 1px, 1px 12px;
-  background-position:0 0, 0 0, 100% 0, 100% 0, 0 100%, 0 100%, 100% 100%, 100% 100%;
-}
+/* 8 段渐变角标退役 → 面板改用 sovereign.js 斜切 SVG 框(.sov-frame)+ .sov-chamfer
+   clip-path + 左上短刻线(.sov-tick)。hover 26px 辉光退役(§2.4 配额:静息/hover 皆零辉光)。 */
 
-/* hover: brass edge + soft outer glow — transform is owned by the v6.51 tilt
-   (glass.js --rx/--ry); keeping a transform here would override the tilt */
-@media (hover:hover){
-  html[data-fx~="deco"] .panel:hover{
-    border-color:var(--brass-ghost);
-    box-shadow:0 10px 30px -22px rgba(0,0,0,.30), 0 0 26px -14px var(--brass-glow),
-               inset 0 1px 0 color-mix(in srgb, var(--brass-soft) 16%, transparent);
-  }
-}
-
-/* kicker marker — the small brass diamond the System uses, ahead of the
-   roman-numeral eyebrow (panel-label-row is already flex with gap:10px) */
+/* kicker 菱形退役 → 左上短刻线语言:panel-label-row 前的小紫刻线(无辉光) */
 html[data-fx~="deco"] .panel-label-row::before{
-  content:''; flex:0 0 auto; width:5px; height:5px;
-  background:var(--brass); transform:rotate(45deg);
-  box-shadow:0 0 6px var(--brass-glow);
+  content:''; flex:0 0 auto; width:10px; height:2px;
+  background:var(--brass);
 }
 
 /* The 90 — the homepage hero: the ONLY resting glow on the page, so the eye
@@ -722,23 +687,14 @@ html[data-fx~="deco"] .panel-label-row::before{
    from v6.47+ all stay — this adds MATERIAL, not new color. Default theme only;
    sterile keeps its own language. */
 
-/* ambient field — three drifting brass glows far behind the content */
-html[data-fx~="deco"] body::before{
-  content:''; position:fixed; inset:-20%; z-index:var(--z-behind); pointer-events:none;
-  background:
-    radial-gradient(38% 30% at 18% 22%, color-mix(in srgb, var(--brass) 24%, transparent), transparent 70%),
-    radial-gradient(30% 26% at 82% 12%, color-mix(in srgb, var(--brass-soft) 17%, transparent), transparent 70%),
-    radial-gradient(42% 34% at 64% 86%, color-mix(in srgb, var(--brass) 19%, transparent), transparent 70%),
-    radial-gradient(24% 20% at 40% 55%, color-mix(in srgb, var(--brass-soft) 10%, transparent), transparent 70%);
-  animation:ambientDrift 64s ease-in-out infinite alternate;
-}
-@keyframes ambientDrift{
-  0%  { transform:translate(0,0) scale(1); }
-  50% { transform:translate(2.5%,-2%) scale(1.06); }
-  100%{ transform:translate(-2%,2.5%) scale(1.02); }
-}
-@media (prefers-reduced-motion:reduce){
-  html[data-fx~="deco"] body::before{ animation:none; }
+/* 背景氛围层(§2.4,flat-first):三团常驻流光底场退役,换样张 body 的两个极弱
+   径向渐变(直接 body background-image,零合成层、零 blur、零辉光)。energyflow 能量丝
+   仍是主背景(P3 紫化分层)。 */
+html[data-fx~="deco"] body{
+  background-image:
+    radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--brass) 6%, transparent), transparent 60%),
+    radial-gradient(100% 60% at 50% 110%, color-mix(in srgb, var(--color-background-secondary) 55%, transparent), transparent 70%);
+  background-attachment:fixed;
 }
 
 /* Phase B — sketch-trail canvas (created by glass.js): drifting brass ink
@@ -750,52 +706,87 @@ html[data-fx~="deco"] body::before{
 /* (sterile hide rule removed — subsumed by the html:not([data-fx~="trails"]) capability rule) */
 /* perf: a full-screen HUD fully covers the page — stop animating the ambient field
    and compositing the trail canvas behind it (wasted GPU + stacked-backdrop jank). */
-html[data-fx~="deco"] body.fin-locked::before,
-html[data-fx~="deco"] body.sys-locked::before,
-html[data-fx~="deco"] body.fit-locked::before,
-html[data-fx~="deco"] body.motiv-locked::before,
-html[data-fx~="deco"] body.has-focus::before{ animation:none; }
 body.fin-locked #glass-trails, body.sys-locked #glass-trails,
 body.fit-locked #glass-trails, body.motiv-locked #glass-trails,
 body.has-focus #glass-trails{ display:none; }
 
-/* the glass itself — translucent ground + blur; corner brackets (background-image
-   layers from v6.47) sit on top of the glass ground untouched */
+/* ════════════ SOVEREIGN 面板材质(§2.4 玻璃退役 · flat-first)════════════
+   26px 黄铜玻璃全面退役(性能预算最大一笔回收)。面板本体透明,由 sovereign.js
+   注入的三件套成形:.sov-fill 实色浮起 + 16px 斜切,.sov-frame 1px hairline 框,
+   .sov-tick 左上短刻线。无边框、无阴影、无 blur、无辉光(静息/hover 皆零辉光)。 */
 html[data-fx~="deco"] .panel,
 html[data-fx~="deco"] .the90-panel,
-html[data-fx~="deco"] .hermes-panel,
+html[data-fx~="deco"] .hermes-panel{
+  background:transparent;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+}
+/* principles / lowday 卡(δ 拥有其底色/结构)仅退役此处叠加的玻璃 blur */
 html[data-fx~="deco"] .principles-card,
 html[data-fx~="deco"] .lowday-card{
-  background-color:color-mix(in srgb, var(--color-background-primary) 55%, transparent);
-  -webkit-backdrop-filter:blur(26px) saturate(1.3);
-  backdrop-filter:blur(26px) saturate(1.3);
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
 }
-html[data-fx~="deco"] .panel{
-  box-shadow:0 10px 30px -22px rgba(0,0,0,.30),
-             inset 0 1px 0 color-mix(in srgb, var(--brass-soft) 16%, transparent);
-}
-html[data-fx~="deco"] .the90-panel{
-  box-shadow:0 0 34px -18px var(--brass-glow), 0 12px 36px -26px rgba(0,0,0,.35),
-             inset 0 1px 0 color-mix(in srgb, var(--brass-soft) 16%, transparent);
-}
+/* 聚焦全屏面板:实色 backstop —— .sov-fill(absolute inset:0)在面板内部滚动时会
+   随内容上移,面板自身补一层底色,滚动时不露出背板模糊。 */
+html[data-fx~="deco"] .panel-focused{ background:var(--color-background-secondary); }
 
-/* pointer light-spot — a faint brass glow that follows the cursor across the
-   glass (driven by --mx/--my from glass.js); hover-capable devices only */
+/* pointer 光斑辉光退役。tilt 仍独占 transform(glass.js 每帧 lerp --rx/--ry):
+   transform 绝不进 transition 列表、hover 也绝不写 transform —— 红线不变。 */
 @media (hover:hover) and (pointer:fine){
-  html[data-fx~="deco"] .panel::after{
-    content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    background:radial-gradient(320px 260px at var(--mx,50%) var(--my,50%),
-      color-mix(in srgb, var(--brass-soft) 17%, transparent), transparent 70%);
-    opacity:0; transition:opacity .35s var(--ease-silk);
-  }
-  html[data-fx~="deco"] .panel:hover::after{ opacity:1; }
-  /* tilt — glass.js lerps --rx/--ry per frame; transform must NOT be in the
-     transition list (it would double-smooth against the JS lerp and fight
-     GSAP's entrance tweens) */
   html[data-fx~="deco"] .panel{
     transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));
-    transition:box-shadow .35s var(--ease-silk), border-color .35s var(--ease-silk);
+    transition:border-color .35s var(--ease-silk);
   }
+}
+
+/* ════════════ SOVEREIGN 结构件(sovereign.js 注入的 .sov-* 三件套)════════════ */
+.sov-panel{ position:relative; isolation:isolate; }
+/* 背景填充层:实色浮起(§2.4)+ 16px 斜切(TR+BL,.sov-chamfer 供 clip-path) */
+.sov-fill{
+  position:absolute; inset:0; z-index:-2; pointer-events:none;
+  background:var(--color-background-secondary);
+}
+.sov-chamfer{
+  clip-path:polygon(
+    0 0, calc(100% - 16px) 0, 100% 16px,
+    100% 100%, 16px 100%, 0 calc(100% - 16px));
+}
+/* 1px hairline 结构框:SVG 描边贴合斜切轮廓,vector-effect 保 1px;可被 P2 描边成形 */
+.sov-frame{
+  position:absolute; inset:0; z-index:-1; pointer-events:none;
+  width:100%; height:100%; overflow:visible;
+}
+.sov-frame path{
+  fill:none; stroke:var(--hair); stroke-width:1;
+  vector-effect:non-scaling-stroke;
+}
+/* 左上短刻线(样张 .panel-tick,警示刻线换紫) */
+.sov-tick{
+  position:absolute; top:14px; left:0; width:20px; height:2px;
+  background:var(--brass); z-index:1; opacity:.9; pointer-events:none;
+}
+.sov-tick::after{
+  content:''; position:absolute; left:0; top:2px; width:2px; height:10px;
+  background:var(--brass); opacity:.55;
+}
+/* Hermes 面板保留其 brass-tinted 关注色(在斜切填充层上),区别于普通面板 */
+html[data-fx~="deco"] #hermes-panel .sov-fill{ background:var(--color-background-success); }
+
+/* 微标签系统(§2.2,mono 小字,真实编号 SYS.0x // MODULE) */
+.sov-micro{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.2em;
+  text-transform:uppercase; color:var(--color-text-tertiary);
+  margin:0 0 9px; line-height:1;
+}
+.sov-micro b{ color:var(--mute); font-weight:600; }
+.sov-micro-hero{ margin:0 0 12px; }
+
+/* panel-label 排版:mono 微标签风格(10.5px / .2em / uppercase / tertiary) */
+html[data-fx~="deco"] .panel-label-row .eyebrow-mute{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.2em;
+  color:var(--color-text-tertiary);
 }
 
 /* v7.1 — stacked cards (粘性滚动堆叠): glass.js wraps each top-level section
@@ -826,7 +817,7 @@ html[data-fx~="deco"] .flip-host{ perspective:1400px; }
   border:.5px solid var(--brass-ghost); border-radius:5px; padding:4px 10px;
   transition:border-color var(--dur-fast) var(--ease-silk), box-shadow var(--dur-fast) var(--ease-silk);
 }
-.flip-btn:hover{ border-color:var(--brass); box-shadow:0 0 10px var(--brass-glow); }
+.flip-btn:hover{ border-color:var(--brass); background:color-mix(in srgb, var(--brass) 14%, transparent); }
 
 /* v7.2 — 3D perspective page transition: the page recedes while a protocol
    modal is up (class toggled by pageDepth(); modals live outside .page-wrapper
@@ -881,20 +872,9 @@ body.has-focus .focus-backdrop{ opacity:1; pointer-events:auto; }
   height:100%;
 }
 
-/* smoothness: promote the glass to its own layers; lighter blur on touch
-   devices where 26px genuinely drops frames */
+/* promote panels to their own layers for smooth tilt (玻璃已退役,无 blur 可减) */
 html[data-fx~="deco"] .panel,
 html[data-fx~="deco"] .the90-panel{ will-change:transform; }
-@media (pointer:coarse){
-  html[data-fx~="deco"] .panel,
-  html[data-fx~="deco"] .the90-panel,
-  html[data-fx~="deco"] .hermes-panel,
-  html[data-fx~="deco"] .principles-card,
-  html[data-fx~="deco"] .lowday-card{
-    -webkit-backdrop-filter:blur(13px) saturate(1.25);
-    backdrop-filter:blur(13px) saturate(1.25);
-  }
-}
 
 /* v7.4 — 无退出键纪律: backdrop / Esc / 系统返回手势是唯一收回方式 */
 html[data-fx~="deco"] .sys-back[aria-label="关闭"]{ display:none !important; }
@@ -1009,32 +989,15 @@ html[data-fx~="deco"] .todo-row{
 }
 .tr-break-btn:hover{ border-color:var(--fin-neg,#C0392B); color:var(--fin-neg,#C0392B); }
 
-/* ── 黄铜流光 (molten brass) — a multi-tone gradient WANDERS through the
-   text continuously, like slow liquid metal: the position drifts along a
-   non-linear path (X and Y) and never stops, never "flashes past".
-   Reserved for IDENTITY lines only (creed pillars, the date hero, the 8/9
-   countdown) — body text, lists and stats stay static so this keeps its
-   weight. Shades derive from theme vars via color-mix → sterile adapts. ── */
-@keyframes brassFlow{
-  0%   { background-position:0% 20%; }
-  33%  { background-position:85% 70%; }
-  66%  { background-position:30% 100%; }
-  100% { background-position:0% 20%; }
-}
-html[data-fx~="deco"] .creed-pillars, html[data-fx~="deco"] #the90-tagline{
-  background:linear-gradient(115deg,
-    color-mix(in srgb, var(--brass), #000 38%) 0%,
-    var(--brass) 16%,
-    var(--brass-soft) 30%,
-    color-mix(in srgb, var(--brass-soft), #fff 45%) 44%,
-    var(--brass) 58%,
-    color-mix(in srgb, var(--brass), #000 30%) 72%,
-    var(--brass) 86%,
-    var(--brass-soft) 100%);
-  background-size:340% 240%;
-  -webkit-background-clip:text;background-clip:text;
-  color:transparent;-webkit-text-fill-color:transparent;
-  animation:brassFlow 11s ease-in-out infinite;
+/* ── brassFlow 液态流光退役(REDESIGN §6):身份宣言文字(信条五柱 / 日期英雄 /
+   8/9 倒计时)改为纯 var(--brass) 着色。P2 会给它们「终端点亮」终态动画。
+   glass.js 对 #dateline/#the90-tagline/.serif-it/.panel-label-row 只按元素/类
+   引用(SplitText revert),对 brassFlow 仅有注释、无 animation/class 引用,故
+   keyframes 直接移除、无 JS 悬空。 ── */
+html[data-fx~="deco"] .creed-pillars,
+html[data-fx~="deco"] #the90-tagline{
+  color:var(--brass);
+  -webkit-text-fill-color:var(--brass);
 }
 /* the big date stays ink-bodied — brass veins drift through it, slower
    (a hero moment, not a marquee) */
@@ -1047,7 +1010,7 @@ html[data-fx~="deco"] .creed-pillars, html[data-fx~="deco"] #the90-tagline{
   display:flex; align-items:center; justify-content:center;
   opacity:0; pointer-events:none; cursor:pointer;
   background:color-mix(in srgb, var(--color-background-primary) 30%, transparent);
-  -webkit-backdrop-filter:blur(10px) saturate(1.1); backdrop-filter:blur(10px) saturate(1.1);
+  -webkit-backdrop-filter:blur(8px) saturate(1.1); backdrop-filter:blur(8px) saturate(1.1);
   transition:opacity .55s var(--ease-silk);
 }
 .mr-ready.show{ opacity:1; pointer-events:auto; }
@@ -1101,7 +1064,7 @@ body.mr-detail-open{ overflow:hidden; }
   background:transparent; border:.5px solid transparent; border-radius:6px;
   transition:color var(--dur-fast) var(--ease-silk), border-color var(--dur-fast) var(--ease-silk), box-shadow var(--dur-fast) var(--ease-silk); }
 .mr-pen:hover{ color:var(--brass); border-color:var(--brass-ghost); }
-.mr-pen.active{ color:var(--brass); border-color:var(--brass); box-shadow:0 0 10px var(--brass-glow); }
+.mr-pen.active{ color:var(--brass); border-color:var(--brass); }
 .mr-detail-text{ width:100%; min-height:150px; resize:vertical; box-sizing:border-box;
   font-family:var(--serif); font-size:13.5px; line-height:1.75; color:var(--ink);
   background:var(--color-background-tertiary); border:.5px solid var(--hair); border-radius:6px; padding:12px 13px; }
@@ -1109,25 +1072,8 @@ body.mr-detail-open{ overflow:hidden; }
 ::view-transition-group(mr-fly){ animation-duration:.55s; animation-timing-function:cubic-bezier(.65,0,.35,1); }
 
 html[data-fx~="deco"] #dateline{
-  background:linear-gradient(115deg,
-    var(--ink) 0%, var(--ink) 20%,
-    var(--brass-soft) 33%,
-    var(--ink) 46%,
-    color-mix(in srgb, var(--brass-soft), #fff 40%) 60%,
-    var(--ink) 73%,
-    var(--brass-soft) 87%,
-    var(--ink) 100%);
-  background-size:380% 260%;
-  -webkit-background-clip:text;background-clip:text;
-  color:transparent;-webkit-text-fill-color:transparent;
-  animation:brassFlow 19s ease-in-out infinite;
-  /* .serif-big is line-height:1 — with background-clip:text the descender
-     ('y','g','p' tails) falls outside the line-box and gets clipped. Give it
-     room + negative margin so the layout below (datemeta) doesn't shift. */
-  line-height:1.18; padding-bottom:.06em; margin-bottom:-.12em;
-}
-@media (prefers-reduced-motion:reduce){
-  .creed-pillars, #the90-tagline, #dateline{ animation:none; background-position:0 0; }
+  color:var(--brass);
+  -webkit-text-fill-color:var(--brass);
 }
 
 /* same per-item bracket language for the JP / trading / academics checklists —
@@ -1192,7 +1138,7 @@ html[data-fx~="deco"] .row{
 .nav-launch-label{ writing-mode:vertical-rl; letter-spacing:.28em; font-size:11px; font-family:var(--mono); }
 .navd-head{ display:flex; align-items:center; gap:8px; padding-bottom:14px; margin-bottom:16px;
   border-bottom:0.5px solid var(--hair); font-family:var(--mono); font-size:9px; letter-spacing:.18em; text-transform:uppercase; color:var(--ghost); }
-.navd-dot{ width:5px; height:5px; border-radius:50%; background:var(--brass); flex:0 0 auto; box-shadow:0 0 6px var(--brass-glow); }
+.navd-dot{ width:5px; height:5px; border-radius:50%; background:var(--brass); flex:0 0 auto; }
 .navd-id{ flex:1; min-width:0; }
 .navd-close{ background:none; border:none; color:var(--ghost); cursor:pointer; font-family:var(--mono); font-size:9px; letter-spacing:.12em; padding:4px 2px; }
 .navd-close:hover{ color:var(--brass); }
@@ -1237,12 +1183,11 @@ html[data-fx~="deco"] .row{
 @keyframes navExit{ to{ opacity:0; transform:translateX(48px); } }
 /* 键盘选择(↑↓)时高亮当前频道 */
 .navd-item:focus-visible{ outline:none; border-color:var(--brass); background:color-mix(in srgb, var(--brass) 8%, transparent); }
-html[data-theme="terminal"] .navd-item:focus-visible{ border-color:var(--brass-soft); background:rgba(239,224,0,0.08); }
 
 /* ── 导览 = 只剩六块浮在「毛玻璃模糊主页」上:抽屉本身透明无框,背板加强模糊 ── */
 .drawer.drawer-nav{ background:none !important; border:none !important; box-shadow:none !important; }
 .drawer-nav .navd-list{ width:min(336px,92vw); max-height:88vh; overflow-y:auto; pointer-events:auto; padding:clamp(1.2rem,4vw,1.75rem) clamp(1rem,4vw,1.6rem); }
-.drawer-backdrop{ background:rgba(8,9,6,0.42); backdrop-filter:blur(14px) saturate(1.05); -webkit-backdrop-filter:blur(14px) saturate(1.05); }
+.drawer-backdrop{ background:rgba(8,7,15,0.62); backdrop-filter:blur(8px) saturate(1.05); -webkit-backdrop-filter:blur(8px) saturate(1.05); }
 /* 导览把手 = 单个左向箭头(无框、无字) */
 .nav-arrow{ background:none; border:none; cursor:pointer; padding:18px 12px 18px 16px; display:flex; align-items:center; justify-content:center; }
 .nav-arrow i{ display:block; width:11px; height:11px; border-left:2px solid var(--brass); border-bottom:2px solid var(--brass); transform:rotate(45deg); transition:transform .22s var(--ease-silk,ease), border-color .22s; }
@@ -1276,8 +1221,6 @@ html[data-theme="terminal"] .navd-item:focus-visible{ border-color:var(--brass-s
    所以先前只有它可见。isolation 不为 fixed 子元素建立包含块,弹窗/HUD 的层级顺序不受影响。*/
 body{ isolation:isolate; }
 #energy-flow{ position:fixed; inset:0; width:100vw; height:100vh; z-index:var(--z-behind); pointer-events:none; opacity:.9; }
-html[data-theme="terminal"] #energy-flow{ opacity:.8; }
-html[data-theme="sterile"]  #energy-flow{ opacity:.5; }
 body.has-focus #energy-flow, body.fin-locked #energy-flow, body.fit-locked #energy-flow,
 body.sys-locked #energy-flow, body.cal-locked #energy-flow, body.ai-locked #energy-flow,
 body.store-locked #energy-flow, body.motiv-locked #energy-flow{ display:none; }

@@ -17,3 +17,4 @@ dist/
 .agents/
 .claude/skills/typeui-design-system/
 .claude/skills/typeui-fundamentals/
+skills-lock.json

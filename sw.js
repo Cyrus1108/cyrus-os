@@ -5,7 +5,7 @@
    - TradingView widgets and external CDNs: stale-while-revalidate.
    Bump CACHE_VERSION on every shell change to force clients to drop the old cache. */
 
-const CACHE_VERSION = 'cyrus-os-v7.32.2';
+const CACHE_VERSION = 'cyrus-os-v7.33.0';
 const APP_SHELL = [
   './',
   './index.html',
@@ -25,11 +25,8 @@ const APP_SHELL = [
   './styles/tokens.css',
   './styles/fonts.css',
   './styles/base.css',
-  './styles/components.css?v=7.27.3',
+  './styles/components.css?v=7.33.0',
   './styles/animations.css',
-  './styles/theme-sterile.css',
-  './styles/theme-terminal.css',
-  './styles/theme-monarch.css',
   './styles/finance.css',
   './styles/fitness.css',
   './styles/calendar.css',
@@ -42,6 +39,7 @@ const APP_SHELL = [
   './scripts/supabase.js',
   './scripts/state.js',
   './scripts/render-core.js',
+  './scripts/sovereign.js',
   './scripts/notifications.js',
   './scripts/drawer.js',
   './scripts/markets.js',
@@ -64,7 +62,6 @@ const APP_SHELL = [
   './scripts/lowday.js',
   './scripts/principles.js',
   './scripts/glass.js',
-  './scripts/herocube.js',
   './scripts/energyflow.js?v=7.27.3',
   './vendor/gsap.min.js',
   './vendor/ScrollTrigger.min.js',
@@ -81,8 +78,6 @@ const APP_SHELL = [
   './vendor/fonts/oswald-var-latin-ext.woff2',
   './scripts/applock.js',
   './scripts/theme.js',
-  './scripts/ambient.js',
-  './scripts/lifetree.js',
   './scripts/dragsort.js',
   './scripts/swipe.js',
   './scripts/sync.js',

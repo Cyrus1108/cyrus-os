@@ -8,6 +8,10 @@ button,.mr-pill,.the90-cell,.row,.symbol-chip,.check-btn,.hn-item,.navd-item,[ro
 input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:text;}
 html,body{margin:0;padding:0;background:var(--color-background-tertiary);color:var(--ink);font-family:var(--sans);}
 
+/* SOVEREIGN 选区色:紫底 brand 半透明,永远可读 */
+::selection{ background:color-mix(in srgb, var(--brass) 32%, transparent); color:var(--ink); }
+::-moz-selection{ background:color-mix(in srgb, var(--brass) 32%, transparent); color:var(--ink); }
+
 .page-wrapper{max-width:1080px;margin:0 auto;padding:2.5rem 2rem;}
 @media(max-width:559px){ .page-wrapper{ padding:1.75rem 1.25rem; } }
 .stack{padding:2rem 0 .5rem;font-family:var(--sans);position:relative;}
@@ -49,7 +53,7 @@ input:not([type]),
 select{
   box-sizing:border-box;
   font-family:var(--sans);
-  border-radius:2px;
+  border-radius:4px;
   background:var(--color-background-input);
   color:var(--ink) !important;
   /* Some Chromium forks (Brave/Comet/Vivaldi) and autofill set -webkit-text-fill-color
@@ -78,7 +82,8 @@ textarea:focus,input:focus,select:focus{
   outline:none;
   border-color:var(--brass);
   background:var(--color-background-primary);
-  box-shadow:0 0 0 2px var(--brass-glow);
+  /* SOVEREIGN 焦点环:0 0 0 2px 底色 + 0 0 0 4px brand(样张公式) */
+  box-shadow:0 0 0 2px var(--color-background-secondary), 0 0 0 4px var(--brass);
 }
 textarea::placeholder,input::placeholder{color:var(--ghost);font-style:italic;font-family:var(--serif);font-size:13px;}
 textarea.bias-input{font-family:var(--serif);font-style:italic;}

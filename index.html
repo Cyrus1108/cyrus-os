@@ -10,8 +10,8 @@
 <link rel="icon" type="image/svg+xml" href="./icon.svg">
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
 
-<meta name="theme-color" content="#0C0918" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0C0918" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#08060F" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#08060F" media="(prefers-color-scheme: dark)">
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -21,11 +21,8 @@
 
 <link rel="stylesheet" href="./styles/tokens.css">
 <link rel="stylesheet" href="./styles/base.css">
-<link rel="stylesheet" href="./styles/components.css?v=7.27.3">
+<link rel="stylesheet" href="./styles/components.css?v=7.33.0">
 <link rel="stylesheet" href="./styles/animations.css">
-<link rel="stylesheet" href="./styles/theme-sterile.css">
-<link rel="stylesheet" href="./styles/theme-terminal.css">
-<link rel="stylesheet" href="./styles/theme-monarch.css">
 <link rel="stylesheet" href="./styles/finance.css">
 <link rel="stylesheet" href="./styles/fitness.css">
 <link rel="stylesheet" href="./styles/calendar.css">
@@ -40,11 +37,13 @@
      vendor/fonts/, precached by the SW so themes keep their type offline -->
 <link rel="stylesheet" href="./styles/fonts.css">
 
-<!-- Pre-paint: apply the saved theme + its capability flags (data-fx) before first
-     paint, so both the theme colors AND the decorative-layer guards are correct with
-     no flash. This inline map is the SINGLE SOURCE of THEME_FX — it must run
-     pre-CSS so it cannot import; scripts/theme.js consumes window.THEME_FX. -->
-<script>(function(){var FX=window.THEME_FX={cappa:'glass cube trails flow-additive deco',sterile:'lifetree',terminal:'glass flow-additive deco',monarch:'glass flow-additive deco'};var t;try{t=JSON.parse(localStorage.getItem('cyrus_dashboard_v6_theme')||'"cappa"');}catch(e){t='cappa';}if(t!=='sterile'&&t!=='terminal'&&t!=='monarch')t='cappa';var d=document.documentElement;d.setAttribute('data-theme',t);d.setAttribute('data-fx',FX[t]);})();</script>
+<!-- Pre-paint: SOVEREIGN is the single identity — no theme to read any more. Stamp
+     its fixed capability set on <html> before first paint so the decorative-layer
+     guards are correct with no flash: glass (interaction layer on), flow-additive
+     (energyflow additive blending), deco (panel/body decorations on). cube / trails
+     / lifetree are permanently off. window.THEME_FX kept as a 1-entry compat shim
+     for scripts/theme.js's legacy consumer. -->
+<script>(function(){window.THEME_FX={sovereign:'glass flow-additive deco'};var d=document.documentElement;d.setAttribute('data-theme','sovereign');d.setAttribute('data-fx','glass flow-additive deco');})();</script>
 
 <!-- Pre-paint: if the app lock is enabled, hide content until applock.js mounts the lock screen (no flash of private data) -->
 <script>(function(){try{var l=JSON.parse(localStorage.getItem('cyrus_lock')||'null');if(l&&l.enabled)document.documentElement.classList.add('app-locked-boot');}catch(e){}})();</script>
@@ -82,7 +81,7 @@
   #app-cover .cover-aura,#app-cover .cover-crest,#app-cover .cover-word,#app-cover .cover-sub,#app-cover .cover-load span{animation:none}}
 </style>
 
-<!-- Three.js (ES module) for the life-tree — resolved on demand by lifetree.js -->
+<!-- Three.js (ES module) — importmap kept for the P3 君主徽记 (monarch crest) scene -->
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script>
 
 <!-- Supabase JS SDK (UMD, exposes window.supabase) — vendored for offline (precached in sw.js) -->
@@ -168,8 +167,7 @@
         <div class="eyebrow-mute" style="margin-bottom:10px;">Personal operating system</div>
       </div>
       <div style="text-align:right;">
-        <!-- v7.18: 模块/系统导览迁至底部控制面板频道条(#nav-dock);此处只留主题切换 -->
-        <button id="theme-btn" class="theme-btn" onclick="toggleTheme()" title="切换主题" style="margin-bottom:8px;">◆ 终末</button>
+        <!-- v7.33 SOVEREIGN: 四主题退役,主题切换按钮已删除(单一身份,无可切) -->
         <div id="clock" class="clock"></div>
         <div id="clock-sub" class="clock-sub"></div>
       </div>
@@ -210,32 +208,15 @@
   <!-- THE 90 — 90-day commitment tracker (Stage 5) -->
   <div id="the90-panel" class="the90-panel">
     <div class="lt-beam" aria-hidden="true"></div>
+    <div class="sov-micro sov-micro-hero"><b>SYS.05</b> // THE-90</div>
     <div class="the90-head">
       <div id="the90-day" class="the90-head-day">DAY · / 90</div>
       <div id="the90-phase" class="the90-head-phase">—</div>
     </div>
     <div id="the90-tagline" class="the90-tagline"></div>
 
-    <!-- Life-tree cultivation chamber — Sterile theme only (hidden in cappa) -->
-    <div id="lifetree-chamber">
-      <div id="lifetree-mount"></div>
-      <div class="lt-grow" aria-hidden="true"></div>
-      <div class="lt-corner tl"></div><div class="lt-corner tr"></div>
-      <div class="lt-corner bl"></div><div class="lt-corner br"></div>
-      <div class="lt-topbar">
-        <span class="lt-sys">武陵 · 天师桩 · TALOS-II</span>
-        <span class="lt-online">◆ ONLINE</span>
-      </div>
-      <div class="lt-state" id="lt-state">DAY ·</div>
-      <div class="lt-hud">
-        <span>生长 <b id="lt-grow">·</b></span>
-        <span>STREAK <b id="lt-streak">·</b></span>
-        <span>阶段 <b id="lt-phase">·</b></span>
-        <span>距 8/9 <b id="lt-left">·</b></span>
-        <span>今日 <b id="lt-today">·</b></span>
-      </div>
-      <div class="lt-scan"></div>
-    </div>
+    <!-- (life-tree chamber retired with the sterile theme, v7.33.0 — the90.js's
+         lt-HUD writes are guarded by if(ltGrow) and no-op without this markup) -->
 
     <div class="the90-sub-label">今日打卡</div>
     <div id="the90-cells" class="the90-cells"></div>
@@ -286,6 +267,7 @@
 
   <div class="panel mr-panel">
     <div class="panel-head">
+      <div class="sov-micro"><b>SYS.01</b> // MORNING</div>
       <div class="panel-label-row"><span class="eyebrow">I</span><span class="eyebrow-mute">Morning ritual</span></div>
       <div class="panel-stat-row">
         <span class="serif-it">今日の朝</span>
@@ -306,6 +288,7 @@
     <!-- Academics -->
     <div class="panel">
       <div class="panel-head">
+        <div class="sov-micro"><b>SYS.02</b> // ACADEMICS</div>
         <div class="panel-label-row"><span class="eyebrow">II</span><span class="eyebrow-mute">Academics</span></div>
         <div class="panel-stat-row">
           <span class="serif-it">课业</span>
@@ -382,6 +365,7 @@
     <!-- Japanese -->
     <div class="panel">
       <div class="panel-head">
+        <div class="sov-micro"><b>SYS.03</b> // JP-N2</div>
         <div class="panel-label-row"><span class="eyebrow">III</span><span class="eyebrow-mute">Japanese N2</span></div>
         <div class="panel-stat-row">
           <span class="serif-it">日本語</span>
@@ -426,6 +410,7 @@
     <!-- Trading -->
     <div class="panel">
       <div class="panel-head">
+        <div class="sov-micro"><b>SYS.04</b> // TRADING</div>
         <div class="panel-label-row"><span class="eyebrow">IV</span><span class="eyebrow-mute">Trading desk</span></div>
         <div class="panel-stat-row">
           <span class="serif-it">交易</span>
@@ -464,6 +449,7 @@
   <!-- V · General Todos (full width) -->
   <div class="panel" style="margin-top:14px;">
     <div class="panel-head">
+      <div class="sov-micro"><b>SYS.06</b> // TODOS</div>
       <div class="panel-label-row"><span class="eyebrow">V</span><span class="eyebrow-mute">General todos</span></div>
       <div class="panel-stat-row">
         <span class="serif-it">杂务清单</span>
@@ -726,12 +712,11 @@
 <script src="./vendor/lenis.min.js"></script>
 <script src="./scripts/lowday.js"></script>
 <script src="./scripts/principles.js"></script>
+<script src="./scripts/sovereign.js"></script>
 <script src="./scripts/glass.js"></script>
-<script type="module" src="./scripts/herocube.js"></script>
 <script src="./scripts/energyflow.js?v=7.27.3"></script>
 <script src="./scripts/applock.js"></script>
 <script src="./scripts/theme.js"></script>
-<script src="./scripts/ambient.js"></script>
 <script src="./scripts/sync.js"></script>
 <script src="./scripts/auth.js"></script>
 <script src="./scripts/app.js"></script>

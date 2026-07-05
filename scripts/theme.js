@@ -1,85 +1,35 @@
-/* Theme switching — "cappa" (default brass/cream) ⇄ "sterile" (Endfield).
-   The chosen theme is set on <html data-theme>, persisted to localStorage,
-   and synced via settings.theme. The WebGL life-tree (Three.js) is lazy-loaded
-   only the first time the sterile theme is activated, so the default theme
-   carries zero extra weight. */
+/* SOVEREIGN — legacy theme shim.
+   The four-theme system (cappa / sterile / terminal / monarch) and the theme
+   toggle are retired: CyrusOS now has ONE identity, SOVEREIGN. This module used
+   to cycle themes, write data-fx capability maps, and lazy-load the life-tree —
+   all of that is gone. What remains is a thin compatibility layer:
 
-let _lifetreeLoading = false;
+   - initTheme()  — called by app.js; stamps the fixed capability set + a stable
+                    data-theme="sovereign" (the pre-paint script in index.html
+                    already did this to avoid a flash; this re-asserts it).
+   - applyTheme() — kept because sync.js calls it when a `theme` value arrives on
+                    pull. Per the redesign red line (§3.10), any stored/pulled
+                    theme value (cappa/sterile/terminal/monarch or anything else)
+                    is silently ignored — we never leave SOVEREIGN. The
+                    settings.theme column is NOT deleted; its value is just inert.
+   - currentTheme() — compat constant, always 'sovereign'. */
 
-/* Three themes now: cappa (brass/cream default) → sterile (light Endfield futurism)
-   → terminal (dark Arknights tactical). The toggle cycles through them. */
-const THEMES = ['cappa', 'sterile', 'terminal', 'monarch'];
+/* Fixed SOVEREIGN capability set (mirrors index.html's pre-paint stamp):
+   glass = interaction layer on, flow-additive = energyflow additive blend,
+   deco = panel/body decorations on. cube / trails / lifetree are permanently off. */
+const SOVEREIGN_FX = 'glass flow-additive deco';
 
-/* ── Capability flags (data-fx) — THE authoritative map of "which decorative
-   layers each theme turns on". applyTheme writes these onto <html data-fx="…">
-   and every guard (JS + CSS) reads a flag instead of pattern-matching theme
-   names. Flag semantics (archaeology of the pre-existing guards):
-     glass         — glass.js maximalist interaction layer + sys-window HUD shell
-                     run (was: everything-except-sterile).
-     cube          — herocube Three.js hero cube renders (was: cappa only —
-                     herocube.js early-returned for sterile/terminal/monarch).
-     trails        — glass-trails ink canvas is visible (was: cappa only —
-                     terminal & monarch hid #glass-trails via CSS).
-     flow-additive — energyflow uses 'lighter' additive blending (was:
-                     everything-except-sterile; sterile used source-over).
-     lifetree      — sterile life-tree + ambient run (was: sterile only).
-     deco          — default-theme panel/body decorations apply (was the CSS
-                     `html:not([data-theme="sterile"])` guard).
-   Single source: index.html's pre-paint inline script defines window.THEME_FX
-   (it must run pre-CSS, so the map lives there); this module just consumes it. */
-const THEME_FX = window.THEME_FX;
-
-function currentTheme(){
-  const t = document.documentElement.getAttribute('data-theme');
-  return THEMES.includes(t) ? t : 'cappa';
+function applySovereign(){
+  const d = document.documentElement;
+  d.setAttribute('data-theme', 'sovereign');
+  d.setAttribute('data-fx', SOVEREIGN_FX);
 }
 
-function applyTheme(name, persist){
-  const t = THEMES.includes(name) ? name : 'cappa';
-  document.documentElement.setAttribute('data-theme', t);
-  document.documentElement.setAttribute('data-fx', THEME_FX[t] || THEME_FX.cappa);
-  try { localStorage.setItem('cyrus_dashboard_v6_theme', JSON.stringify(t)); } catch(e){}
-  // sync to Supabase settings (saveLS is defined in state.js and triggers push)
-  if(persist && typeof saveLS === 'function') saveLS('theme', t);
-  updateThemeBtn(t);
+function currentTheme(){ return 'sovereign'; }
 
-  // life-tree + ambient run only where the 'lifetree' capability is set (sterile).
-  if(document.documentElement.matches('[data-fx~="lifetree"]')){
-    ensureLifeTree();
-    if(typeof initAmbient === 'function') initAmbient();
-  } else if(typeof window.destroyLifeTree === 'function'){
-    // cappa/terminal/monarch drop the life-tree
-    window.destroyLifeTree();
-  }
-}
+/* Compat no-op: ignores whatever name/value is passed (legacy theme values are
+   inert under SOVEREIGN) and simply re-asserts the single identity. */
+function applyTheme(){ applySovereign(); }
 
-function toggleTheme(){
-  const i = THEMES.indexOf(currentTheme());
-  applyTheme(THEMES[(i + 1) % THEMES.length], true);
-}
-
-function updateThemeBtn(t){
-  const b = document.getElementById('theme-btn');
-  // label shows the NEXT theme in the cycle
-  if(b) b.textContent = t === 'cappa' ? '◆ 终末' : t === 'sterile' ? '▣ 终端' : t === 'terminal' ? '♛ 君主' : '☼ 经典';
-}
-
-/* Lazy-load the life-tree module (pulls in Three.js) only when needed. */
-function ensureLifeTree(){
-  if(typeof window.initLifeTree === 'function'){ window.initLifeTree(); return; }
-  if(_lifetreeLoading) return;
-  _lifetreeLoading = true;
-  import('./lifetree.js')
-    .then(() => { if(typeof window.initLifeTree === 'function') window.initLifeTree(); })
-    .catch(err => console.error('[theme] life-tree load failed', err))
-    .finally(() => { _lifetreeLoading = false; });
-}
-
-/* Called by app.js after init, and reads the stored theme (LS first; settings
-   pull may update it later via applyTheme). The pre-paint inline script in
-   index.html already set data-theme to avoid a flash. */
-function initTheme(){
-  let t = 'cappa';
-  try { const raw = localStorage.getItem('cyrus_dashboard_v6_theme'); if(raw) t = JSON.parse(raw); } catch(e){}
-  applyTheme(t, false);
-}
+/* Called by app.js after init. */
+function initTheme(){ applySovereign(); }

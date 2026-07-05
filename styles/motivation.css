@@ -35,7 +35,7 @@ body.motiv-locked{ overflow:hidden; }
 .motiv-input{
   flex:1; min-width:160px; padding:10px 12px; font-size:14px;
   background:var(--color-background-input); color:var(--ink);
-  border:.5px solid var(--hair-strong); border-radius:var(--border-radius-md);
+  border-radius:var(--border-radius-md);
   font-family:var(--sans);
 }
 .motiv-input-name{ flex:0 1 200px; }
@@ -61,11 +61,11 @@ body.motiv-locked{ overflow:hidden; }
 }
 .motiv-card{
   position:relative; cursor:pointer;
-  border:.5px solid var(--hair); border-radius:var(--border-radius-md);
+  border-radius:var(--border-radius-md);
   overflow:hidden; background:var(--color-background-secondary);
-  transition:transform var(--dur-fast) var(--ease-press),border-color var(--dur-base) var(--ease-silk),box-shadow var(--dur-base) var(--ease-silk);
+  transition:transform var(--dur-fast) var(--ease-press),border-color var(--dur-base) var(--ease-silk);
 }
-.motiv-card:hover{ transform:translateY(-2px); border-color:var(--brass); box-shadow:0 6px 18px rgba(0,0,0,.18); }
+.motiv-card:hover{ transform:translateY(-2px); border-color:var(--brass); }
 .motiv-card:active{ transform:translateY(0) scale(.99); }
 
 .motiv-thumb{ position:relative; aspect-ratio:16/9; background:#000; }

@@ -51,12 +51,8 @@ body.booted .todo-row, body.booted .row{ animation:none; }
 }
 .the90-today-col{ animation:todayColBreathe 2.2s var(--ease-silk) infinite; }
 
-/* ③ Countdown tagline breathing glow — the emotional core line, alive like a beacon */
-@keyframes taglineGlow{
-  0%,100%{ text-shadow:none; opacity:.85; }
-  50%    { text-shadow:0 0 8px var(--brass-glow); opacity:1; }
-}
-.the90-tagline{ animation:taglineGlow 4s var(--ease-silk) infinite; }
+/* ③ 倒计时 tagline 常驻辉光退役(§2.4:静息零辉光)。tagline 改纯 var(--brass) 静态;
+   P2 再给它「终端点亮」终态动画。 */
 
 /* ④ All-done payoff — one-time celebration the moment all 5 targets are met.
    At that point the 5 cells are already solid brass, so a brass sweep would be

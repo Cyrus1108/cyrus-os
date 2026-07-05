@@ -11,7 +11,6 @@
   --fit-rest:#C9A227;
 }
 @media (prefers-color-scheme:dark){ :root{ --fit-pos:#5FC88A; } }
-html[data-theme="sterile"]{ --fit-pos:#3FAE6B; }
 
 body.fit-locked{ overflow:hidden; }
 
@@ -53,11 +52,9 @@ body.fit-locked{ overflow:hidden; }
 .fit-view input[type="date"], .fit-view select{
   width:100%; padding:10px 12px; font-size:14px;
   background:var(--color-background-input); color:var(--ink);
-  border:.5px solid var(--hair-strong); border-radius:var(--border-radius-md);
+  border-radius:var(--border-radius-md);
   font-family:var(--sans);
 }
-html[data-theme="sterile"] .fit-view input,
-html[data-theme="sterile"] .fit-view select{ border-radius:0; }
 
 /* ════════ default theme — 健身 HUD unified with the System window.
    glass.js wraps #fitness-view into .sys-backdrop + .sys-window.fit-hud;
@@ -108,7 +105,6 @@ html[data-fx~="deco"] .fit-view.fit-closing .sys-backdrop{
 .fit-btn:hover{ border-color:var(--brass); }
 .fit-btn.brass{ background:var(--brass); color:var(--color-background-primary); border-color:var(--brass); font-weight:600; }
 .fit-btn.mini{ padding:4px 10px; font-size:12px; }
-html[data-theme="sterile"] .fit-btn{ border-radius:0; }
 
 /* ════════ 今日 today ════════ */
 .fit-day-head{ display:flex; align-items:baseline; gap:10px; margin-bottom:16px; }
@@ -116,7 +112,6 @@ html[data-theme="sterile"] .fit-btn{ border-radius:0; }
 .fit-day-label{ font-size:13px; color:var(--brass); letter-spacing:.06em; }
 .fit-day-done{ margin-left:auto; font-size:12px; color:var(--fit-pos); border:.5px solid var(--fit-pos);
   border-radius:999px; padding:3px 12px; }
-html[data-theme="sterile"] .fit-day-done{ border-radius:0; }
 
 .fit-rest-day{ text-align:center; padding:40px 18px; }
 .fit-rest-glyph{ font-size:34px; margin-bottom:12px; }
@@ -124,8 +119,7 @@ html[data-theme="sterile"] .fit-day-done{ border-radius:0; }
 .fit-rest-sub{ font-size:13px; color:var(--ghost); line-height:1.7; }
 
 .fit-ex{ background:var(--color-background-secondary); border:.5px solid var(--hair);
-  border-radius:var(--border-radius-lg); padding:14px 14px 12px; margin-bottom:12px; transition:border-color .25s var(--ease-silk); }
-html[data-theme="sterile"] .fit-ex{ border-radius:0; }
+  border-radius:var(--border-radius-md); padding:14px 14px 12px; margin-bottom:12px; transition:border-color .25s var(--ease-silk); }
 .fit-ex.done{ border-color:var(--fit-pos); }
 .fit-ex-top{ display:flex; align-items:baseline; gap:10px; margin-bottom:12px; }
 .fit-ex-name{ font-size:16px; color:var(--ink); font-weight:600; }
@@ -139,7 +133,6 @@ html[data-theme="sterile"] .fit-ex{ border-radius:0; }
   gap:1px; background:var(--color-background-tertiary); border:.5px solid var(--hair-strong);
   border-radius:var(--border-radius-md); cursor:pointer; color:var(--mute); padding:0 8px;
   transition:background .2s var(--ease-silk),border-color .2s var(--ease-silk),color .2s var(--ease-silk); }
-html[data-theme="sterile"] .fit-pip{ border-radius:0; }
 .fit-pip:hover{ border-color:var(--brass); }
 .fit-pip-n{ font-size:16px; font-weight:600; font-family:var(--mono); line-height:1; }
 .fit-pip-l{ font-size:9px; letter-spacing:.04em; opacity:.7; }
@@ -148,8 +141,7 @@ html[data-theme="sterile"] .fit-pip{ border-radius:0; }
 
 /* completion check-in banner */
 .fit-checkin{ display:flex; align-items:center; gap:10px; background:var(--color-background-success,rgba(63,174,107,.12));
-  border:.5px solid var(--fit-pos); border-radius:var(--border-radius-lg); padding:14px 16px; margin-bottom:14px; }
-html[data-theme="sterile"] .fit-checkin{ border-radius:0; }
+  border:.5px solid var(--fit-pos); border-radius:var(--border-radius-md); padding:14px 16px; margin-bottom:14px; }
 .fit-checkin-ic{ font-size:20px; }
 .fit-checkin-tx{ font-size:14px; color:var(--ink); }
 .fit-checkin-tx b{ color:var(--fit-pos); }
@@ -159,8 +151,7 @@ html[data-theme="sterile"] .fit-checkin{ border-radius:0; }
   padding:12px 2px calc(8px + env(safe-area-inset-bottom));
   background:linear-gradient(to top, var(--color-background-primary) 60%, transparent); }
 .fit-timer{ flex:1; background:var(--color-background-secondary); border:.5px solid var(--hair-strong);
-  border-radius:var(--border-radius-lg); padding:12px 12px 10px; text-align:center; }
-html[data-theme="sterile"] .fit-timer{ border-radius:0; }
+  border-radius:var(--border-radius-md); padding:12px 12px 10px; text-align:center; }
 .fit-timer.down{ border-color:color-mix(in srgb, var(--fit-rest) 50%, var(--hair-strong)); }
 .fit-timer.ring{ animation:fitRing .5s ease 3; }
 @keyframes fitRing{ 0%,100%{ box-shadow:0 0 0 0 transparent; } 50%{ box-shadow:0 0 0 3px var(--fit-rest); } }
@@ -171,22 +162,18 @@ html[data-theme="sterile"] .fit-timer{ border-radius:0; }
 .fit-timer-btns button{ flex:1; padding:6px 4px; font-size:12px; background:var(--color-background-tertiary);
   border:.5px solid var(--hair); border-radius:var(--border-radius-md); color:var(--mute); cursor:pointer; }
 .fit-timer-btns button:hover{ border-color:var(--brass); color:var(--ink); }
-html[data-theme="sterile"] .fit-timer-btns button{ border-radius:0; }
 .fit-timer-presets{ display:flex; gap:5px; justify-content:center; margin-top:7px; flex-wrap:wrap; }
 .fit-timer-presets button{ padding:3px 9px; font-size:11px; font-family:var(--mono);
   background:none; border:.5px solid var(--hair); border-radius:999px; color:var(--ghost); cursor:pointer; }
 .fit-timer-presets button:hover{ border-color:var(--brass); color:var(--ink); }
-html[data-theme="sterile"] .fit-timer-presets button{ border-radius:0; }
 
 /* ════════ 计划 plan ════════ */
-.fit-pday{ background:var(--color-background-secondary); border:.5px solid var(--hair);
-  border-radius:var(--border-radius-lg); padding:12px 14px; margin-bottom:10px; }
-html[data-theme="sterile"] .fit-pday{ border-radius:0; }
+.fit-pday{ background:var(--color-background-secondary);
+  border-radius:var(--border-radius-md); padding:12px 14px; margin-bottom:10px; }
 .fit-pday.rest{ opacity:.72; }
 .fit-pday-head{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
 .fit-pday-name{ font-size:15px; color:var(--ink); font-weight:600; }
 .fit-pday-today{ font-size:10px; color:var(--brass); border:.5px solid var(--brass); border-radius:999px; padding:1px 8px; }
-html[data-theme="sterile"] .fit-pday-today{ border-radius:0; }
 .fit-pday-tools{ margin-left:auto; display:flex; gap:6px; }
 .fit-slot{ display:flex; align-items:center; gap:8px; padding:7px 0; border-top:.5px solid var(--hair); font-size:14px; }
 .fit-slot-name{ flex:1; color:var(--ink); }
@@ -205,30 +192,26 @@ html[data-theme="sterile"] .fit-pday-today{ border-radius:0; }
 .fit-lib-tools button:hover{ color:var(--brass); }
 
 /* ════════ 趋势 trends ════════ */
-.fit-chart-card{ background:var(--color-background-secondary); border:.5px solid var(--hair);
-  border-radius:var(--border-radius-lg); padding:14px; margin-bottom:14px; }
-html[data-theme="sterile"] .fit-chart-card{ border-radius:0; }
+.fit-chart-card{ background:var(--color-background-secondary);
+  border-radius:var(--border-radius-md); padding:14px; margin-bottom:14px; }
 .fit-chart-title{ font-size:13px; color:var(--brass); letter-spacing:.06em; margin-bottom:10px;
   display:flex; align-items:center; justify-content:space-between; }
 .fit-chart-wrap{ position:relative; height:200px; }
 .fit-stat-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px; }
-.fit-stat{ background:var(--color-background-secondary); border:.5px solid var(--hair);
+.fit-stat{ background:var(--color-background-secondary);
   border-radius:var(--border-radius-md); padding:12px 10px; text-align:center; }
-html[data-theme="sterile"] .fit-stat{ border-radius:0; }
 .fit-stat-n{ font-size:22px; font-family:var(--mono); color:var(--ink); line-height:1.1; }
 .fit-stat-l{ font-size:11px; color:var(--ghost); margin-top:4px; }
 .fit-dim-chips{ display:flex; gap:6px; flex-wrap:wrap; }
 .fit-dim-chip{ padding:3px 11px; font-size:12px; background:none; border:.5px solid var(--hair);
   border-radius:999px; color:var(--ghost); cursor:pointer; }
 .fit-dim-chip.active{ border-color:var(--brass); color:var(--brass); }
-html[data-theme="sterile"] .fit-dim-chip{ border-radius:0; }
 
 /* ════════ 饮食 diet ════════ */
 .fit-diet-head{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
 .fit-diet-date{ font-family:var(--serif); font-size:18px; color:var(--ink); }
 .fit-diet-nav{ background:none; border:.5px solid var(--hair); border-radius:var(--border-radius-md);
   color:var(--mute); cursor:pointer; padding:4px 10px; font-size:14px; }
-html[data-theme="sterile"] .fit-diet-nav{ border-radius:0; }
 .fit-meal{ display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:.5px solid var(--hair); }
 .fit-meal-time{ font-size:11px; color:var(--ghost); font-family:var(--mono); width:42px; flex:none; }
 .fit-meal-name{ flex:1; font-size:14px; color:var(--ink); }
