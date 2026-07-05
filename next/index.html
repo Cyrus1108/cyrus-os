@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en" data-boot="pending">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#0A0B06" />
+  <title>CYRUS://NEXT — COMMAND DECK</title>
+
+  <!-- self-contained prototype; NOT part of the PWA shell (network-only) -->
+  <link rel="stylesheet" href="./style.css" />
+
+  <!-- three.js as ES module (importmap), matching the main app convention -->
+  <script type="importmap">
+    { "imports": { "three": "../vendor/three.module.js" } }
+  </script>
+
+  <!-- GSAP + Lenis are UMD globals, loaded classic before the module boots -->
+  <script defer src="../vendor/gsap.min.js"></script>
+  <script defer src="../vendor/ScrollTrigger.min.js"></script>
+  <script defer src="../vendor/SplitText.min.js"></script>
+  <script defer src="../vendor/lenis.min.js"></script>
+</head>
+
+<body>
+  <!-- ═══ scroll spacer: gives Lenis room to drive the camera orbit ═══ -->
+  <div id="scroll-track" aria-hidden="true"></div>
+
+  <!-- ═══ WebGL deck ═══ -->
+  <canvas id="deck" aria-label="Tactical command deck"></canvas>
+
+  <!-- ═══ projected yellow station labels (DOM, positioned each frame) ═══ -->
+  <div id="labels" aria-hidden="true"></div>
+
+  <!-- ═══ reticle crosshair cursor (desktop pointer only) ═══ -->
+  <div id="reticle" aria-hidden="true">
+    <span class="ret-h"></span><span class="ret-v"></span>
+    <span class="ret-tl"></span><span class="ret-tr"></span>
+    <span class="ret-bl"></span><span class="ret-br"></span>
+    <b class="ret-tag"></b>
+  </div>
+
+  <!-- ═══ persistent deck chrome (corners / status readout) ═══ -->
+  <div id="chrome" aria-hidden="true">
+    <div class="chrome-tl">CYRUS://NEXT</div>
+    <div class="chrome-tr">COMMAND DECK</div>
+    <div class="chrome-bl"><span id="readout">DECK · IDLE</span></div>
+    <div class="chrome-br">DRAG ORBIT · SCROLL ADVANCE · CLICK STATION</div>
+    <span class="scan"></span>
+  </div>
+
+  <!-- ═══ boot self-check overlay ═══ -->
+  <div id="boot">
+    <pre id="boot-log" role="status" aria-live="polite"></pre>
+    <div id="boot-skip">CLICK / ANY KEY TO SKIP</div>
+  </div>
+
+  <!-- ═══ HUD overlay (slant DOM panel, per-station) ═══ -->
+  <div id="hud" hidden>
+    <div id="hud-panel" role="dialog" aria-modal="true" aria-labelledby="hud-title">
+      <header>
+        <span id="hud-glyph" aria-hidden="true"></span>
+        <div>
+          <div id="hud-kicker">STATION</div>
+          <h1 id="hud-title">—</h1>
+        </div>
+        <button id="hud-close" aria-label="Return to deck">ESC ⟵</button>
+      </header>
+      <div id="hud-body"></div>
+      <footer id="hud-foot"></footer>
+    </div>
+  </div>
+
+  <!-- ═══ no-WebGL / plain fallback ═══ -->
+  <noscript><div class="fallback">CYRUS://NEXT requires JavaScript.</div></noscript>
+  <div id="fallback" hidden></div>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
