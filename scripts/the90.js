@@ -447,18 +447,16 @@ function rThe90(){
     else msB.textContent = daysToMs;
   }
 
-  // ④ all-done payoff — fire the warm-white shine + glow flash once, the moment all met.
+  // ④ 满勤仪式:旧 .celebrate 格子扫光已退役(v7.36.0),视觉统一走 ritualPulse。
+  //    但满勤可由非点击路径达成(the90AutoMet 自动勾、realtime 远端补完)——只有
+  //    render 里的 false→true 闩锁能看到所有路径,故仪式由这里触发;toggleThe90
+  //    里的手势触发与本处重合时,ritualPulse 的全局互斥闩(_ritualActive)吸收重复。
+  //    (视觉-only + 闩锁一次,是渲染纪律容许的既有先例,同旧 celebrate。)
   const metToday = meta.targets.filter(t => the90ScoreMet(todayScores[t.id], phase)).length;
   const allDone = meta.targets.length > 0 && metToday === meta.targets.length;
-  if(the90WasComplete !== null && allDone && !the90WasComplete){
-    const cellsBox = document.getElementById('the90-cells');
-    if(cellsBox){
-      cellsBox.classList.remove('celebrate');
-      // reflow so re-adding the class restarts the animation even on rapid re-complete
-      void cellsBox.offsetWidth;
-      cellsBox.classList.add('celebrate');
-      setTimeout(()=> cellsBox.classList.remove('celebrate'), 900);
-    }
+  if(the90WasComplete !== null && allDone && !the90WasComplete
+     && typeof window.ritualPulse === 'function'){
+    window.ritualPulse(document.getElementById('the90-panel'));
   }
   the90WasComplete = allDone;
 

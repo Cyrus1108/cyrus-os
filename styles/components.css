@@ -881,14 +881,8 @@ html[data-fx~="deco"] .the90-panel{ will-change:transform; }
 html[data-fx~="deco"] .sys-back[aria-label="关闭"]{ display:none !important; }
 html[data-fx~="deco"] .fin-back{ display:none !important; }
 
-/* v7.0 — 五柱黄铜立方 (herocube.js): fixed ambient sculpture behind the glass */
-#herocube{
-  position:fixed; z-index:var(--z-behind); pointer-events:none;
-  top:clamp(54px, 9vh, 130px); right:clamp(6px, 5vw, 78px);
-  width:clamp(170px, 24vw, 330px); aspect-ratio:1/1;
-  opacity:.95;
-}
-/* (sterile hide rule removed — subsumed by the html:not([data-fx~="cube"]) capability rule) */
+/* (herocube 定位规则已删——herocube.js 于 v7.33.0 退役,元素不再存在;
+   其位置由 crest.js 的君主徽记继承,样式在 #crest 小节) */
 
 /* todo rows — the same bracket language per ITEM, scaled down: resting state
    shows faint 6px left-edge brackets (visible on touch devices too); hover
@@ -1072,9 +1066,11 @@ body.mr-detail-open{ overflow:hidden; }
 .mr-detail-text::placeholder{ color:var(--ghost); }
 ::view-transition-group(mr-fly){ animation-duration:.55s; animation-timing-function:cubic-bezier(.65,0,.35,1); }
 
+/* 大日期用高对比 ink(纯 brass 满行偏重,总监督裁定 v7.36.0);
+   brass 点缀留给日期行内的强调元素与微标签 */
 html[data-fx~="deco"] #dateline{
-  color:var(--brass);
-  -webkit-text-fill-color:var(--brass);
+  color:var(--ink);
+  -webkit-text-fill-color:var(--ink);
 }
 
 /* same per-item bracket language for the JP / trading / academics checklists —
@@ -1121,6 +1117,10 @@ html[data-fx~="deco"] .row{
    documented 1em generic size for future consumers, .hn-ico fixes the nav slot size. */
 .ic{ width:1em; height:1em; }
 .hn-ico,.ic{ flex:0 0 auto; color:var(--mute); stroke:currentColor; fill:none; stroke-linejoin:round; stroke-linecap:round; transition:color var(--dur-base) var(--ease-silk,ease); }
+/* 宿主按钮驱动图标色(review v7.36.0):这些控件的 hover/状态色写在按钮上,图标
+   必须跟随——精确点名,不用 button .ic 通配(会误伤导览图标的独立配色体系) */
+.motiv-player-close .ic, .motiv-del .ic, .row-btn .ic,
+.fin-back .ic, .cal-back .ic, .store-back .ic, .motiv-back .ic{ color:inherit; }
 .hn-ico{ width:23px; height:23px; }
 .hn-tx{ display:flex; flex-direction:column; gap:1px; min-width:0; }
 .hn-en{ font-size:12px; font-weight:700; letter-spacing:.09em; color:var(--ink); }
@@ -1238,8 +1238,9 @@ body.store-locked #energy-flow, body.motiv-locked #energy-flow{ display:none; }
    capability-based via data-fx. #herocube JS only ever mounts under `cube`
    (cappa); #glass-trails is created for every `glass` theme but only shown
    under `trails` (cappa). */
-html:not([data-fx~="cube"])   #herocube    { display:none !important; }
 html:not([data-fx~="trails"]) #glass-trails{ display:none !important; }
+/* (#herocube 能力规则已删,元素随 herocube.js 退役;trails 规则保留——
+   glassInitTrails 机器还在 glass.js 里,仅被 data-fx 门禁着) */
 
 /* P3 — 君主徽记 (crest.js): the single WebGL scene, fixed ambient relief floating
    behind the The-90 panel. Same top/right-clamp placement idiom as the retired

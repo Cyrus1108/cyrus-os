@@ -36,9 +36,20 @@ body.fin-locked{ overflow:hidden; }
 .fin-back{
   background:none; border:none; color:var(--mute); font-size:14px;
   cursor:pointer; padding:6px 8px; border-radius:var(--border-radius-md);
+  display:inline-flex; align-items:center; gap:5px;
 }
+.fin-back .ic{ width:15px; height:15px; }
 .fin-back:hover{ color:var(--ink); background:var(--color-background-secondary); }
-.fin-title{ flex:1; font-family:var(--serif); font-size:20px; color:var(--ink); letter-spacing:.04em; }
+.fin-titlewrap{ flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+.fin-title{ font-family:var(--serif); font-size:20px; color:var(--ink); letter-spacing:.04em; }
+/* mono micro-label (§2.2) — module id + derived base currency / privacy state.
+   Metrics mirror the shared .sov-micro (10.5px/.2em) so the seven HUD labels
+   read as one system (review v7.36.0); extra ellipsis handling is FIN-only. */
+.fin-micro{ font-family:var(--mono); font-size:10.5px; letter-spacing:.2em;
+  text-transform:uppercase; color:var(--color-text-tertiary); line-height:1;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fin-micro b{ color:var(--mute); font-weight:600; }
+.fin-micro-meta{ color:var(--mute); }
 .fin-eye{ background:none; border:.5px solid var(--hair); border-radius:var(--border-radius-md);
   font-size:16px; cursor:pointer; padding:6px 10px; line-height:1; }
 
@@ -511,16 +522,17 @@ body.fin-locked{ overflow:hidden; }
 /* finance entry button in header — matches theme-btn */
 
 /* ════════ v7.4 — 财务 HUD 统一: same shell language as the System window.
-   glass.js wraps #finance-view into .sys-backdrop + .sys-window.fin-hud at
-   init; here the .fin-view becomes a centering stage and the window reuses
-   the System's scroll-unfurl keyframes (sysScrollOpen/Close + sysFold from
-   system.css are global). Default theme only — sterile keeps the old pane. */
+   glass.js wraps #finance-view into .sys-backdrop + .sys-window.fin-hud at init;
+   here the .fin-view becomes a transparent centering STAGE and the wrapper carries
+   the window chrome. The open/close motion is now the GSAP 「系统窗降临」 three-beat
+   choreography in glass.js (playSysDescent/playSysFurl) — the old sysScrollOpen/
+   sysFold/sysBackFade keyframe rules were retired with the keyframes (system.css)
+   and are removed here (P4). Default theme only — sterile keeps the old pane. */
 html[data-fx~="deco"] .fin-view{
   display:flex; align-items:center; justify-content:center; padding:16px;
   background:transparent;
-  /* kill the Phase-1 translateY(100%) sheet slide — with a half-transparent
-     HUD backdrop it read as the background flying up from the bottom. Fade
-     instead; the window itself unfurls via sysScrollOpen. */
+  /* kill the Phase-1 translateY(100%) sheet slide — GSAP unfurls the window; the
+     stage just cross-fades so the half-transparent backdrop doesn't fly up. */
   transform:none; opacity:0;
   transition:opacity .4s var(--ease-silk), visibility .4s var(--ease-silk);
 }
@@ -528,27 +540,6 @@ html[data-fx~="deco"] .fin-view.open{ transform:none; opacity:1; }
 html[data-fx~="deco"] .fin-view .sys-window.fin-hud{
   width:100%; max-width:1080px; max-height:94vh;
   overflow:auto; overscroll-behavior:contain;
-}
-html[data-fx~="deco"] .fin-view.open .fin-hud{
-  animation:sysScrollOpen 1100ms linear both; transform-origin:center center;
-}
-html[data-fx~="deco"] .fin-view.open .fin-hud::after{
-  animation:sysFold 1100ms linear both;
-}
-html[data-fx~="deco"] .fin-view.fin-closing .fin-hud{
-  animation:sysScrollClose 480ms cubic-bezier(0.5,0,0.78,0.2) both; transform-origin:center center;
-}
-html[data-fx~="deco"] .fin-view.fin-closing .fin-hud::after{
-  animation:sysFoldClose 480ms ease both;
-}
-html[data-fx~="deco"] .fin-view.fin-closing .sys-backdrop{
-  animation:sysBackFade 480ms var(--ease-silk) both;
-}
-@media (prefers-reduced-motion:reduce){
-  html[data-fx~="deco"] .fin-view.open .fin-hud,
-  html[data-fx~="deco"] .fin-view.open .fin-hud::after{
-    animation:none !important; clip-path:none !important; opacity:1 !important;
-  }
 }
 
 /* ── v7.34.0 review fix — borderless cards keep a TRANSPARENT baseline border ──

@@ -23,6 +23,7 @@ function openCalendar(fromHash){
   v.classList.add('open');
   v.setAttribute('aria-hidden','false');
   document.body.classList.add('cal-locked');
+  if(window.Sfx) Sfx.open();
   if(!fromHash && location.hash!=='#calendar'){ location.hash='calendar'; }
   rCalendar();
 }
@@ -30,6 +31,7 @@ function closeCalendar(fromHash){
   const v = document.getElementById('calendar-view'); if(!v) return;
   if(!calUI.open) return;                                   // already closing/closed
   calUI.open = false;
+  if(window.Sfx) Sfx.close();
   v.setAttribute('aria-hidden','true');
   calCloseModal();
   if(!fromHash && location.hash==='#calendar'){ history.replaceState(null,'',location.pathname+location.search); }
@@ -136,7 +138,7 @@ function calDayHtml(ds){
     evHtml += evs.map(e=>`<div class="cal-ev-row">
         <div class="cal-ev-time">${e.start?escH(e.start)+(e.end?'<br>'+escH(e.end):''):'全天'}</div>
         <div class="cal-ev-body"><div class="cal-ev-title">${escH(e.title)}</div>${e.loc?`<div class="cal-ev-loc">📍 ${escH(e.loc)}</div>`:''}${e.notes?`<div class="cal-ev-notes">${escH(e.notes)}</div>`:''}</div>
-        <div class="cal-ev-actions"><button class="row-btn" onclick="calEditEvent('${e.id}')">编辑</button><button class="row-btn" onclick="calDelEvent('${e.id}')">×</button></div>
+        <div class="cal-ev-actions"><button class="row-btn" onclick="calEditEvent('${e.id}')">编辑</button><button class="row-btn" onclick="calDelEvent('${e.id}')" aria-label="删除"><svg class="ic"><use href="./vendor/icons.svg#i-close"/></svg></button></div>
       </div>`).join('');
   } else {
     evHtml += `<div class="cal-empty">— 今日无行程 —</div>`;
@@ -254,6 +256,9 @@ function calJumpTo(kind, id){
 
 /* ── header button dot: lit when today has any item ── */
 function rCalDot(){
-  const btn = document.getElementById('cal-btn'); if(!btn) return;
-  btn.classList.toggle('has-today', calDayItems(TODAY).total>0);
+  const total = calDayItems(TODAY).total;
+  const btn = document.getElementById('cal-btn');
+  if(btn) btn.classList.toggle('has-today', total>0);
+  const n = document.getElementById('cal-micro-n');
+  if(n) n.textContent = total;
 }

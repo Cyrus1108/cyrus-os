@@ -21,12 +21,22 @@ body.motiv-locked{ overflow:hidden; }
   padding:calc(16px + env(safe-area-inset-top)) 18px 12px; border-bottom:.5px solid var(--hair);
 }
 .motiv-back{
+  display:inline-flex; align-items:center; gap:4px;
   background:none; border:none; color:var(--mute); font-size:14px;
   cursor:pointer; padding:6px 8px; border-radius:var(--border-radius-md);
   transition:color var(--dur-base) var(--ease-silk),background var(--dur-base) var(--ease-silk);
 }
 .motiv-back:hover{ color:var(--ink); background:var(--color-background-secondary); }
-.motiv-title{ flex:1; font-family:var(--serif); font-size:20px; color:var(--ink); letter-spacing:.04em; }
+.motiv-title{
+  flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  font-family:var(--serif); font-size:20px; color:var(--ink); letter-spacing:.04em;
+}
+/* 微标签(§2.2,mono 真实统计:视频数):右贴顶栏,不参与标题截断挤压 */
+.motiv-top .sov-micro{ flex:0 0 auto; margin:0; text-align:right; white-space:nowrap; }
+
+@media(max-width:559px){
+  .motiv-top .sov-micro{ font-size:9px; letter-spacing:.12em; max-width:38vw; overflow:hidden; text-overflow:ellipsis; }
+}
 
 .motiv-body{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:16px 14px 40px; }
 

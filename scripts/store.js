@@ -27,12 +27,15 @@ function openStore(fromHash){
   storeUI.open=true;
   v.classList.add('open'); v.setAttribute('aria-hidden','false');
   document.body.classList.add('store-locked');
+  if(window.Sfx) Sfx.open();
   if(!fromHash && location.hash!=='#store'){ location.hash='store'; }
   rStore();
 }
 function closeStore(fromHash){
   const v=document.getElementById('store-view'); if(!v || !storeUI.open) return;
-  storeUI.open=false; v.setAttribute('aria-hidden','true'); storeCloseModal();
+  storeUI.open=false;
+  if(window.Sfx) Sfx.close();
+  v.setAttribute('aria-hidden','true'); storeCloseModal();
   if(!fromHash && location.hash==='#store'){ history.replaceState(null,'',location.pathname+location.search); }
   const hud=v.querySelector('.sys-window');
   const reduce=window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches;
@@ -89,7 +92,7 @@ function storeCardHtml(i){
   const link=storeSafeLink(i.link);
   const img=i.image_path
     ? `<img class="store-card-img" data-path="${escH(i.image_path)}" alt="">`
-    : `<div class="store-card-img store-noimg"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M5 8.5h14l-1.1 10.5H6.1z"/><path d="M9 8.5a3 3 0 0 1 6 0"/></svg></div>`;
+    : `<div class="store-card-img store-noimg"><svg class="ic"><use href="./vendor/icons.svg#i-shop"/></svg></div>`;
   return `<div class="store-card ${bought?'is-bought':''} ${priCls}">
       <div class="store-card-imgwrap">${img}${pri>=2?'<span class="store-pri-flag">★ 很想</span>':''}${bought?'<span class="store-bought-flag">已买</span>':''}</div>
       <div class="store-card-body">
@@ -100,7 +103,7 @@ function storeCardHtml(i){
           ${link?`<a class="store-card-link" href="${escH(link)}" target="_blank" rel="noopener noreferrer">去看看 ↗</a>`:''}
           <button class="row-btn" onclick="storeToggleBought('${i.id}')">${bought?'↩ 还原':'✓ 已买'}</button>
           <button class="row-btn" onclick="storeEdit('${i.id}')">编辑</button>
-          <button class="row-btn" onclick="storeDel('${i.id}')">×</button>
+          <button class="row-btn" onclick="storeDel('${i.id}')" aria-label="删除"><svg class="ic"><use href="./vendor/icons.svg#i-close"/></svg></button>
         </div>
       </div>
     </div>`;
@@ -234,4 +237,10 @@ function storeDel(id){
 }
 
 /* ── nav button dot: lit while there are un-bought wishes ── */
-function rStoreDot(){ const b=document.getElementById('shop-btn'); if(!b) return; b.classList.toggle('has-today', storeWants().length>0); }
+function rStoreDot(){
+  const wantN = storeWants().length;
+  const b=document.getElementById('shop-btn');
+  if(b) b.classList.toggle('has-today', wantN>0);
+  const n=document.getElementById('store-micro-n');
+  if(n) n.textContent = wantN;
+}

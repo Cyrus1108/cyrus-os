@@ -40,7 +40,7 @@ function finCss(v){ return getComputedStyle(document.documentElement).getPropert
 function finChartColors(){
   return { ink:finCss('--ink'), mute:finCss('--mute'), ghost:finCss('--ghost'),
            hair:finCss('--hair'), brass:finCss('--brass'),
-           pos:finCss('--fin-pos')||'#3FAE6B', neg:finCss('--fin-neg')||'#E5704B' };
+           pos:finCss('--fin-pos')||'#5FC88A', neg:finCss('--fin-neg')||'#E8857A' };
 }
 
 const finAna = { range:'month', dim:'category', kind:'expense', from:null, to:null, charts:[] };

@@ -259,6 +259,10 @@ function openFinance(fromHash){
   v.classList.add('open');
   v.setAttribute('aria-hidden','false');
   document.body.classList.add('fin-locked');
+  // HUD-open cue — this body only runs once the lowday.js openFinance wrapper has
+  // passed its low-day lock (it returns before calling through), so the sound
+  // fires strictly after the lock check, on the real open.
+  if(window.Sfx && typeof Sfx.open==='function') Sfx.open();
   // no pageDepth: the HUD backdrop already covers the page; receding it made
   // the half-transparent sys-backdrop look like the background was flying up
   if(!fromHash && location.hash!=='#finance'){ location.hash='finance'; }
@@ -280,6 +284,7 @@ function closeFinance(fromHash){
   const v = document.getElementById('finance-view'); if(!v) return;
   if(!finUI.open) return;                                   // already closing/closed
   finUI.open = false;
+  if(window.Sfx && typeof Sfx.close==='function') Sfx.close();
   v.setAttribute('aria-hidden','true');
   finCloseModal();
   if(typeof finAnaDestroy==='function') finAnaDestroy();    // tear down Chart.js if closing from the analytics tab
@@ -302,7 +307,15 @@ function finSwitchTab(tab){
   withViewTransition(()=>{ finUI.tab=tab; finUI.acctMgr=false; rFinance(); });
 }
 function finTogglePrivacy(){ finUI.privacy=!finUI.privacy; saveLSRaw('fin_privacy', finUI.privacy); finUpdateEye(); rFinance(); }
-function finUpdateEye(){ const e=document.getElementById('fin-eye'); if(e){ e.textContent = finUI.privacy?'🙈':'👁'; e.setAttribute('aria-pressed', String(finUI.privacy)); e.setAttribute('aria-label', finUI.privacy?'显示金额':'隐藏金额'); } }
+function finUpdateEye(){
+  const e=document.getElementById('fin-eye');
+  if(e){ e.textContent = finUI.privacy?'🙈':'👁'; e.setAttribute('aria-pressed', String(finUI.privacy)); e.setAttribute('aria-label', finUI.privacy?'显示金额':'隐藏金额'); }
+  // HUD micro-label derived value: base currency (real config) + privacy STATE.
+  // Privacy is a boolean flag, never an amount — the "value never enters the DOM"
+  // finance red line stays intact.
+  const ml=document.getElementById('fin-micro-meta');
+  if(ml){ const base=(typeof S!=='undefined'&&S.fin&&S.fin.baseCurrency)||'TWD'; ml.textContent = ` · BASE ${base}${finUI.privacy?' · 遮罩':''}`; }
+}
 
 /* ════════════ main render ════════════ */
 function rFinance(){

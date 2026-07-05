@@ -1,5 +1,5 @@
 @keyframes ripple{to{transform:scale(4);opacity:0;}}
-@keyframes pillFlash{0%{box-shadow:0 0 0 0 var(--brass-glow);}50%{box-shadow:0 0 0 6px rgba(168,132,85,0);}100%{box-shadow:0 0 0 0 rgba(168,132,85,0);}}
+@keyframes pillFlash{0%{box-shadow:0 0 0 0 var(--brass-glow);}50%{box-shadow:0 0 0 6px rgba(157,123,230,0);}100%{box-shadow:0 0 0 0 rgba(157,123,230,0);}}
 @keyframes paneFade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
 @keyframes widgetFade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
 @keyframes editSlide{from{opacity:0;transform:translateX(-4px);}to{opacity:1;transform:translateX(0);}}
@@ -61,22 +61,8 @@ body.booted .panel{ animation:none; }
 /* ③ 倒计时 tagline 常驻辉光退役(§2.4:静息零辉光)。tagline 改纯 var(--brass) 静态;
    P2 再给它「终端点亮」终态动画。 */
 
-/* ④ All-done payoff — one-time celebration the moment all 5 targets are met.
-   At that point the 5 cells are already solid brass, so a brass sweep would be
-   invisible: use a WARM-WHITE shine (reads on brass) plus a glow-ring flash. */
-@keyframes the90Sweep{ to{ transform:translateX(130%); } }
-@keyframes the90CelebrateGlow{
-  0%  { box-shadow:0 0 0 0 transparent; }
-  35% { box-shadow:0 0 14px 2px var(--brass-glow); }
-  100%{ box-shadow:0 0 0 0 transparent; }
-}
-.the90-cells.celebrate{ animation:the90CelebrateGlow 800ms var(--ease-silk); }
-.the90-cells.celebrate::after{
-  content:''; position:absolute; inset:0; pointer-events:none; z-index:3;
-  background:linear-gradient(105deg,transparent 35%,rgba(255,240,214,.55) 50%,transparent 65%);
-  transform:translateX(-130%);
-  animation:the90Sweep 750ms var(--ease-silk);
-}
+/* ④ 旧 all-done 格子庆祝(the90Sweep/the90CelebrateGlow/.celebrate)已退役——
+   满勤仪式统一由 beat.js 的 ritualPulse 承担(面板级辉光+典礼金扫光+粒子,v7.36.0)。 */
 
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important;}

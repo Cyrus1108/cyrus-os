@@ -24,6 +24,7 @@ function openAi(fromHash){
   v.classList.add('open');
   v.setAttribute('aria-hidden','false');
   document.body.classList.add('ai-locked');
+  if(window.Sfx) Sfx.open();
   if(!fromHash && location.hash!=='#ai'){ location.hash='ai'; }
   rAi();
 }
@@ -32,6 +33,7 @@ function closeAi(fromHash){
   if(!aiUI.open) return;
   aiUI.open = false;
   v.setAttribute('aria-hidden','true');
+  if(window.Sfx) Sfx.close();
   aiCloseModal();
   aiDestroyCharts();
   if(!fromHash && location.hash==='#ai'){ history.replaceState(null,'',location.pathname+location.search); }
@@ -97,6 +99,10 @@ function aiStreak(){
 function rAi(){
   if(!aiUI.open) return;
   const body=document.getElementById('ai-body'); if(!body) return;
+  // AUT.11 micro-tag (item 1): real streak stat, not decorative — cheap textContent
+  // set, safe to re-run on every render (no animation/rebuild involved).
+  const mt=document.getElementById('ai-micro');
+  if(mt) mt.innerHTML = '<b>AUT.11</b> // 连续 '+aiStreak()+' 天';
   document.querySelectorAll('#ai-view .ai-tab').forEach(b=> b.classList.toggle('active', b.dataset.tab===aiUI.tab));
   if(aiUI.tab==='trends') rAiTrends(body); else rAiLog(body);
 }

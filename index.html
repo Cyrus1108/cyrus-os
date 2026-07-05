@@ -551,8 +551,11 @@
 <!-- ════ Finance module — full-screen view (Phase 1) ════ -->
 <div id="finance-view" class="fin-view" aria-hidden="true">
   <div class="fin-top">
-    <button class="fin-back" onclick="closeFinance()">← 返回</button>
-    <div class="fin-title">财务 · Finance</div>
+    <button class="fin-back" onclick="closeFinance()"><svg class="ic" aria-hidden="true"><use href="./vendor/icons.svg#i-back"/></svg>返回</button>
+    <div class="fin-titlewrap">
+      <div class="fin-micro"><b>SYS.12</b> // FINANCE<span id="fin-micro-meta" class="fin-micro-meta"></span></div>
+      <div class="fin-title">财务 · Finance</div>
+    </div>
     <button id="fin-eye" class="fin-eye" onclick="finTogglePrivacy()" title="隐藏金额">&#128065;</button>
   </div>
   <div class="fin-tabs">
@@ -569,8 +572,11 @@
 <!-- ════ Fitness module — full-screen view (v7.11) ════ -->
 <div id="fitness-view" class="fit-view" aria-hidden="true">
   <div class="fit-top">
-    <button class="fit-back" onclick="closeFitness()">← 返回</button>
-    <div class="fit-title">健身 · Fitness</div>
+    <button class="fit-back" onclick="closeFitness()"><svg class="ic" aria-hidden="true"><use href="./vendor/icons.svg#i-back"/></svg>返回</button>
+    <div class="fit-top-main">
+      <div class="fit-title">健身 · Fitness</div>
+      <div class="sov-micro" id="fit-micro"><b>FIT.10</b> // 连续 0 天</div>
+    </div>
   </div>
   <div class="fit-tabs">
     <button class="fit-tab active" data-tab="today" onclick="fitSwitchTab('today')">今日</button>
@@ -585,8 +591,9 @@
 <!-- ════ Calendar module — full-screen view (v7.13) ════ -->
 <div id="calendar-view" class="cal-view" aria-hidden="true">
   <div class="cal-top">
-    <button class="cal-back" onclick="closeCalendar()">← 返回</button>
+    <button class="cal-back" onclick="closeCalendar()"><svg class="ic"><use href="./vendor/icons.svg#i-back"/></svg> 返回</button>
     <div class="cal-title">日历 · Calendar</div>
+    <div class="sov-micro" id="cal-micro"><b>SYS.07</b> // CALENDAR · TODAY <span id="cal-micro-n">0</span></div>
   </div>
   <div id="cal-month" class="cal-month"></div>
   <div id="cal-day" class="cal-day"></div>
@@ -611,8 +618,11 @@
     </div>
   </div>
   <div class="ai-top">
-    <button class="ai-back" onclick="closeAi()">← 返回</button>
-    <div class="ai-title">AI Automation</div>
+    <button class="ai-back" onclick="closeAi()"><svg class="ic" aria-hidden="true"><use href="./vendor/icons.svg#i-back"/></svg>返回</button>
+    <div class="ai-top-main">
+      <div class="ai-title">AI Automation</div>
+      <div class="sov-micro" id="ai-micro"><b>AUT.11</b> // 连续 0 天</div>
+    </div>
   </div>
   <div class="ai-tabs">
     <button class="ai-tab active" data-tab="log" onclick="aiSwitchTab('log')">记录</button>
@@ -625,8 +635,9 @@
 <!-- ════ 心愿单 · Wishlist / Store — full-screen HUD ════ -->
 <div id="store-view" class="store-view" aria-hidden="true">
   <div class="store-top">
-    <button class="store-back" onclick="closeStore()">← 返回</button>
+    <button class="store-back" onclick="closeStore()"><svg class="ic"><use href="./vendor/icons.svg#i-back"/></svg> 返回</button>
     <div class="store-title">心愿单 · Wishlist</div>
+    <div class="sov-micro" id="store-micro"><b>SYS.08</b> // WISHLIST · WANT <span id="store-micro-n">0</span></div>
   </div>
   <div id="store-body" class="store-body"></div>
   <div id="store-modal" class="store-modal"></div>
@@ -635,14 +646,15 @@
 <!-- ════ Motivation Center — full-screen YouTube video grid ════ -->
 <div id="motivation-view" class="motiv-view" aria-hidden="true">
   <div class="motiv-top">
-    <button class="motiv-back" onclick="closeMotivation()">← 返回</button>
+    <button class="motiv-back" onclick="closeMotivation()"><svg class="ic"><use href="./vendor/icons.svg#i-back"/></svg> 返回</button>
     <div class="motiv-title">动力中心 · Motivation</div>
+    <div class="sov-micro" id="motiv-micro"><b>SYS.09</b> // MOTIVATION · VID <span id="motiv-micro-n">0</span></div>
   </div>
   <div id="motiv-body" class="motiv-body"></div>
 </div>
 <div id="motiv-player" class="motiv-player" aria-hidden="true" onclick="if(event.target===this)closeMotivPlayer()">
   <div class="motiv-player-card">
-    <button class="motiv-player-close" onclick="closeMotivPlayer()" aria-label="关闭">&#10005;</button>
+    <button class="motiv-player-close" onclick="closeMotivPlayer()" aria-label="关闭"><svg class="ic"><use href="./vendor/icons.svg#i-close"/></svg></button>
     <div id="motiv-player-frame" class="motiv-player-frame"></div>
   </div>
 </div>
@@ -659,9 +671,12 @@
     <div class="sys-rod top"></div>
     <div class="sys-rod bottom"></div>
     <div class="sys-top">
-      <div class="sys-title">系统 · STATUS</div>
+      <div class="sys-top-main">
+        <div class="sys-title">系统 · STATUS</div>
+        <div class="sov-micro"><b>SYS.00</b> // 母舰</div>
+      </div>
       <button class="sys-back sys-mute" onclick="sfxToggleMute(this)" aria-label="声音开关">&#9834;</button>
-      <button class="sys-back" onclick="closeSystem()" aria-label="关闭">&#10005;</button>
+      <button class="sys-back" onclick="closeSystem()" aria-label="关闭"><svg class="ic"><use href="./vendor/icons.svg#i-close"/></svg></button>
     </div>
     <div class="sys-tabs">
       <button class="sys-tab active" data-tab="status" onclick="sysSwitchTab('status')">状态</button>
@@ -689,7 +704,8 @@
 <script src="./scripts/swipe.js"></script>
 <script src="./scripts/notifications.js"></script>
 <script src="./scripts/drawer.js"></script>
-<script src="./scripts/markets.js"></script>
+<!-- markets.js 下线(v7.36.0):O1 核实完全孤立(零调用入口、DOM 宿主不存在)。
+     文件留盘待日后并入 Trading Desk 专注页(REDESIGN §6),仅不再加载/缓存。 -->
 <script src="./scripts/morning.js"></script>
 <script src="./scripts/academics.js"></script>
 <script src="./scripts/japanese.js"></script>

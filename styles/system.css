@@ -65,13 +65,19 @@ body.sys-locked{ overflow:hidden; }
    窗体直接子块),不再需要 sysContentIn 卷轴内容淡入。reduced-motion 下内容默认 opacity:1
    (无 CSS 置 0),glass.js 亦不置 0,故静态可见。 */
 .sys-top{ display:flex; align-items:center; gap:12px; padding:14px 16px 10px; }
-.sys-title{ flex:1; font-family:var(--mono); font-size:12px; letter-spacing:.24em; text-transform:uppercase; color:var(--brass); }
+/* SYS.00 母舰 micro-tag rides under the title (item 1: real mono microlabel,
+   not decorative — 母舰 = this HUD is the flagship/master of the six HUD clones). */
+.sys-top-main{ flex:1; min-width:0; }
+.sys-top-main .sov-micro{ margin:3px 0 0; }
+.sys-title{ font-family:var(--mono); font-size:12px; letter-spacing:.24em; text-transform:uppercase; color:var(--brass); }
 .sys-back{
+  display:flex; align-items:center; justify-content:center;
   background:none; border:.5px solid var(--hair); color:var(--mute);
   width:28px; height:28px; line-height:1; font-size:13px; cursor:pointer; border-radius:var(--border-radius-md);
   transition:color var(--dur-base) var(--ease-silk),border-color var(--dur-base) var(--ease-silk);
 }
 .sys-back:hover{ color:var(--brass); border-color:var(--brass); }
+.sys-back .ic{ color:inherit; width:14px; height:14px; }   /* item 3: × glyph → #i-close sprite */
 /* sound toggle in the title bar — monochrome ♪, diagonal slash when muted */
 .sys-mute{ position:relative; font-size:15px; line-height:1; }
 .sys-mute.sfx-muted{ color:var(--ghost); }
@@ -106,7 +112,8 @@ body.sys-locked{ overflow:hidden; }
 .sys-q-challenge .sys-q-title{ font-family:var(--sans); font-size:14px; }
 .sys-q-daily{ display:flex; flex-direction:column; gap:2px; margin-bottom:6px; }
 .sys-q-line{ display:flex; align-items:center; gap:9px; font-size:13px; color:var(--ink); padding:5px 2px; }
-.sys-q-line .sys-q-check{ font-size:13px; color:var(--ghost); width:16px; text-align:center; }
+.sys-q-line .sys-q-check{ display:inline-flex; align-items:center; justify-content:center; font-size:13px; color:var(--ghost); width:16px; text-align:center; }
+.sys-q-line .sys-q-check .ic{ color:inherit; width:13px; height:13px; }   /* item 3: done ✓ → #i-check sprite */
 .sys-q-line.done{ color:var(--mute); }
 .sys-q-line.done .sys-q-check{ color:var(--brass); }
 .sys-q-sides{ display:flex; flex-direction:column; gap:6px; }
@@ -217,14 +224,22 @@ body.sys-locked{ overflow:hidden; }
 .sys-attr-bar{ height:5px; border-radius:3px; background:var(--color-background-tertiary); border:.5px solid var(--hair); overflow:hidden; }
 .sys-attr-bar > i{ display:block; height:100%; background:var(--brass); transition:width var(--dur-slow) var(--ease-press); }
 .sys-attr-val{ font-family:var(--mono); font-size:13px; color:var(--brass); text-align:right; }
-/* B · per-pillar colour coding — distinct hues, all kept in the metallic family.
+/* B · per-pillar colour coding — SOVEREIGN violet-anchored six-hue ring (REDESIGN
+   积压裁定项, P4/S2). The old 黄铜 metal set (red-copper/olive-bronze/gold/warm-
+   platinum/dark-bronze/patina) clashed with the void-purple surface; replaced with
+   six hues spaced 50° apart, S50%/L70% uniform, spanning green→red through the
+   brand's own violet (WIS sits at H260, a hair off --brass's H259 — "closest to
+   the source"). Legacy → new, all AA-checked against card surface #120D22:
+     STR 力量 #c66a45→#D98CCC H310 (7.75:1)   AGI 敏捷 #94a05c→#99D98C H110 (11.44:1)
+     INT 智力 #cda63f→#8CB3D9 H210 (8.65:1)   WIS 智慧 #d6c391→#A68CD9 H260 (6.67:1)
+     VIT 体力 #9c6b3e→#D98C8C H360 (7.30:1)   CRE 创造 #5aa08b→#8CD9BF H160 (11.56:1)
    --ac is set on the row and inherited by the icon / bar / value below. */
-.sys-attr.sa-STR{ --ac:#c66a45; }  /* 力量 · 红铜 */
-.sys-attr.sa-AGI{ --ac:#94a05c; }  /* 敏捷 · 青铜 */
-.sys-attr.sa-INT{ --ac:#cda63f; }  /* 智力 · 赤金 */
-.sys-attr.sa-WIS{ --ac:#d6c391; }  /* 智慧 · 暖白金 */
-.sys-attr.sa-VIT{ --ac:#9c6b3e; }  /* 体力 · 深铜 */
-.sys-attr.sa-CRE{ --ac:#5aa08b; }  /* 创造 · 铜绿（brass patina） */
+.sys-attr.sa-STR{ --ac:#D98CCC; }  /* 力量 · 绯紫 H310 */
+.sys-attr.sa-AGI{ --ac:#99D98C; }  /* 敏捷 · 苍锐绿 H110 */
+.sys-attr.sa-INT{ --ac:#8CB3D9; }  /* 智力 · 星蓝 H210 */
+.sys-attr.sa-WIS{ --ac:#A68CD9; }  /* 智慧 · 孤月紫 H260 */
+.sys-attr.sa-VIT{ --ac:#D98C8C; }  /* 体力 · 赤瑚红 H0/360 */
+.sys-attr.sa-CRE{ --ac:#8CD9BF; }  /* 创造 · 深海绿松 H160(承 patina 血统) */
 .sys-attr-icon{ color:var(--ac, var(--brass)); }
 .sys-attr-bar > i{ background:var(--ac, var(--brass)); }
 .sys-attr-val{ color:var(--ac, var(--brass)); }
@@ -306,12 +321,17 @@ body.sys-locked{ overflow:hidden; }
 .sys-ach-prog > i{ display:block; height:100%; background:var(--brass-soft); }
 .sys-ach-progn{ font-family:var(--mono); font-size:9px; color:var(--mute); margin-top:4px; letter-spacing:.06em; }
 
-/* tier badge hue ramp — conveys an achievement's weight by colour + glow.
-   Reuses the attribute palette (red-bronze → warm white → 赤金 → pale platinum). */
-.sys-ach.tier-bronze.unlocked   .sys-ach-badge{ color:#c66a45; }
-.sys-ach.tier-silver.unlocked   .sys-ach-badge{ color:#d6c391; }
-.sys-ach.tier-gold.unlocked     .sys-ach-badge{ color:#cda63f; }
-.sys-ach.tier-platinum.unlocked .sys-ach-badge{ color:#e8dcc0; }
+/* tier badge hue ramp — conveys an achievement's weight by colour, re-cast in the
+   violet family (was a 黄铜 red-bronze→pale-platinum hue ramp; clashed with the
+   void-purple surface). Bronze/silver/gold/platinum keep their prestige ordering
+   through saturation+lightness (dusky → pale-neutral → rich-vivid → near-white)
+   instead of a hue ramp. #E8C878 典礼金 is UNCHANGED — reserved for ceremony only
+   (celebration modal / brassFlow, below); this ramp never touches it. AA vs card
+   surface #120D22: bronze 5.12:1, silver 9.65:1, gold 6.04:1, platinum 13.74:1. */
+.sys-ach.tier-bronze.unlocked   .sys-ach-badge{ color:#AF6BBD; }  /* 铜 H290 S38 L58 */
+.sys-ach.tier-silver.unlocked   .sys-ach-badge{ color:#BCB6C9; }  /* 银 H260 S15 L75 */
+.sys-ach.tier-gold.unlocked     .sys-ach-badge{ color:#B976DB; }  /* 金 H280 S58 L66 */
+.sys-ach.tier-platinum.unlocked .sys-ach-badge{ color:#DED9E8; }  /* 白金 H260 S25 L88 */
 /* masked (hidden + locked): neutral so the badge colour never leaks the tier */
 .sys-ach.tier-hidden .sys-ach-badge{ color:var(--brass-soft); opacity:.5; }
 

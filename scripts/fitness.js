@@ -33,6 +33,7 @@ function openFitness(fromHash){
   v.classList.add('open');
   v.setAttribute('aria-hidden','false');
   document.body.classList.add('fit-locked');
+  if(window.Sfx) Sfx.open();
   if(!fromHash && location.hash!=='#fitness'){ location.hash='fitness'; }
   // seed the preset exercise library the first time (only once the DB is known empty)
   if(typeof initialPullDone!=='undefined' && initialPullDone && S.fit.exercises.length===0){
@@ -49,6 +50,7 @@ function closeFitness(fromHash){
   if(!fitUI.open) return;                                   // already closing/closed
   fitUI.open = false;
   v.setAttribute('aria-hidden','true');
+  if(window.Sfx) Sfx.close();
   fitCloseModal();
   if(fitTimer.up.running) fitSaveDuration();   // flush the running stopwatch's elapsed before we stop the ticker
   fitStopTicker(); fitDestroyCharts();
@@ -203,6 +205,10 @@ function fitPlanWeekComplete(){
 function rFitness(){
   if(!fitUI.open) return;
   const body=document.getElementById('fit-body'); if(!body) return;
+  // FIT.10 micro-tag (item 1): real streak stat, not decorative — cheap textContent
+  // set, safe to re-run on every render (no animation/rebuild involved).
+  const mt=document.getElementById('fit-micro');
+  if(mt) mt.innerHTML = '<b>FIT.10</b> // 连续 '+fitComputeStreak()+' 天';
   document.querySelectorAll('#fitness-view .fit-tab').forEach(b=> b.classList.toggle('active', b.dataset.tab===fitUI.tab));
   if(fitUI.tab==='today') rFitToday(body);
   else if(fitUI.tab==='plan') rFitPlan(body);

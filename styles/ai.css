@@ -24,9 +24,13 @@ body.ai-locked{ overflow:hidden; }
   border-bottom:.5px solid var(--hair);
   position:sticky; top:0; z-index:3; background:var(--color-background-primary);
 }
-.ai-back{ background:none; border:none; color:var(--mute); font-size:14px; cursor:pointer; padding:6px 8px; border-radius:var(--border-radius-md); }
+.ai-back{ display:inline-flex; align-items:center; gap:5px; background:none; border:none; color:var(--mute); font-size:14px; cursor:pointer; padding:6px 8px; border-radius:var(--border-radius-md); }
 .ai-back:hover{ color:var(--ink); background:var(--color-background-secondary); }
-.ai-title{ flex:1; font-family:var(--serif); font-size:20px; color:var(--ink); letter-spacing:.04em; }
+.ai-back .ic{ color:inherit; width:15px; height:15px; }   /* item 3: ← 返回 glyph → #i-back sprite (mirrors .fin-back/.cal-back) */
+/* AUT.11 micro-tag rides under the title (item 1: real streak stat, set by rAi) */
+.ai-top-main{ flex:1; min-width:0; }
+.ai-top-main .sov-micro{ margin:3px 0 0; }
+.ai-title{ font-family:var(--serif); font-size:20px; color:var(--ink); letter-spacing:.04em; }
 
 .ai-tabs{ display:flex; gap:14px; padding:8px 18px 0; }
 .ai-tab{ background:none; border:none; color:var(--mute); font-size:14px; padding:8px 2px; cursor:pointer; border-bottom:2px solid transparent; }
@@ -46,7 +50,7 @@ body.ai-locked{ overflow:hidden; }
 /* ── log ── */
 .ai-date-head{ font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ghost); margin:14px 0 6px; }
 .ai-row{ display:flex; gap:10px; align-items:flex-start; padding:9px 0; border-bottom:.5px solid var(--hair); }
-.ai-kind{ flex-shrink:0; font-size:10px; padding:3px 8px; border-radius:999px; line-height:1.3; }
+.ai-kind{ flex-shrink:0; font-family:var(--mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; padding:3px 8px; border-radius:999px; line-height:1.3; }
 .ai-kind-built{ color:var(--brass); background:color-mix(in srgb, var(--brass) 14%, transparent); }
 .ai-kind-learned{ color:#4B89E5; background:color-mix(in srgb,#4B89E5 14%, transparent); }
 .ai-kind-shipped{ color:#3FAE6B; background:color-mix(in srgb,#3FAE6B 16%, transparent); }
@@ -76,7 +80,13 @@ body.ai-locked{ overflow:hidden; }
 #ai-btn{ position:relative; }
 #ai-btn.has-today::after{ content:""; position:absolute; top:4px; right:4px; width:6px; height:6px; border-radius:50%; background:var(--brass); }
 
-/* ════ default theme (cappa): glass .sys-window.ai-hud + scroll-unfurl ════ */
+/* ════ default theme (SOVEREIGN): glass .sys-window.ai-hud — glass.js owns the
+   open/close choreography (GSAP three-beat descent, playSysDescent/playSysFurl);
+   .ai-view is just the centering stage. (v_P4S2: dropped the dead sysScrollOpen/
+   sysFold/sysScrollClose/sysFoldClose/sysBackFade animation references — those
+   @keyframes were retired from system.css and `.ai-hud::after` had no `content`,
+   so it never painted anyway.) transform-origin:center stays as the GSAP scaleY
+   pivot's sane default before glass.js's first inline transformOrigin set. ════ */
 html[data-fx~="deco"] .ai-view{
   display:flex; align-items:center; justify-content:center; padding:16px;
   background:transparent;
@@ -88,16 +98,9 @@ html[data-fx~="deco"] .ai-view .sys-window.ai-hud{
   width:100%; max-width:600px; max-height:94vh;
   overflow:auto; overscroll-behavior:contain;
 }
-html[data-fx~="deco"] .ai-view.open .ai-hud{ animation:sysScrollOpen 1100ms linear both; transform-origin:center center; }
-html[data-fx~="deco"] .ai-view.open .ai-hud::after{ animation:sysFold 1100ms linear both; }
-html[data-fx~="deco"] .ai-view.ai-closing .ai-hud{ animation:sysScrollClose 480ms cubic-bezier(0.5,0,0.78,0.2) both; transform-origin:center center; }
-html[data-fx~="deco"] .ai-view.ai-closing .ai-hud::after{ animation:sysFoldClose 480ms ease both; }
-html[data-fx~="deco"] .ai-view.ai-closing .sys-backdrop{ animation:sysBackFade 480ms var(--ease-silk) both; }
+html[data-fx~="deco"] .ai-view.open .ai-hud,
+html[data-fx~="deco"] .ai-view.ai-closing .ai-hud{ transform-origin:center center; }
 html[data-fx~="deco"] .ai-view .ai-top{ background:transparent; }
-@media (prefers-reduced-motion:reduce){
-  html[data-fx~="deco"] .ai-view.open .ai-hud,
-  html[data-fx~="deco"] .ai-view.open .ai-hud::after{ animation:none !important; clip-path:none !important; opacity:1 !important; }
-}
 @media(max-width:559px){
   html[data-fx~="deco"] .ai-view .sys-window.ai-hud{ max-height:96vh; }
 }

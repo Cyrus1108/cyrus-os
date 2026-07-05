@@ -26,12 +26,18 @@ function openMotivation(fromHash){
   v.classList.add('open');
   v.setAttribute('aria-hidden','false');
   document.body.classList.add('motiv-locked');
+  if(window.Sfx) Sfx.open();
   if(!fromHash && location.hash!=='#motivation'){ location.hash='motivation'; }
   rMotivation();
 }
 function closeMotivation(fromHash){
   const v = document.getElementById('motivation-view'); if(!v) return;
+  if(!motivUI.open) return;   // 兄弟 HUD 同款守卫:auth 登出的 force-close-all 依赖已关即静默(不响幽灵 close 音)
   motivUI.open = false;
+  // if a video is playing, its own close (below) already rings the cue —
+  // don't double up on a single "back out of everything" gesture.
+  const hadPlayer = !!motivUI.playing;
+  if(window.Sfx && !hadPlayer) Sfx.close();
   v.classList.remove('open');
   v.setAttribute('aria-hidden','true');
   document.body.classList.remove('motiv-locked');
@@ -58,6 +64,7 @@ function rMotivation(){
   if(!motivUI.open) return;
   const body = document.getElementById('motiv-body'); if(!body) return;
   const vids = (S.motiv && S.motiv.videos) || [];
+  const microN = document.getElementById('motiv-micro-n'); if(microN) microN.textContent = vids.length;
 
   // static shell built once (keeps the inputs + their focus/value across renders)
   if(!body.querySelector('.motiv-add')){
@@ -102,7 +109,7 @@ function rMotivation(){
           <span class="motiv-play">&#9658;</span>
         </div>
         <div class="motiv-card-title">${escH(v.title || '未命名')}</div>
-        <button class="motiv-del" onclick="event.stopPropagation();delMotivVideo('${v.id}')" title="删除" aria-label="删除">&#10005;</button>`;
+        <button class="motiv-del" onclick="event.stopPropagation();delMotivVideo('${v.id}')" title="删除" aria-label="删除"><svg class="ic"><use href="./vendor/icons.svg#i-close"/></svg></button>`;
     } else {
       const t = card.querySelector('.motiv-card-title');
       const title = escH(v.title || '未命名');
@@ -154,6 +161,7 @@ function delMotivVideo(id){
 function playMotiv(id){
   const v = S.motiv.videos.find(x => x.id === id); if(!v) return;
   motivUI.playing = id;
+  if(window.Sfx) Sfx.open();
   const frame = document.getElementById('motiv-player-frame');
   if(frame){
     frame.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${v.videoId}?autoplay=1&rel=0"`
@@ -165,6 +173,7 @@ function playMotiv(id){
   if(p){ p.classList.add('open'); p.setAttribute('aria-hidden','false'); }
 }
 function closeMotivPlayer(){
+  if(motivUI.playing && window.Sfx) Sfx.close();
   motivUI.playing = null;
   const p = document.getElementById('motiv-player');
   if(p){ p.classList.remove('open'); p.setAttribute('aria-hidden','true'); }

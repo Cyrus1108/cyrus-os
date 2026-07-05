@@ -29,8 +29,10 @@ const RPG_ACTIVITY_ATTR = {
   V:   { VIT:1, WIS:1, INT:1 },                         // 性能量管理
 };
 const RPG_TITLES = { E:'觉醒者', D:'挑战者', C:'攀登者', B:'破限者', A:'支配者', S:'君主' };
-// per-attr hues — MUST mirror the .sa-* colours in system.css (used for SVG fills)
-const RPG_ATTR_COLOR = { STR:'#c66a45', AGI:'#94a05c', INT:'#cda63f', WIS:'#d6c391', VIT:'#9c6b3e', CRE:'#5aa08b' };
+// per-attr hues — MUST mirror the .sa-* colours in system.css (used for SVG fills).
+// SOVEREIGN violet-anchored six-hue ring (50° apart, S50/L70) — see system.css
+// .sys-attr.sa-* comment for the legacy-hex → new-hex table + AA contrast check.
+const RPG_ATTR_COLOR = { STR:'#D98CCC', AGI:'#99D98C', INT:'#8CB3D9', WIS:'#A68CD9', VIT:'#D98C8C', CRE:'#8CD9BF' };
 
 /* ── pure helpers ── */
 function rpgTargets(){
@@ -710,7 +712,7 @@ function rpgRadarSVG(rpg){
   const weak = (typeof rpgWeakestAttr==='function') ? rpgWeakestAttr(rpg.attrs) : null;
   const data = ids.map((k,i)=>{
     const v = rpg.attrs[k];
-    return { i, k, v, name:RPG_ATTR_NAME[k]||k, pt:P(i, rad(v)), color:RPG_ATTR_COLOR[k]||'#a88455' };
+    return { i, k, v, name:RPG_ATTR_NAME[k]||k, pt:P(i, rad(v)), color:RPG_ATTR_COLOR[k]||'#9D7BE6' };
   });
   let dots='', labels='';
   data.forEach(d=>{
@@ -906,7 +908,11 @@ function rSysQuests(body){
 
   const dailyLines = targets.map(t=>{
     const met = (typeof the90ScoreMet==='function') && the90ScoreMet(todayScores[t.id], phase);
-    return `<div class="sys-q-line ${met?'done':''}"><span class="sys-q-check">${met?'✓':'○'}</span>${escH(t.label)}</div>`;
+    // item 3: ✓ glyph → #i-check sprite (done state only; ○ stays a plain glyph —
+    // it reads as an empty ring at 13px and a matching outline symbol isn't in
+    // the sprite, so swapping it would cost more legibility than it buys).
+    const checkHtml = met ? '<svg class="ic"><use href="./vendor/icons.svg#i-check"/></svg>' : '○';
+    return `<div class="sys-q-line ${met?'done':''}"><span class="sys-q-check">${checkHtml}</span>${escH(t.label)}</div>`;
   }).join('');
 
   const d = S.rpg.daily || {};

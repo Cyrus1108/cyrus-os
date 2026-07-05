@@ -25,11 +25,17 @@ body.store-locked{ overflow:hidden; }
   position:sticky; top:0; z-index:3; background:var(--color-background-primary);
 }
 .store-back{
+  display:inline-flex; align-items:center; gap:4px;
   background:none; border:none; color:var(--mute); font-size:14px;
   cursor:pointer; padding:6px 8px; border-radius:var(--border-radius-md);
 }
 .store-back:hover{ color:var(--ink); background:var(--color-background-secondary); }
-.store-title{ flex:1; font-family:var(--serif); font-size:20px; color:var(--ink); letter-spacing:.04em; }
+.store-title{
+  flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  font-family:var(--serif); font-size:20px; color:var(--ink); letter-spacing:.04em;
+}
+/* 微标签(§2.2,mono 真实统计:想要数):右贴顶栏,不参与标题截断挤压 */
+.store-top .sov-micro{ flex:0 0 auto; margin:0; text-align:right; white-space:nowrap; }
 
 .store-body{ padding:14px 16px 36px; }
 
@@ -72,6 +78,7 @@ body.store-locked{ overflow:hidden; }
 .store-card-imgwrap{ position:relative; width:100%; aspect-ratio:4/3; background:var(--color-background-primary); }
 .store-card-img{ width:100%; height:100%; object-fit:cover; display:block; }
 .store-noimg{ display:flex; align-items:center; justify-content:center; color:var(--ghost); }
+.store-noimg .ic{ width:28px; height:28px; color:var(--ghost); }
 .store-pri-flag{
   position:absolute; top:7px; left:7px; font-size:10px; color:var(--brass-soft,var(--brass));
   background:color-mix(in srgb,#000 62%,transparent); padding:2px 7px; border-radius:999px;
@@ -138,33 +145,21 @@ html[data-fx~="deco"] .store-view .sys-window.store-hud{
   overflow:auto; overscroll-behavior:contain;
 }
 html[data-fx~="deco"] .store-view.open .store-hud{
-  animation:sysScrollOpen 1100ms linear both; transform-origin:center center;
-}
-html[data-fx~="deco"] .store-view.open .store-hud::after{
-  animation:sysFold 1100ms linear both;
+  transform-origin:center center;
 }
 html[data-fx~="deco"] .store-view.store-closing .store-hud{
-  animation:sysScrollClose 480ms cubic-bezier(0.5,0,0.78,0.2) both; transform-origin:center center;
-}
-html[data-fx~="deco"] .store-view.store-closing .store-hud::after{
-  animation:sysFoldClose 480ms ease both;
-}
-html[data-fx~="deco"] .store-view.store-closing .sys-backdrop{
-  animation:sysBackFade 480ms var(--ease-silk) both;
+  transform-origin:center center;
 }
 html[data-fx~="deco"] .store-view .store-top{ background:transparent; }
-@media (prefers-reduced-motion:reduce){
-  html[data-fx~="deco"] .store-view.open .store-hud,
-  html[data-fx~="deco"] .store-view.open .store-hud::after{
-    animation:none !important; clip-path:none !important; opacity:1 !important;
-  }
-}
+/* (dead reduced-motion override removed v7.36.0 — the sysScrollOpen animation it
+   neutralized was retired; glass.js handles reduced-motion itself) */
 
 @media(max-width:559px){
   .store-stats{ gap:6px; }
   .store-stat-n{ font-size:13px; }
   .store-grid{ grid-template-columns:repeat(auto-fill,minmax(132px,1fr)); gap:10px; }
   html[data-fx~="deco"] .store-view .sys-window.store-hud{ max-height:96vh; }
+  .store-top .sov-micro{ font-size:9px; letter-spacing:.12em; max-width:38vw; overflow:hidden; text-overflow:ellipsis; }
 }
 
 /* v7.34.0 review fix: transparent baseline so .p2 priority / hover border-color renders */

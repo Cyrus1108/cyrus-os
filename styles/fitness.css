@@ -30,11 +30,16 @@ body.fit-locked{ overflow:hidden; }
   padding:calc(16px + env(safe-area-inset-top)) 18px 12px; border-bottom:.5px solid var(--hair);
 }
 .fit-back{
+  display:inline-flex; align-items:center; gap:5px;
   background:none; border:none; color:var(--mute); font-size:14px;
   cursor:pointer; padding:6px 8px; border-radius:var(--border-radius-md);
 }
 .fit-back:hover{ color:var(--ink); background:var(--color-background-secondary); }
-.fit-title{ flex:1; font-family:var(--serif); font-size:20px; color:var(--ink); letter-spacing:.04em; }
+.fit-back .ic{ color:inherit; width:15px; height:15px; }   /* item 3: ← 返回 glyph → #i-back sprite (mirrors .fin-back/.cal-back) */
+/* FIT.10 micro-tag rides under the title (item 1: real streak stat, set by rFitness) */
+.fit-top-main{ flex:1; min-width:0; }
+.fit-top-main .sov-micro{ margin:3px 0 0; }
+.fit-title{ font-family:var(--serif); font-size:20px; color:var(--ink); letter-spacing:.04em; }
 
 .fit-tabs{ display:flex; gap:2px; padding:8px 14px 0; border-bottom:.5px solid var(--hair); }
 .fit-tab{
@@ -57,10 +62,15 @@ body.fit-locked{ overflow:hidden; }
 }
 
 /* ════════ default theme — 健身 HUD unified with the System window.
-   glass.js wraps #fitness-view into .sys-backdrop + .sys-window.fit-hud;
-   here .fit-view becomes a centering stage and the window reuses the
-   System scroll-unfurl keyframes. Fade in (never translateY — that drags
-   the half-transparent backdrop up from the bottom). ════════ */
+   glass.js wraps #fitness-view into .sys-backdrop + .sys-window.fit-hud and
+   drives the open/close choreography itself (GSAP three-beat descent — see
+   glass.js "System-window descent"); .fit-view is just the centering stage.
+   Fade in (never translateY — that drags the half-transparent backdrop up
+   from the bottom). transform-origin:center stays — it's the scaleY pivot
+   glass.js's descent timeline animates against. (v_P4S2: dropped the dead
+   sysScrollOpen/sysFold/sysScrollClose/sysFoldClose/sysBackFade animation
+   references — those @keyframes were retired from system.css and the
+   `.fit-hud::after` selector had no `content`, so it never painted anyway.) ════════ */
 html[data-fx~="deco"] .fit-view{
   display:flex; align-items:center; justify-content:center; padding:16px;
   background:transparent;
@@ -73,26 +83,9 @@ html[data-fx~="deco"] .fit-view .sys-window.fit-hud{
   overflow:auto; overscroll-behavior:contain;
   display:flex; flex-direction:column;
 }
-html[data-fx~="deco"] .fit-view.open .fit-hud{
-  animation:sysScrollOpen 1100ms linear both; transform-origin:center center;
-}
-html[data-fx~="deco"] .fit-view.open .fit-hud::after{
-  animation:sysFold 1100ms linear both;
-}
+html[data-fx~="deco"] .fit-view.open .fit-hud,
 html[data-fx~="deco"] .fit-view.fit-closing .fit-hud{
-  animation:sysScrollClose 480ms cubic-bezier(0.5,0,0.78,0.2) both; transform-origin:center center;
-}
-html[data-fx~="deco"] .fit-view.fit-closing .fit-hud::after{
-  animation:sysFoldClose 480ms ease both;
-}
-html[data-fx~="deco"] .fit-view.fit-closing .sys-backdrop{
-  animation:sysBackFade 480ms var(--ease-silk) both;
-}
-@media (prefers-reduced-motion:reduce){
-  html[data-fx~="deco"] .fit-view.open .fit-hud,
-  html[data-fx~="deco"] .fit-view.open .fit-hud::after{
-    animation:none !important; clip-path:none !important; opacity:1 !important;
-  }
+  transform-origin:center center;
 }
 
 /* ════════ shared bits ════════ */

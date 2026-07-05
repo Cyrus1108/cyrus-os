@@ -126,7 +126,7 @@ function lockKey(k){
 async function lockSubmitPin(){
   const c = lockCfg(); const pin = lockRT.entry;
   const { hash } = await lockHashPin(pin, c.pinSalt, c.pinIter);
-  if(hash === c.pinHash){ appUnlockDone(); }
+  if(hash === c.pinHash){ if(window.Sfx && typeof Sfx.save==='function') Sfx.save(); appUnlockDone(); }
   else {
     lockRT.fails++; lockRT.entry='';
     lockRenderDots();
@@ -154,7 +154,7 @@ async function lockBioTap(auto){
   const err=document.getElementById('applock-err');
   if(err) err.textContent = auto ? '' : '验证中…';
   const ok = await lockBioUnlock();
-  if(ok){ appUnlockDone(); return; }
+  if(ok){ if(window.Sfx && typeof Sfx.save==='function') Sfx.save(); appUnlockDone(); return; }
   // failed / cancelled — stay on PIN. Stay silent on the auto attempt (often just a
   // missing user-gesture); only nudge if the user tapped the button themselves.
   if(err) err.textContent = auto ? '' : '未通过 · 重试或用 PIN';
