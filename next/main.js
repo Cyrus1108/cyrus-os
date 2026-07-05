@@ -21,33 +21,49 @@ const IS_MOBILE = COARSE || window.innerWidth < 720;
 // ════════════════════════════════════════════════════════════════════════════
 const MOCK = (() => {
   const N = 90;
-  const END = Date.UTC(2026, 6, 5);              // 2026-07-05 (today, +08:00 deck)
-  const START = END - (N - 1) * 86400000;
+  const START = Date.UTC(2026, 4, 11);           // 2026-05-11 · D1 (the challenge's genesis)
+  const TODAY_IDX = 56;                           // D57 = 2026-07-06 (in progress)
   let s = 0x9e3779b9;
   const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
   const TRACKS = ['RISE', 'STUDY', 'JP', 'TRADE', 'BODY'];
   const the90 = [];
   for (let i = 0; i < N; i++) {
     const d = new Date(START + i * 86400000);
+    const date = `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+    if (i > TODAY_IDX) { the90.push({ date, tracks: null, score: null, ghost: true }); continue; }
     const ramp = 0.42 + 0.4 * (i / (N - 1));      // upward discipline curve
     const weekly = Math.sin(i / 7 * Math.PI * 2) * 0.06;
     const tracks = TRACKS.map(() => Math.max(0, Math.min(1, ramp + weekly + (rnd() - 0.5) * 0.5)));
     let score = tracks.reduce((a, b) => a + b, 0) / tracks.length;
-    if (i === N - 1) { score = 0.55; }             // today: in-progress
-    the90.push({
-      date: `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`,
-      tracks, score: Math.round(score * 100) / 100,
-    });
+    if (i === TODAY_IDX) { score = 0.55; }         // today: in-progress
+    the90.push({ date, tracks, score: Math.round(score * 100) / 100 });
   }
-  const days30 = the90.slice(-30);
+  const real = the90.slice(0, TODAY_IDX + 1);
+  const days30 = real.slice(-30);
   const avg30 = Math.round(days30.reduce((a, d) => a + d.score, 0) / days30.length * 100);
-  // longest streak of score ≥ 0.6
+  // longest streak of score ≥ 0.6 (real days only)
   let streak = 0, best = 0;
-  for (const d of the90) { if (d.score >= 0.6) { streak++; best = Math.max(best, streak); } else streak = 0; }
+  for (const d of real) { if (d.score >= 0.6) { streak++; best = Math.max(best, streak); } else streak = 0; }
+
+  // ── mini-viz series (HUD depth) ──────────────────────────────────────────
+  const tr = real.slice(-13).map(d => d.tracks[3]);              // TRADE track → pseudo-OHLC
+  const candles = [];
+  for (let i = 1; i < tr.length; i++) {
+    const o = tr[i - 1], c = tr[i], j = (rnd() * 0.12), k = (rnd() * 0.12);
+    candles.push({ o, c, hi: Math.min(1, Math.max(o, c) + j), lo: Math.max(0, Math.min(o, c) - k) });
+  }
+  const viz = {
+    sys30: real.slice(-30).map(d => d.score),                    // The90 last 30d
+    rise7: real.slice(-7).map(d => d.tracks[0]),                 // wake-ritual 7d dots
+    candles,                                                     // 12 mini candles
+    credits: 108 / 120,
+    todos: 12 / (12 + 7),
+    jp: 1 - 88 / 120,                                            // exam prep progress
+  };
 
   return {
-    version: 'v0.1.0-deck', build: '2026.07.05', user: 'qjun.aom', tz: '+08:00',
-    the90, todayIndex: N - 1, avg30, best,
+    version: 'v0.1.0-deck', build: '2026.07.06', user: 'qjun.aom', tz: '+08:00',
+    the90, todayIndex: TODAY_IDX, avg30, best, viz,
     stations: [
       { id: 'MORNING', label: 'MORNING', glyph: '☉', tag: 'STREAK <b>42d</b> · WAKE <b>05:40</b>',
         hud: { kicker: 'RITUAL / 日冕', cells: [
@@ -98,29 +114,88 @@ const MOCK = (() => {
 // ════════════════════════════════════════════════════════════════════════════
 // minimal WebAudio — 3 cues, gesture-gated (no sound until first user gesture)
 // ════════════════════════════════════════════════════════════════════════════
+// Ported from scripts/sound.js's approach: oscillator + filtered-noise voices
+// routed through a master → lowpass → compressor chain plus a procedural
+// convolution reverb (decaying-noise impulse) so cues sit "in space".
 const audio = (() => {
-  let ctx = null, armed = false;
+  let ctx = null, master = null, verb = null, noiseBuf = null, armed = false;
   const ensure = () => {
-    if (!ctx) { const AC = window.AudioContext || window.webkitAudioContext; if (AC) ctx = new AC(); }
-    if (ctx && ctx.state === 'suspended') ctx.resume();
+    if (!ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
+      try { ctx = new AC(); } catch { return null; }
+      master = ctx.createGain(); master.gain.value = 0.22;
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 8200;
+      const comp = ctx.createDynamicsCompressor();
+      comp.threshold.value = -22; comp.knee.value = 18; comp.ratio.value = 5;
+      comp.attack.value = 0.004; comp.release.value = 0.16;
+      master.connect(lp); lp.connect(comp); comp.connect(ctx.destination);
+      try {
+        verb = ctx.createConvolver();
+        const rate = ctx.sampleRate, len = Math.floor(rate * 1.3), buf = ctx.createBuffer(2, len, rate);
+        for (let ch = 0; ch < 2; ch++) { const dd = buf.getChannelData(ch);
+          for (let i = 0; i < len; i++) dd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.8); }
+        verb.buffer = buf; verb.connect(master);
+      } catch { verb = null; }
+    }
+    if (ctx.state === 'suspended') { try { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); } catch {} }
     return ctx;
   };
   const arm = () => { armed = true; ensure(); };
-  const beep = (freq, dur, type, gain, glideTo) => {
-    if (!armed) return; const c = ensure(); if (!c) return;
-    const t = c.currentTime, o = c.createOscillator(), g = c.createGain();
-    o.type = type; o.frequency.setValueAtTime(freq, t);
-    if (glideTo) o.frequency.exponentialRampToValueAtTime(glideTo, t + dur);
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(gain, t + 0.012);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g).connect(c.destination); o.start(t); o.stop(t + dur + 0.02);
+  const noise = () => {
+    if (noiseBuf) return noiseBuf;
+    const rate = ctx.sampleRate, len = Math.floor(rate * 0.5); noiseBuf = ctx.createBuffer(1, len, rate);
+    const d = noiseBuf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    return noiseBuf;
+  };
+  const send = (node, n) => { node.connect(master); if (n.verb && verb) { const w = ctx.createGain(); w.gain.value = n.verb; node.connect(w); w.connect(verb); } };
+  const voice = (t0, n) => {
+    const dur = n.dur || 0.18, atk = n.attack || 0.006, rel = n.release || 0.12;
+    const o = ctx.createOscillator(); o.type = n.type || 'sine'; o.frequency.setValueAtTime(n.freq, t0);
+    if (n.slideTo) o.frequency.exponentialRampToValueAtTime(n.slideTo, t0 + dur);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(n.gain || 0.4, t0 + atk);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur + rel);
+    o.connect(g); send(g, n); o.start(t0); o.stop(t0 + dur + rel + 0.02);
+  };
+  const nVoice = (t0, n) => {
+    const dur = n.dur || 0.05, atk = n.attack || 0.003, rel = n.release || 0.05;
+    const src = ctx.createBufferSource(); src.buffer = noise(); src.loop = true;
+    const f = ctx.createBiquadFilter(); f.type = n.fType || 'bandpass';
+    f.frequency.setValueAtTime(n.f0 || 1800, t0);
+    if (n.f1) f.frequency.exponentialRampToValueAtTime(n.f1, t0 + dur);
+    f.Q.value = n.q || 1.2;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(n.gain || 0.3, t0 + atk);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur + rel);
+    src.connect(f); f.connect(g); send(g, n); src.start(t0); src.stop(t0 + dur + rel + 0.02);
+  };
+  const play = (osc, noises) => {
+    if (!armed || !ensure()) return; const t = ctx.currentTime + 0.02;
+    (osc || []).forEach(n => voice(t + (n.at || 0), n));
+    (noises || []).forEach(n => nVoice(t + (n.at || 0), n));
   };
   return {
     arm,
-    powerup: () => { beep(180, 0.5, 'sawtooth', 0.05, 620); },              // boot power-on rise
-    tick: () => { beep(1300, 0.045, 'square', 0.03); },                     // target-lock click
-    hud: () => { beep(420, 0.28, 'triangle', 0.045, 880); },               // HUD open sweep
+    // boot power-on — noise riser + rising saw, spacious tail
+    powerup: () => play(
+      [{ at: 0.02, freq: 180, dur: 0.5, type: 'sawtooth', gain: 0.16, slideTo: 620, verb: 0.4 }],
+      [{ at: 0, f0: 260, f1: 2600, dur: 0.22, gain: 0.12, q: 2.4, verb: 0.5 }]),
+    // target-lock click — 2ms noise transient + glass pip
+    tick: () => play(
+      [{ at: 0.004, freq: 1318, dur: 0.045, type: 'sine', gain: 0.24, release: 0.07 }],
+      [{ at: 0, f0: 2600, f1: 4200, dur: 0.016, gain: 0.18, q: 1.0 }]),
+    // HUD open — holographic sweep, rising fifth in space
+    hud: () => play(
+      [{ at: 0.02, freq: 440, dur: 0.24, type: 'triangle', gain: 0.16, slideTo: 880, verb: 0.5 },
+       { at: 0.06, freq: 660, dur: 0.2, type: 'sine', gain: 0.1, verb: 0.55 }],
+      [{ at: 0, f0: 320, f1: 2400, dur: 0.16, gain: 0.11, q: 2.4, verb: 0.5 }]),
+    // bloom-pulse sink — a low-frequency floor drop under the HUD reveal
+    sink: () => play(
+      [{ at: 0, freq: 120, dur: 0.28, type: 'sine', gain: 0.34, slideTo: 62, release: 0.3, verb: 0.35 },
+       { at: 0, freq: 60, dur: 0.34, type: 'sine', gain: 0.22, slideTo: 42, release: 0.35 }],
+      [{ at: 0, f0: 180, f1: 70, dur: 0.14, gain: 0.06, q: 1.6, verb: 0.4 }]),
   };
 })();
 
@@ -189,24 +264,89 @@ function renderFallback() {
 // ════════════════════════════════════════════════════════════════════════════
 // HUD overlay
 // ════════════════════════════════════════════════════════════════════════════
+// ── mini-visualizations (DOM/SVG, monochrome, restrained) per station ────────
+function svgBars(vals, hotIdx) {
+  const n = vals.length, w = 100 / n;
+  const rects = vals.map((v, i) => {
+    const h = Math.max(2, v * 28), y = 30 - h;
+    return `<rect class="${i === hotIdx ? 'mv-hot' : 'mv-bar'}" x="${(i * w + w * 0.16).toFixed(2)}" y="${y.toFixed(2)}" width="${(w * 0.68).toFixed(2)}" height="${h.toFixed(2)}"/>`;
+  }).join('');
+  return `<svg class="mv" viewBox="0 0 100 30" preserveAspectRatio="none">${rects}</svg>`;
+}
+function svgCandles(cs) {
+  const n = cs.length, w = 100 / n;
+  const body = cs.map((c, i) => {
+    const cx = i * w + w / 2, up = c.c >= c.o;
+    const cls = up ? 'mv-up' : 'mv-bar';
+    const y = 30 - Math.max(c.o, c.c) * 28, bh = Math.max(1.4, Math.abs(c.c - c.o) * 28);
+    const wy0 = 30 - c.hi * 28, wy1 = 30 - c.lo * 28;
+    return `<line class="mv-wick" x1="${cx.toFixed(2)}" x2="${cx.toFixed(2)}" y1="${wy0.toFixed(2)}" y2="${wy1.toFixed(2)}"/>
+      <rect class="${cls}" x="${(cx - w * 0.28).toFixed(2)}" y="${y.toFixed(2)}" width="${(w * 0.56).toFixed(2)}" height="${bh.toFixed(2)}"/>`;
+  }).join('');
+  return `<svg class="mv" viewBox="0 0 100 30" preserveAspectRatio="none">${body}</svg>`;
+}
+function svgDots(vals, thresh) {
+  return `<div class="mv-dots">${vals.map(v => `<span class="${v >= thresh ? 'on' : ''}"></span>`).join('')}</div>`;
+}
+function svgRing(frac) {
+  const r = 13, c = 2 * Math.PI * r, off = c * (1 - frac);
+  return `<svg class="mv-ring" viewBox="0 0 32 32"><circle class="rg-t" cx="16" cy="16" r="${r}"/>
+    <circle class="rg-p" cx="16" cy="16" r="${r}" stroke-dasharray="${c.toFixed(2)}" stroke-dashoffset="${off.toFixed(2)}" transform="rotate(-90 16 16)"/></svg>`;
+}
+function svgMeter(frac) {
+  return `<div class="mv-meter"><span style="width:${(frac * 100).toFixed(1)}%"></span></div>`;
+}
+function buildViz(id) {
+  const v = MOCK.viz;
+  switch (id) {
+    case 'SYSTEM': return { k: 'THE 90 · LAST 30 DAYS', h: svgBars(v.sys30, v.sys30.length - 1) };
+    case 'TRADING': return { k: 'LAST 12 SESSIONS', h: svgCandles(v.candles) };
+    case 'MORNING': return { k: 'WAKE RITUAL · 7 DAYS', h: svgDots(v.rise7, 0.5) };
+    case 'ACADEMICS': return { k: 'CREDITS · 108 / 120', h: svgMeter(v.credits) };
+    case 'JP-N2': return { k: 'EXAM PREP · D-88', h: svgRing(v.jp) };
+    case 'TODOS': return { k: 'CLEARED TODAY · 12 / 19', h: svgMeter(v.todos) };
+    default: return null;
+  }
+}
+// count-up a numeric value span (mono), ~400ms; leaves non-numeric strings as-is
+function countUp(el) {
+  const raw = el.dataset.v;
+  if (!gsap || REDUCED || !/^-?\d+(\.\d+)?$/.test(raw)) { el.textContent = raw; return; }
+  const target = parseFloat(raw), dec = (raw.split('.')[1] || '').length, o = { v: 0 };
+  gsap.to(o, { v: target, duration: 0.42, ease: 'power2.out',
+    onUpdate() { el.textContent = o.v.toFixed(dec); }, onComplete() { el.textContent = raw; } });
+}
+
 const hudEl = document.getElementById('hud');
 let hudOpen = false;
-function openHUD(id) {
+function openHUD(id, scene) {
   const st = MOCK.stations.find(s => s.id === id); if (!st) return;
   document.getElementById('hud-glyph').textContent = st.glyph;
   document.getElementById('hud-kicker').textContent = st.hud.kicker;
   document.getElementById('hud-title').textContent = st.label;
   document.getElementById('hud-body').innerHTML = st.hud.cells.map(c =>
     `<div class="hud-cell${c.wide ? ' wide' : ''}"><div class="hud-k">${c.k}</div>
-     <div class="hud-v${c.accent === 'cyan' ? ' cyan' : ''}">${c.v}${c.unit ? ` <small>${c.unit}</small>` : ''}</div></div>`
+     <div class="hud-v${c.accent === 'cyan' ? ' cyan' : ''}"><span class="num" data-v="${c.v}">${c.v}</span>${c.unit ? ` <small>${c.unit}</small>` : ''}</div></div>`
   ).join('') + `<div class="hud-cell wide"><div class="hud-note">${st.hud.note}</div></div>`;
+  const viz = buildViz(id);
+  const vizEl = document.getElementById('hud-viz');
+  if (viz) { vizEl.hidden = false; vizEl.innerHTML = `<div class="hud-viz-k">${viz.k}</div>${viz.h}`; }
+  else { vizEl.hidden = true; vizEl.innerHTML = ''; }
   document.getElementById('hud-foot').innerHTML = `<span>${id} · LIVE MOCK</span><span>ESC / BACKPLATE ⟵ DECK</span>`;
   const sysAvg = document.getElementById('sys-avg'); if (sysAvg) sysAvg.textContent = MOCK.avg30 + '%';
   const sysStreak = document.getElementById('sys-streak'); if (sysStreak) sysStreak.textContent = MOCK.best + 'd';
   hudEl.hidden = false;
   requestAnimationFrame(() => hudEl.classList.add('is-open'));
   hudOpen = true;
-  audio.arm(); audio.hud();
+  // content follows the panel slide-in: cells stagger + numbers count up
+  if (gsap && !REDUCED) {
+    gsap.fromTo('#hud-body .hud-cell', { opacity: 0, y: 8 },
+      { opacity: 1, y: 0, duration: 0.4, stagger: 0.05, ease: 'power2.out', delay: 0.12, overwrite: true });
+    gsap.fromTo('#hud-viz', { opacity: 0 }, { opacity: 1, duration: 0.5, delay: 0.18, overwrite: true });
+  }
+  document.querySelectorAll('#hud-body .hud-v .num').forEach(countUp);
+  if (scene && scene.pulseBloom) scene.pulseBloom();     // HUD-open bloom pulse
+  audio.arm(); audio.hud(); audio.sink();                 // sweep + low-frequency sink
   document.getElementById('readout').textContent = `${id} · FOCUSED`;
 }
 function closeHUD(scene) {
@@ -258,7 +398,7 @@ function main() {
         if (!hudOpen) readout.textContent = 'DECK · IDLE';
       }
     },
-    onFocusDone: (id) => openHUD(id),
+    onFocusDone: (id) => openHUD(id, scene),
     onReturnDone: () => { if (lenis) lenis.start(); },
   });
 
@@ -321,11 +461,17 @@ function main() {
   canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); scene.stop(); }, false);
   canvas.addEventListener('webglcontextrestored', () => { if (!REDUCED) scene.start(); else scene.renderOnce(); }, false);
 
-  // ── run boot → reveal → live ────────────────────────────────────────────────
-  runBoot(() => {
-    scene.reveal();
-    if (REDUCED) scene.renderOnce(); else scene.start();
-  });
+  // ── run boot → match-move descent → reveal → live ───────────────────────────
+  // The camera starts on a high approach pose and drifts down while the boot log
+  // types; when boot finishes the overlay fades and reveal() completes the same
+  // descent as the grid scans in and pillars rise — one continuous shot, no cut.
+  if (REDUCED) {
+    runBoot(() => { scene.reveal(); scene.renderOnce(); });
+  } else {
+    scene.beginIntro();      // seed approach pose + slow pre-drift (behind boot)
+    scene.start();           // render loop on immediately
+    runBoot(() => { scene.reveal(); });
+  }
 }
 
 main();
