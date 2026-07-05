@@ -66,6 +66,7 @@
     opts = opts || {};
 
     window._ritualActive = true;
+    if(typeof window.crestIgnite === 'function') window.crestIgnite();   // 满勤 → 徽记点亮
     const D = 0.8;   // 800ms
 
     // 面板需为定位上下文(仅在 static 时补;visual-only)

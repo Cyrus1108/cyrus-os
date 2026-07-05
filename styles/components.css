@@ -1226,11 +1226,11 @@ html[data-fx~="deco"] .row{
    isolate),让 body 自身背景画在它的负 z 子元素「之下」,能量层才显现。cappa 早已成上下文,
    所以先前只有它可见。isolation 不为 fixed 子元素建立包含块,弹窗/HUD 的层级顺序不受影响。*/
 body{ isolation:isolate; }
-#energy-flow{ position:fixed; inset:0; width:100vw; height:100vh; z-index:var(--z-behind); pointer-events:none; opacity:.9; }
+#energy-flow{ position:fixed; inset:0; width:100vw; height:100vh; z-index:var(--z-behind); pointer-events:none; opacity:.5; }  /* 背景氛围层配额 §2.4 ≤0.5;深度分层后靠层间对比出纵深,不靠整体更亮 */
 body.has-focus #energy-flow, body.fin-locked #energy-flow, body.fit-locked #energy-flow,
 body.sys-locked #energy-flow, body.cal-locked #energy-flow, body.ai-locked #energy-flow,
 body.store-locked #energy-flow, body.motiv-locked #energy-flow{ display:none; }
-@media (prefers-reduced-motion:reduce){ #energy-flow{ opacity:.35; } }
+@media (prefers-reduced-motion:reduce){ #energy-flow{ opacity:.3; } }
 
 /* Hero decorations show only where their capability flag is set. Was the
    per-theme `html[data-theme="terminal"] #herocube,#glass-trails{display:none}`
@@ -1240,3 +1240,18 @@ body.store-locked #energy-flow, body.motiv-locked #energy-flow{ display:none; }
    under `trails` (cappa). */
 html:not([data-fx~="cube"])   #herocube    { display:none !important; }
 html:not([data-fx~="trails"]) #glass-trails{ display:none !important; }
+
+/* P3 — 君主徽记 (crest.js): the single WebGL scene, fixed ambient relief floating
+   behind the The-90 panel. Same top/right-clamp placement idiom as the retired
+   herocube; sits on the background layer, never intercepts pointer. On the degrade
+   path #crest holds a static inline SVG crest (.crest-svg) instead of a canvas. */
+#crest{
+  position:fixed; z-index:var(--z-behind); pointer-events:none;
+  top:clamp(54px, 9vh, 130px); right:clamp(6px, 5vw, 78px);
+  width:clamp(170px, 24vw, 330px); aspect-ratio:1/1;
+}
+#crest .crest-svg{ width:100%; height:100%; opacity:.5; }
+#crest.crest-breathe .crest-svg{ animation:crestBreathe 6s var(--ease-silk, ease-in-out) infinite; }
+#crest.crest-lit .crest-svg{ opacity:.9; transition:opacity .3s var(--ease-silk, ease-out); }
+@keyframes crestBreathe{ 0%,100%{ opacity:.42; } 50%{ opacity:.58; } }
+html:not([data-fx~="crest"]) #crest{ display:none !important; }

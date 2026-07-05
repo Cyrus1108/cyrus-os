@@ -16,8 +16,9 @@
 
 /* Fixed SOVEREIGN capability set (mirrors index.html's pre-paint stamp):
    glass = interaction layer on, flow-additive = energyflow additive blend,
-   deco = panel/body decorations on. cube / trails / lifetree are permanently off. */
-const SOVEREIGN_FX = 'glass flow-additive deco';
+   deco = panel/body decorations on, crest = 君主徽记 WebGL scene (crest.js) on.
+   cube / trails / lifetree are permanently off. */
+const SOVEREIGN_FX = 'glass flow-additive deco crest';
 
 function applySovereign(){
   const d = document.documentElement;

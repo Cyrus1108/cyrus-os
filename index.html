@@ -21,7 +21,7 @@
 
 <link rel="stylesheet" href="./styles/tokens.css">
 <link rel="stylesheet" href="./styles/base.css">
-<link rel="stylesheet" href="./styles/components.css?v=7.33.0">
+<link rel="stylesheet" href="./styles/components.css?v=7.35.0">
 <link rel="stylesheet" href="./styles/animations.css">
 <link rel="stylesheet" href="./styles/finance.css">
 <link rel="stylesheet" href="./styles/fitness.css">
@@ -43,7 +43,7 @@
      (energyflow additive blending), deco (panel/body decorations on). cube / trails
      / lifetree are permanently off. window.THEME_FX kept as a 1-entry compat shim
      for scripts/theme.js's legacy consumer. -->
-<script>(function(){window.THEME_FX={sovereign:'glass flow-additive deco'};var d=document.documentElement;d.setAttribute('data-theme','sovereign');d.setAttribute('data-fx','glass flow-additive deco');})();</script>
+<script>(function(){window.THEME_FX={sovereign:'glass flow-additive deco crest'};var d=document.documentElement;d.setAttribute('data-theme','sovereign');d.setAttribute('data-fx','glass flow-additive deco crest');})();</script>
 
 <!-- Pre-paint: if the app lock is enabled, hide content until applock.js mounts the lock screen (no flash of private data) -->
 <script>(function(){try{var l=JSON.parse(localStorage.getItem('cyrus_lock')||'null');if(l&&l.enabled)document.documentElement.classList.add('app-locked-boot');}catch(e){}})();</script>
@@ -715,7 +715,8 @@
 <script src="./scripts/principles.js"></script>
 <script src="./scripts/sovereign.js"></script>
 <script src="./scripts/glass.js"></script>
-<script src="./scripts/energyflow.js?v=7.27.3"></script>
+<script type="module" src="./scripts/crest.js"></script>
+<script src="./scripts/energyflow.js?v=7.35.0"></script>
 <script src="./scripts/applock.js"></script>
 <script src="./scripts/theme.js"></script>
 <script src="./scripts/sync.js"></script>

@@ -530,6 +530,7 @@ function sysShowModal(p){
     } else { Sfx.achievement(); }
   }
   if(p.type==='levelup'){
+    if(typeof window.crestIgnite==='function') window.crestIgnite();   // 升级/rankup → 徽记点亮
     const num = document.getElementById('sys-cele-num');
     if(num && typeof animateNumber==='function') animateNumber(num, p.from, p.to, 700);
     else if(num) num.textContent = p.to;
