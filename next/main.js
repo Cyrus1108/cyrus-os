@@ -245,6 +245,19 @@ function main() {
         if (!hudOpen) readout.textContent = 'DECK · IDLE';
       }
     },
+    // pillar hover (desktop): reticle reads out the day under the cursor. Only
+    // owns the reticle when no station is hovered (stations take priority).
+    onPillarHover: (info) => {
+      if (scene.hovered) return;
+      if (info) {
+        reticle.classList.add('is-locked');
+        retTag.textContent = `D+${info.i + 1} · ${info.date} · ${Math.round(info.score * 100)}%`;
+        readout.textContent = 'THE 90 · ' + info.date;
+      } else {
+        reticle.classList.remove('is-locked'); retTag.textContent = '';
+        if (!hudOpen) readout.textContent = 'DECK · IDLE';
+      }
+    },
     onFocusDone: (id) => openHUD(id),
     onReturnDone: () => { if (lenis) lenis.start(); },
   });

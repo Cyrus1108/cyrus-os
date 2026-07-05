@@ -74,6 +74,25 @@ html[data-reticle="on"], html[data-reticle="on"] *{cursor:none;}
   text-shadow:0 0 12px rgba(239,224,0,.55);}
 .lbl.is-dim{opacity:.28;}
 
+/* ---- the90 array readability suite (nameplate / today beacon / ticks) ------ */
+.np{position:absolute;transform:translate(-50%,-100%);text-align:center;white-space:nowrap;
+  will-change:transform,opacity;transition:opacity .25s var(--ease-press);}
+.np-main{display:inline-block;font-family:var(--disp);font-weight:600;font-size:15px;
+  letter-spacing:.36em;text-transform:uppercase;color:var(--yellow);
+  border-bottom:1.5px solid var(--yellow);padding:0 2px 4px;}
+.np-sub{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--mute);margin-top:5px;}
+.np-sub b{color:var(--cyan);font-weight:500;}
+.beacon-lbl{position:absolute;transform:translate(-50%,-150%);
+  display:flex;align-items:center;gap:5px;white-space:nowrap;
+  font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--cyan);
+  will-change:transform,opacity;transition:opacity .25s var(--ease-press);}
+.bc-dot{width:5px;height:5px;border-radius:50%;background:var(--cyan);
+  box-shadow:0 0 7px rgba(56,217,208,.8);animation:bcpulse 2.2s ease-in-out infinite;}
+@keyframes bcpulse{0%,100%{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1.25)}}
+.tick{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;
+  font-family:var(--mono);font-size:8px;letter-spacing:.12em;color:var(--ghost);opacity:.5;
+  will-change:transform,opacity;}
+
 /* ---- reticle crosshair cursor --------------------------------------------- */
 #reticle{
   position:fixed;top:0;left:0;width:46px;height:46px;z-index:9;
