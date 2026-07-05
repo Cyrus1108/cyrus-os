@@ -747,7 +747,7 @@ html[data-fx~="deco"] body::before{
   position:fixed; inset:0; width:100vw; height:100vh;
   z-index:var(--z-behind); pointer-events:none;
 }
-html[data-theme="sterile"] #glass-trails{ display:none; }
+/* (sterile hide rule removed — subsumed by the html:not([data-fx~="trails"]) capability rule) */
 /* perf: a full-screen HUD fully covers the page — stop animating the ambient field
    and compositing the trail canvas behind it (wasted GPU + stacked-backdrop jank). */
 html[data-fx~="deco"] body.fin-locked::before,
@@ -907,7 +907,7 @@ html[data-fx~="deco"] .fin-back{ display:none !important; }
   width:clamp(170px, 24vw, 330px); aspect-ratio:1/1;
   opacity:.95;
 }
-html[data-theme="sterile"] #herocube{ display:none; }
+/* (sterile hide rule removed — subsumed by the html:not([data-fx~="cube"]) capability rule) */
 
 /* todo rows — the same bracket language per ITEM, scaled down: resting state
    shows faint 6px left-edge brackets (visible on touch devices too); hover

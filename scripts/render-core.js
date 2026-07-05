@@ -21,9 +21,12 @@
     if(el && el.textContent !== s) el.textContent = s;
   };
 
-  /* HTML 片段:仅在与上次写入不同时更新(用 el 上的缓存签名比较)。 */
+  /* HTML 片段:仅在与上次写入不同时更新(用 el 上的缓存签名比较)。
+     返回 true = 本次真的重写了(调用方可据此重挂绑在旧子树上的状态,
+     如表单导航器)。 */
   window.setHTML = function(el, html){
-    if(el && el._rcHTML !== html){ el.innerHTML = html; el._rcHTML = html; }
+    if(el && el._rcHTML !== html){ el.innerHTML = html; el._rcHTML = html; return true; }
+    return false;
   };
 
   /* 类开关:声明式。 */

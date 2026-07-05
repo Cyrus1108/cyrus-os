@@ -278,8 +278,13 @@ document.addEventListener('keydown', function(e){
 function animateNumber(el, from, to, dur){
   if(!el || from===to) return;
   if(matchMedia('(prefers-reduced-motion:reduce)').matches){ el.textContent=to; return; }
+  // 渲染层骨架化后节点是持久的:同一节点可能在动画未完时再次被驱动
+  // (打卡→realtime 自回声双渲染)。代数标记让旧 rAF 循环立即让位,
+  // 保证任一节点同时只有一条动画在写 textContent。
+  const gen = el._anGen = (el._anGen || 0) + 1;
   const start=performance.now();
   function tick(now){
+    if(el._anGen !== gen) return;   // 已被更新的动画取代
     const p=Math.min((now-start)/dur,1);
     const e=p<0.5?2*p*p:-1+(4-2*p)*p; // easeInOut
     el.textContent=Math.round(from+(to-from)*e);

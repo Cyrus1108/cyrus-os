@@ -40,7 +40,11 @@ function rMR(){
       return d;
     },
     update:(d,i)=>{
-      setAttr(d,'class', `mr-pill ${i.d?'done':''}${i.detail&&i.detail.trim()?' has-detail':''}`);
+      // classList 逐项开关而非整串覆写:保住外部临时类
+      // (dragsort 的 .dragging、toggleMR 的 .flash)
+      d.classList.add('mr-pill');
+      d.classList.toggle('done', !!i.d);
+      d.classList.toggle('has-detail', !!(i.detail&&i.detail.trim()));
       setHTML(d, `
       <span class="drag-handle" onclick="event.stopPropagation()" aria-label="拖动排序">⠿</span>
       <span class="mr-pill-name">${escH(i.t)}</span>

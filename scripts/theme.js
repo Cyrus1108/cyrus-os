@@ -25,14 +25,9 @@ const THEMES = ['cappa', 'sterile', 'terminal', 'monarch'];
      lifetree      — sterile life-tree + ambient run (was: sterile only).
      deco          — default-theme panel/body decorations apply (was the CSS
                      `html:not([data-theme="sterile"])` guard).
-   ⚠️ index.html's pre-paint inline script embeds a COPY of this map so data-fx
-   is correct before first paint — keep the two in sync. */
-const THEME_FX = {
-  cappa:    'glass cube trails flow-additive deco',
-  sterile:  'lifetree',
-  terminal: 'glass flow-additive deco',
-  monarch:  'glass flow-additive deco',
-};
+   Single source: index.html's pre-paint inline script defines window.THEME_FX
+   (it must run pre-CSS, so the map lives there); this module just consumes it. */
+const THEME_FX = window.THEME_FX;
 
 function currentTheme(){
   const t = document.documentElement.getAttribute('data-theme');

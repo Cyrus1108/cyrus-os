@@ -134,7 +134,7 @@ function rAC(){
       if(editingAC===t.id){
         setAttr(d,'class','');
         setAttr(d,'style','padding:6px 0;border-bottom:.5px solid var(--hair);');
-        setHTML(d, acEditInner(t));
+        if(setHTML(d, acEditInner(t))) _acNavFor = null;   // 编辑框被重写→导航器需重挂
         return;
       }
       setAttr(d,'class','row'+(t.done?' item-done':''));
@@ -144,12 +144,20 @@ function rAC(){
   });
   makeSortable(el, { itemSelector:'.row', handleSelector:'.drag-handle', onReorder:onReorderAC });
   renderSubjects();
-  attachRipples();
+  attachRipples(el);
+  // 一次编辑只武装一次导航器(同 todos 的 _tdNavFor 闩锁),
+  // 无关渲染不再把字段高亮重置回第一格
   if(editingAC){
-    const box = el.querySelector('.edit-box');
-    if(box) requestAnimationFrame(()=>openFormNav(box));
+    if(_acNavFor !== editingAC){
+      _acNavFor = editingAC;
+      const box = el.querySelector('.edit-box');
+      if(box) requestAnimationFrame(()=>openFormNav(box));
+    }
+  } else {
+    _acNavFor = null;
   }
 }
+let _acNavFor = null;   // which editing row the form-navigator is already armed on (once per edit-open)
 function onReorderAC(ids){
   S.ac = reorderById(S.ac, ids);
   S.ac.forEach((t,i)=>t.position=i);

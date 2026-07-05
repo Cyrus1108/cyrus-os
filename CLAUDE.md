@@ -64,13 +64,18 @@ any new CSS/JS module there**, or it won't be cached/offline-available.
 - **`prefers-reduced-motion` is globally honored** (`animations.css`): all
   animations collapse to ~0.01ms. New keyframes inherit this automatically;
   JS-driven motion (e.g. `animateNumber` in `app.js`) guards it explicitly.
-- **Render functions rebuild `innerHTML` on every change** (e.g. `rThe90()` runs
-  on every check-in toggle and rebuilds the 450-cell heatmap). Consequences:
-  - **Looping** animations (breathing/glow) are safe — they just restart.
-  - **Entrance** animations (cascades, count-ups) MUST be gated by a
-    session flag so they don't replay on every toggle. See `the90Cascaded` /
-    `the90ArmCascade` (IntersectionObserver, because the heatmap has
-    `content-visibility:auto` and is off-screen at first render).
+- **Render model (v7.32+): skeleton-once + partial update** — render functions
+  no longer blow away `innerHTML`; they build a static skeleton once
+  (`ensureSkeleton`) and then do keyed row reconciliation + guarded text/class
+  writes (`reconcileList`/`setText`/`setHTML`… in `scripts/render-core.js`).
+  Consequences:
+  - Panel-interior nodes are **persistent** — animations/GSAP may bind to them,
+    but anything driving a node over time must tolerate being re-driven
+    (see `animateNumber`'s `_anGen` generation guard).
+  - New list renders follow the same pattern: container holds only keyed rows;
+    row inner markup rewritten only when its own data changed.
+  - **Entrance** animations are still gated by session flags (`the90Cascaded` /
+    `the90ArmCascade`); the 450-cell heatmap keeps its signature-memo rebuild.
 
 ## Data & backend
 

@@ -173,7 +173,7 @@ function rJP(){
       setHTML(d, jpDueInner(i,repBadge));
     }
   });
-  attachRipples();
+  attachRipples(cl);   // 只在调和容器内补涟漪;全文档扫描由 renderAll 末尾统一做
   makeSortable(cl, { itemSelector:'.row', handleSelector:'.drag-handle', onReorder:onReorderJP });
 }
 function onReorderJP(ids){

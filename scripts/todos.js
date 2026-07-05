@@ -224,7 +224,9 @@ function rTodos(){
       if(editingTD === t.id){
         d.classList.remove('todo-row','todo-done');
         setAttr(d, 'style', 'padding:6px 0;border-bottom:.5px solid var(--hair);');
-        setHTML(d, tdEditInner(t));
+        // 编辑框被真的重写(如远端改了分类/内容)→ 旧 edit-box 已脱离 DOM,
+        // 清掉闩锁让下方的导航器重新武装到新框上
+        if(setHTML(d, tdEditInner(t))) _tdNavFor = null;
       } else {
         d.classList.add('todo-row');
         d.classList.toggle('todo-done', !!t.done);
