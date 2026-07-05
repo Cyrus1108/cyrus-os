@@ -45,24 +45,40 @@
        key(item)    -> string   稳定唯一键(如 item.id)
        create(item) -> Element  新行(含只需建一次的结构与事件绑定)
        update(el, item) -> void 幂等地把 item 数据写进已存在的行
-     } */
+     }
+     防御(审查确认过的两类事故):
+     - 拖拽进行中(dragsort 的 .drag-placeholder 在场)跳过本次调和——
+       调和会把无 key 的占位符挤到列表尾,落点时把错误顺序写库;
+       跳过一帧无害,落点后的 onReorder→save→render 会补画。
+     - items 出现重复 key 时只渲染首个,且清扫一切未被本轮认领的键控节点,
+       不会像朴素 Map 版那样每轮渲染泄漏一个幽灵行。 */
   window.reconcileList = function(listEl, items, opts){
     if(!listEl) return;
-    const byKey = new Map();
+    if(listEl.querySelector(':scope > .drag-placeholder, :scope > .dragging')) return;
+    const pools = new Map();
     for(const child of Array.from(listEl.children)){
-      if(child.dataset && child.dataset.key != null) byKey.set(child.dataset.key, child);
+      const k = child.dataset && child.dataset.key;
+      if(k == null) continue;
+      const pool = pools.get(k);
+      if(pool) pool.push(child); else pools.set(k, [child]);
     }
+    const claimed = new Set(), seen = new Set();
     let prev = null;
     for(const item of items){
       const k = String(opts.key(item));
-      let el = byKey.get(k);
-      if(el) byKey.delete(k);
-      else { el = opts.create(item); el.dataset.key = k; }
+      if(seen.has(k)) continue;
+      seen.add(k);
+      const pool = pools.get(k);
+      let el = (pool && pool.length) ? pool.shift() : null;
+      if(!el){ el = opts.create(item); el.dataset.key = k; }
+      claimed.add(el);
       opts.update(el, item);
       const anchor = prev ? prev.nextSibling : listEl.firstChild;
       if(el !== anchor) listEl.insertBefore(el, anchor);
       prev = el;
     }
-    for(const stale of byKey.values()) stale.remove();
+    for(const child of Array.from(listEl.children)){
+      if(child.dataset && child.dataset.key != null && !claimed.has(child)) child.remove();
+    }
   };
 })();
