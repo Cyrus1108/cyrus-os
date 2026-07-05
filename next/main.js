@@ -47,7 +47,7 @@ const MOCK = (() => {
 
   return {
     version: 'v0.1.0-deck', build: '2026.07.05', user: 'qjun.aom', tz: '+08:00',
-    todayIndex: N - 1, avg30, best,
+    the90, todayIndex: N - 1, avg30, best,
     stations: [
       { id: 'MORNING', label: 'MORNING', glyph: '☉', tag: 'STREAK <b>42d</b> · WAKE <b>05:40</b>',
         hud: { kicker: 'RITUAL / 日冕', cells: [
