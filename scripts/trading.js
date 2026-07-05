@@ -4,7 +4,18 @@
 let trOpen=false;
 function toggleTRForm(){ if(S.tr.sealed) return; trOpen=!trOpen;document.getElementById('tr-new-form').style.display=trOpen?'block':'none';}
 function addTRItem(){if(S.tr.sealed)return;const t=document.getElementById('tr-new-text').value.trim();if(!t)return;S.tr.list.push({id:'t'+Date.now(),t,d:false});document.getElementById('tr-new-text').value='';trOpen=false;document.getElementById('tr-new-form').style.display='none';saveTR();rTR();rMetrics();}
-function toggleTR(id){if(S.tr.sealed)return;const i=S.tr.list.find(i=>i.id===id);if(i){i.d=!i.d;if(window.Sfx){i.d?Sfx.tick():Sfx.untick();}}saveTR();rTR();rMetrics();if(typeof rpgAfterChange==='function')rpgAfterChange();}
+function toggleTR(id){
+  if(S.tr.sealed)return;
+  // 三拍:勾选框会被 rTR setHTML 重写,但其行(#tr-list [data-id])是 reconcile 复用的
+  // 持久节点 → beatTap 对行 transform,渲染后仍是同一节点。
+  const row=document.querySelector(`#tr-list [data-id="${id}"]`);
+  const apply=function(){
+    const i=S.tr.list.find(i=>i.id===id);if(i){i.d=!i.d;if(window.Sfx){i.d?Sfx.tick():Sfx.untick();}}
+    saveTR();rTR();rMetrics();if(typeof rpgAfterChange==='function')rpgAfterChange();
+  };
+  if(window.beatTap && row) window.beatTap(row, apply);
+  else apply();
+}
 function delTR(id){if(S.tr.sealed)return;if(editingTR===id)editingTR=null;S.tr.list=S.tr.list.filter(i=>i.id!==id);saveTR();rTR();}
 function startTREdit(id){if(S.tr.sealed)return;editingTR=id;rTR();}
 function cancelTREdit(){editingTR=null;rTR();}

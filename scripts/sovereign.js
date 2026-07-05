@@ -77,7 +77,10 @@
       window.addEventListener('resize', draw);
     }
 
-    if(managed.indexOf(el) < 0) managed.push(el);
+    if(managed.indexOf(el) < 0){
+      managed.push(el);
+      observeDisplacement(el);   // 自愈观察随挂随接(晚挂的交易面板也被覆盖)
+    }
     return path;
   }
 
@@ -102,14 +105,19 @@
     }
     healing = false;
   }
-  function watchForDisplacement(){
+  /* 单例观察器,面板在 mountPanelFrame 首次托管时逐个接入(修复:原一次性
+     watchForDisplacement 只覆盖 mountAll 当时的面板,晚挂的交易面板永远没被观察) */
+  var dispMO = null;
+  function observeDisplacement(el){
     if(!window.MutationObserver) return;
-    var mo = new MutationObserver(function(){
-      if(healing || healScheduled) return;
-      healScheduled = true;
-      requestAnimationFrame(function(){ healScheduled = false; heal(); });
-    });
-    managed.forEach(function(el){ mo.observe(el, { childList: true }); });
+    if(!dispMO){
+      dispMO = new MutationObserver(function(){
+        if(healing || healScheduled) return;
+        healScheduled = true;
+        requestAnimationFrame(function(){ healScheduled = false; heal(); });
+      });
+    }
+    dispMO.observe(el, { childList: true });
   }
 
   /* —— 交易面板特例:glass.js glassInitFlip 会把面板的直接子节点分拣进
@@ -127,7 +135,17 @@
       if(el.querySelector('.flip3d')) finish();
     }) : null;
     if(mo) mo.observe(el, { childList: true, subtree: true });
-    setTimeout(finish, 6000);       // glass 若因故未接管,兜底挂框
+    /* 兜底:绝不在 init 完成前抢挂(登录页停留 >6s 的旧竞态会让 glassInitFlip
+       把三件套误分拣进 flip 面,review v7.34.0)。轮询等 body.booted(app.js 在
+       init+1.5s 落上)——booted 后 flip 若要发生早已发生,再留 1.5s 宽限确认。 */
+    (function fallback(){
+      if(done) return;
+      if(document.body.classList.contains('booted')){
+        setTimeout(function(){ if(!done && !el.querySelector('.flip3d')) finish(); }, 1500);
+      } else {
+        setTimeout(fallback, 3000);
+      }
+    })();
   }
 
   function mountAll(){
@@ -137,7 +155,6 @@
       if(el === tradingPanel){ mountTradingPanel(el); return; }
       mountPanelFrame(el);
     });
-    watchForDisplacement();
   }
 
   window.mountPanelFrame     = mountPanelFrame;

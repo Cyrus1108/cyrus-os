@@ -10,8 +10,7 @@ function renderMarkets(){
   const host = document.getElementById('tv-widgets-host');
   if(!host) return;
   host.innerHTML = '';
-  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const colorTheme = isDark ? 'dark' : 'light';
+  const colorTheme = 'dark';   // SOVEREIGN is dark-only; OS scheme no longer matches app surface
   getSymbols().forEach(sym=>{
     const wrap = document.createElement('div');
     wrap.className = 'tv-widget';
@@ -85,7 +84,7 @@ function toggleMorePanel(){
 function renderCalendar(){
   const host = document.getElementById('calendar-host');
   if(!host) return;
-  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const isDark = true;   // SOVEREIGN is dark-only
   const container = document.createElement('div');
   container.className = 'tradingview-widget-container';
   container.style.height = '100%';

@@ -4,12 +4,12 @@
    (tokens.css / theme-sterile.css) so it reskins automatically.
    ════════════════════════════════════════════════════════════ */
 
+/* SOVEREIGN is dark-only (tokens.css html{color-scheme:dark}) — status colors are
+   the bright-on-void pair unconditionally; the old light-OS branch (#2E8B57/#C0392B)
+   was unreadable on #08060F (review finding, v7.34.0). */
 :root{
-  --fin-pos:#2E8B57;
-  --fin-neg:#C0392B;
-}
-@media (prefers-color-scheme:dark){
-  :root{ --fin-pos:#5FC88A; --fin-neg:#E8857A; }
+  --fin-pos:#5FC88A;
+  --fin-neg:#E8857A;
 }
 
 body.fin-locked{ overflow:hidden; }
@@ -549,4 +549,14 @@ html[data-fx~="deco"] .fin-view.fin-closing .sys-backdrop{
   html[data-fx~="deco"] .fin-view.open .fin-hud::after{
     animation:none !important; clip-path:none !important; opacity:1 !important;
   }
+}
+
+/* ── v7.34.0 review fix — borderless cards keep a TRANSPARENT baseline border ──
+   P1 removed the .5px hairlines but <button>-based shells then fell back to the
+   UA's fat outset default, and state rules that only set border-color painted
+   nothing. A transparent .5px baseline kills the UA default, keeps metrics, and
+   lets state border-colors render again. */
+.fin-tri, .applock-key, .fin-lcal-cell, .fin-catpick, .fin-icon-opt,
+.fin-datebtn, .fin-chip, .fin-tp-cell, .fin-wiz-acct{
+  border:.5px solid transparent;
 }

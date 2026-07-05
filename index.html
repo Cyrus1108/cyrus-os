@@ -64,8 +64,8 @@
   -webkit-mask-image:radial-gradient(circle at 50% 49%,#000 50%,rgba(0,0,0,.6) 66%,transparent 80%);
   mask-image:radial-gradient(circle at 50% 49%,#000 50%,rgba(0,0,0,.6) 66%,transparent 80%);
   animation:coverRise .9s cubic-bezier(.2,.7,.2,1) both;}
-#app-cover .cover-word{position:relative;margin-top:24px;font-family:'Cormorant Garamond',Georgia,'Noto Serif SC',serif;
-  font-size:32px;font-weight:500;letter-spacing:.46em;text-indent:.46em;color:#F1ECFF;
+#app-cover .cover-word{position:relative;margin-top:24px;font-family:'Oswald','Noto Sans SC',sans-serif;
+  font-size:32px;font-weight:600;letter-spacing:.34em;text-indent:.34em;text-transform:uppercase;color:#F1ECFF;
   animation:coverRise 1s cubic-bezier(.2,.7,.2,1) .08s both;}
 #app-cover .cover-sub{position:relative;margin-top:11px;font-family:ui-monospace,'JetBrains Mono',monospace;
   font-size:9px;letter-spacing:.36em;text-indent:.36em;color:#9A8FC2;animation:coverRise 1s ease .16s both;}
@@ -131,25 +131,25 @@
 <aside id="drawer" class="drawer drawer-nav" aria-hidden="true" inert>
   <div class="navd-list">
       <button id="sys-btn" class="hn-item navd-item" data-i="01" onclick="navOpen('sys')" aria-label="系统">
-        <img class="hn-ico hn-logo" src="./icons/nav/sys.png" alt="" aria-hidden="true" width="42" height="42">
+        <svg class="ic hn-ico" aria-hidden="true"><use href="./vendor/icons.svg#i-sys"/></svg>
         <span class="hn-tx"><span class="hn-en">SYS</span><span class="hn-zh">系统</span></span></button>
       <button id="fit-btn" class="hn-item navd-item" data-i="02" onclick="navOpen('fit')" aria-label="健身">
-        <img class="hn-ico hn-logo" src="./icons/nav/fit.png" alt="" aria-hidden="true" width="42" height="42">
+        <svg class="ic hn-ico" aria-hidden="true"><use href="./vendor/icons.svg#i-fit"/></svg>
         <span class="hn-tx"><span class="hn-en">FIT</span><span class="hn-zh">健身</span></span></button>
       <button id="ai-btn" class="hn-item navd-item" data-i="03" onclick="navOpen('ai')" aria-label="AI Automation">
-        <img class="hn-ico hn-logo" src="./icons/nav/ai.png" alt="" aria-hidden="true" width="42" height="42">
+        <svg class="ic hn-ico" aria-hidden="true"><use href="./vendor/icons.svg#i-ai"/></svg>
         <span class="hn-tx"><span class="hn-en">AUT</span><span class="hn-zh">AI</span></span></button>
       <button id="fin-btn" class="hn-item navd-item" data-i="04" onclick="navOpen('fin')" aria-label="财务">
-        <img class="hn-ico hn-logo" src="./icons/nav/fin.png" alt="" aria-hidden="true" width="42" height="42">
+        <svg class="ic hn-ico" aria-hidden="true"><use href="./vendor/icons.svg#i-fin"/></svg>
         <span class="hn-tx"><span class="hn-en">FIN</span><span class="hn-zh">财务</span></span></button>
       <button id="cal-btn" class="hn-item navd-item" data-i="05" onclick="navOpen('cal')" aria-label="日历">
-        <img class="hn-ico hn-logo" src="./icons/nav/cal.png" alt="" aria-hidden="true" width="42" height="42">
+        <svg class="ic hn-ico" aria-hidden="true"><use href="./vendor/icons.svg#i-cal"/></svg>
         <span class="hn-tx"><span class="hn-en">CAL</span><span class="hn-zh">日历</span></span></button>
       <button id="motiv-btn" class="hn-item navd-item" data-i="06" onclick="navOpen('motiv')" aria-label="动力">
-        <img class="hn-ico hn-logo" src="./icons/nav/pwr.png" alt="" aria-hidden="true" width="42" height="42">
+        <svg class="ic hn-ico" aria-hidden="true"><use href="./vendor/icons.svg#i-pwr"/></svg>
         <span class="hn-tx"><span class="hn-en">PWR</span><span class="hn-zh">动力</span></span></button>
       <button id="shop-btn" class="hn-item navd-item" data-i="07" onclick="navOpen('shop')" aria-label="心愿单">
-        <svg class="hn-ico nav-shop-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke-linejoin="round" stroke-linecap="round"><path d="M5 8h14l-1.1 11.4a1 1 0 0 1-1 .9H7.1a1 1 0 0 1-1-.9z"/><path d="M8.5 8a3.5 3.5 0 0 1 7 0"/></svg>
+        <svg class="ic hn-ico" aria-hidden="true"><use href="./vendor/icons.svg#i-shop"/></svg>
         <span class="hn-tx"><span class="hn-en">SHOP</span><span class="hn-zh">心愿</span></span></button>
   </div>
 </aside>
@@ -684,6 +684,7 @@
 <script src="./scripts/supabase.js"></script>
 <script src="./scripts/state.js"></script>
 <script src="./scripts/render-core.js"></script>
+<script src="./scripts/beat.js"></script>
 <script src="./scripts/dragsort.js"></script>
 <script src="./scripts/swipe.js"></script>
 <script src="./scripts/notifications.js"></script>

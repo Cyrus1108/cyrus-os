@@ -6,11 +6,11 @@
    .fin-field / .sys-* classes so it reskins with the theme.
    ════════════════════════════════════════════════════════════ */
 
+/* dark-only app (v7.34.0): bright-on-void status value unconditionally */
 :root{
-  --fit-pos:#2E8B57;
+  --fit-pos:#5FC88A;
   --fit-rest:#C9A227;
 }
-@media (prefers-color-scheme:dark){ :root{ --fit-pos:#5FC88A; } }
 
 body.fit-locked{ overflow:hidden; }
 

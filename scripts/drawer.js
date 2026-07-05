@@ -37,10 +37,12 @@ function closeDrawer(){
   // plain close → SAO cue (same as entering) + exit cascade: PWR→SYS slide out reversed.
   _navPlay(_saoOpen);
   list.classList.add('is-exiting');
+  // exit cascade now 320ms/item (navExit) + up to .32s stagger ≈ 640ms total (was 740ms).
+  // hide ~80ms before the last slab settles, then reset once the stage is faded out.
   setTimeout(() => {
     _drawerHide(d);                                   // hide the stage WHILE is-exiting still holds the slabs
     setTimeout(() => list.classList.remove('is-exiting'), 360);  // out of view (opacity 0) — only then reset, so no flash-back
-  }, 600);
+  }, 560);
 }
 /* Pick a channel (SAO select cue), then choreograph the hand-off:
    1. the other five slabs fade + slide away in sequence;
@@ -64,8 +66,8 @@ function navOpen(which){
   const dy = Math.round(window.innerHeight / 2 - (pr.top + pr.height / 2));
   list.classList.add('is-picking');              // others fade/slide out (CSS), navSlideIn cleared
   picked.classList.add('picked');                // gets a transform transition
-  requestAnimationFrame(() => { picked.style.transform = `translate(${dx}px, ${dy}px)`; });  // glide to centre
-  setTimeout(() => {
+  requestAnimationFrame(() => { picked.style.transform = `translate(${dx}px, ${dy}px)`; });  // glide to centre (CSS --dur-ritual 800ms)
+  setTimeout(() => {                              // fire ~160ms before the glide settles so the HUD unfurl overlaps the arrival
     fn();                                         // HUD unfurls (its own animation) from centre
     closeDrawer();                                // nav stage fades out behind the HUD
     setTimeout(() => {                            // reset for next open, hidden behind the HUD

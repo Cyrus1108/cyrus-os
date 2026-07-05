@@ -1,10 +1,16 @@
 /* v7.0 — 黄铜玻璃 · maximalist interaction layer (nirnor-grade).
    Stack: GSAP + ScrollTrigger + SplitText + Lenis (vendor/, all free since 3.13).
    - Lenis damped smooth-scroll, glued to ScrollTrigger
-   - Hero scatter-assemble: the dateline chars fly in from 3D chaos on every
-     load, then SplitText.revert() hands the element back to the brassFlow
-     gradient. Section titles & eyebrows scatter/assemble ON SCROLL, with
-     reverse — typography stays alive while you move.
+   - Terminal ignite (SOVEREIGN, ex-glassFlicker): the dateline chars power on
+     one by one (2 micro-blinks then settle lit) on every load, then
+     SplitText.revert() hands the element back to its resting brand fill
+     (brassFlow molten流光 retired at rest — §6; ceremonial gold flow lives only
+     in the level-up celebration). Section titles & eyebrows ignite ON SCROLL,
+     with reverse — typography stays alive while you move.
+   - System-window descent (SOVEREIGN, ex-sysScrollOpen 卷轴): all six HUDs open
+     with a GSAP three-beat choreography (frame stroke-forms → volume scaleY
+     from centre → content staggers lit); close reverses it 1.4× faster. See
+     glassInitDescent below.
    - Panels converge from 3D space into the flat grid (once per load,
      clearProps afterwards so the pointer tilt owns transform again).
    - Pointer tilt (JS-lerped, ±3.2°) + brass light-spot.
@@ -34,18 +40,21 @@ function glassInitLenis(){
   (function raf(time){ _lenis.raf(time); requestAnimationFrame(raf); })(0);
 }
 
-/* ── flicker reveal — nirnor's signal-lamp typography: each char blinks a few
-   random times then settles lit. No positional flight (用户钦定). ── */
+/* ── terminal ignite — SOVEREIGN 终端点亮 (DEMO 3 调性,升级自 nirnor signal-lamp):
+   每字精确 2 次微闪后定亮,随机序错峰 (每字自带随机 delay 使点亮顺序打散)。中文
+   按字拆由调用点的 SplitText({type:'chars'}) 负责。受体接线与签名保持不变
+   —— morning.js / glassInitScrollFX 皆沿用 glassFlicker(chars, baseDelay, spread)。
+   眨闪用短 .to 斜坡(30ms)取代旧的硬 .set,读起来更像终端逐字上电。 ── */
 function glassFlicker(chars, baseDelay, spread){
   chars.forEach(ch => {
-    const tl = gsap.timeline({ delay: (baseDelay || 0) + Math.random() * (spread == null ? 0.55 : spread) });
-    const blinks = 2 + Math.floor(Math.random() * 3);
-    tl.set(ch, { autoAlpha: 0 });
-    for(let i = 0; i < blinks; i++){
-      tl.set(ch, { autoAlpha: 0.8 + Math.random() * 0.2 }, `+=${0.03 + Math.random() * 0.07}`);
-      tl.set(ch, { autoAlpha: 0.05 + Math.random() * 0.25 }, `+=${0.02 + Math.random() * 0.05}`);
+    const start = (baseDelay || 0) + Math.random() * (spread == null ? 0.55 : spread);
+    const tl = gsap.timeline({ delay: start });
+    tl.set(ch, { autoAlpha: 0.06 });
+    for(let i = 0; i < 2; i++){                       // 每字 2 次微闪
+      tl.to(ch, { autoAlpha: 0.85 + Math.random() * 0.15, duration: 0.03, ease: 'none' }, `+=${0.015 + Math.random() * 0.03}`)
+        .to(ch, { autoAlpha: 0.12 + Math.random() * 0.12, duration: 0.03, ease: 'none' });
     }
-    tl.to(ch, { autoAlpha: 1, duration: 0.1 }, `+=${0.02 + Math.random() * 0.04}`);
+    tl.to(ch, { autoAlpha: 1, duration: 0.05, ease: 'power2.out' }, '+=0.02');   // 定亮
   });
 }
 
@@ -58,8 +67,9 @@ function glassInitScrollFX(){
   const hasSplit = typeof SplitText !== 'undefined';
   if(hasSplit) gsap.registerPlugin(SplitText);
 
-  /* A. hero — dateline chars flicker alive one by one, every load; SplitText
-     reverts afterwards so the brassFlow gradient owns the element again */
+  /* A. hero — dateline chars ignite one by one, every load; SplitText
+     reverts afterwards so the element's resting brand fill owns it again
+     (brassFlow retired at rest — §6) */
   const dl = document.getElementById('dateline');
   if(dl && hasSplit && dl.textContent.trim()){
     const split = new SplitText(dl, { type:'chars' });
@@ -177,7 +187,13 @@ function glassInitFlip(){
   const panel = trList.closest('.panel');
   if(!panel || panel.querySelector('.flip3d')) return;
   const head = panel.querySelector('.panel-head');
-  const rest = [...panel.children].filter(el => el !== head);
+  // sovereign.js 的斜切三件套(fill/frame/tick)若已抢先挂上(竞态),不参与
+  // flip 分拣 —— 它们是面板结构件,分进 flip 面会撕碎布局(review, v7.34.0)
+  const rest = [...panel.children].filter(el =>
+    el !== head && !(el.classList && (
+      el.classList.contains('sov-fill') ||
+      el.classList.contains('sov-frame') ||
+      el.classList.contains('sov-tick'))));
   if(rest.length < 5) return;
 
   const wrap = document.createElement('div');  wrap.className = 'flip3d';
@@ -407,6 +423,147 @@ function mountHudShell(viewId, opts){
   v.appendChild(bd); v.appendChild(win);
 }
 
+/* ── System-window descent (SOVEREIGN, replaces the sysScrollOpen 卷轴) ──
+   All six HUDs (#system-view master + finance/fitness/calendar/ai/store clones)
+   open with the same GSAP three-beat choreography, productised from
+   design/sovereign-proto.html DEMO 1:
+     拍1  斜切 hairline 外框 1px 描边成形  (0→120ms, strokeDash, ease none)
+     拍2  窗体从中线 scaleY 展开           (120→360ms, expo.out — 主体可交互)
+     拍3  内容分块 stagger 点亮            (340ms+, ~50→35ms/块, 总收尾 <1s)
+   Close = the timeline reversed and accelerated 1.4× (fits inside the modules'
+   ~480/500ms .open-removal window). The frame is a NON-scaling overlay hung on
+   the .sys-view (its abs-positioning containing block is the view's padding box,
+   whose origin — the view has no border — is the viewport, so we position it
+   straight from the window's viewport rect); it stays full-size during 拍1 while
+   the window itself is still collapsed. Timing rides the modules' own Sfx.open /
+   Sfx.close (fired in the user-gesture path) — the open cue's ~260ms envelope
+   now blankets 拍1+拍2 (the old 1300ms scroll always outran the sound).
+   The scroll keyframes + narrative overlays (cover/lock/ripple/rods) are retired
+   in system.css; the clones' module-CSS `animation:sysScrollOpen…` references go
+   inert (undefined @keyframes = no-op) and their `transform-origin:center` agrees
+   with our scaleY pivot. prefers-reduced-motion: draw the frame + show statically,
+   no ceremony (matches the modules' reduced-motion direct show/hide). ── */
+const _SYS_SVGNS = 'http://www.w3.org/2000/svg';
+const _SYS_CHAMFER = 16;                 // 与 system.css .sys-window --sys-chamfer 同步
+const SYS_HUDS = [
+  { view: 'system-view',   closing: 'sys-closing'   },
+  { view: 'finance-view',  closing: 'fin-closing'   },
+  { view: 'fitness-view',  closing: 'fit-closing'   },
+  { view: 'calendar-view', closing: 'cal-closing'   },
+  { view: 'ai-view',       closing: 'ai-closing'    },
+  { view: 'store-view',    closing: 'store-closing' },
+];
+function _sysWindow(view){ return view.querySelector('.sys-window'); }
+/* content blocks = the window's element children minus the frame corners and the
+   retired scroll-narrative overlays (still in #system-view's static HTML). */
+function _sysBlocks(win){
+  return Array.prototype.filter.call(win.children, el =>
+    el.nodeType === 1 &&
+    !el.classList.contains('sys-corner') &&
+    !el.classList.contains('sys-cover') &&
+    !el.classList.contains('sys-ripple') &&
+    !el.classList.contains('sys-rod'));
+}
+function _ensureSysFrame(view){
+  if(view._sysFrame) return view._sysFrame;
+  const svg = document.createElementNS(_SYS_SVGNS, 'svg');
+  svg.setAttribute('class', 'sys-frame');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('preserveAspectRatio', 'none');
+  const path = document.createElementNS(_SYS_SVGNS, 'path');
+  path.setAttribute('vector-effect', 'non-scaling-stroke');
+  svg.appendChild(path);
+  view.appendChild(svg);              // last child → paints above the window (z:2 > 1)
+  view._sysFrame = svg; view._sysFramePath = path;
+  return svg;
+}
+/* measure the window at REST (never mid-scaleY) and trace the chamfer outline */
+function _drawSysFrame(view, win){
+  const svg = view._sysFrame, path = view._sysFramePath;
+  if(!svg || !path || !win) return;
+  const r = win.getBoundingClientRect();
+  const w = Math.round(r.width), h = Math.round(r.height), ch = _SYS_CHAMFER;
+  if(w < 2 || h < 2) return;
+  svg.style.left = r.left + 'px'; svg.style.top = r.top + 'px';
+  svg.style.width = w + 'px';      svg.style.height = h + 'px';
+  svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+  path.setAttribute('d',
+    'M0 0 L' + (w - ch) + ' 0 L' + w + ' ' + ch +
+    ' L' + w + ' ' + h + ' L' + ch + ' ' + h + ' L0 ' + (h - ch) + ' Z');
+}
+function playSysDescent(view, win){
+  const path = view._sysFramePath;
+  const blocks = _sysBlocks(win);
+  if(view._sysTL){ view._sysTL.kill(); view._sysTL = null; }
+  gsap.killTweensOf(win); gsap.killTweensOf(blocks); if(path) gsap.killTweensOf(path);
+  if(glassReducedMotion()){
+    _drawSysFrame(view, win);
+    gsap.set(win, { clearProps: 'transform' });
+    if(blocks.length) gsap.set(blocks, { clearProps: 'opacity,transform' });
+    return;
+  }
+  gsap.set(win, { clearProps: 'transform' });   // rest, so the frame measures true size
+  _drawSysFrame(view, win);
+  const len = (path && path.getTotalLength) ? path.getTotalLength() : 0;
+  if(path && len) gsap.set(path, { strokeDasharray: len, strokeDashoffset: len, autoAlpha: 1 });
+  gsap.set(win, { scaleY: 0, transformOrigin: '50% 50%' });
+  if(blocks.length) gsap.set(blocks, { opacity: 0, y: 8 });
+  const each = blocks.length > 1 ? Math.min(0.05, 0.18 / (blocks.length - 1)) : 0;
+  const tl = gsap.timeline({ onComplete(){
+    if(path) gsap.set(path, { clearProps: 'strokeDasharray,strokeDashoffset' });
+    gsap.set(win, { clearProps: 'transform' });
+    if(blocks.length) gsap.set(blocks, { clearProps: 'opacity,transform' });
+  } });
+  if(path && len) tl.to(path, { strokeDashoffset: 0, duration: 0.12, ease: 'none' }, 0);       // 拍1
+  tl.to(win, { scaleY: 1, duration: 0.24, ease: 'expo.out' }, 0.12);                            // 拍2
+  if(blocks.length) tl.to(blocks, { opacity: 1, y: 0, duration: 0.30, ease: 'power3.out', stagger: each }, 0.34); // 拍3
+  view._sysTL = tl;
+}
+function playSysFurl(view, win){
+  const path = view._sysFramePath;
+  const blocks = _sysBlocks(win);
+  if(view._sysTL){ view._sysTL.kill(); view._sysTL = null; }
+  gsap.killTweensOf(win); gsap.killTweensOf(blocks); if(path) gsap.killTweensOf(path);
+  if(glassReducedMotion()) return;               // module hides via CSS; nothing to furl
+  const S = 1 / 1.4;                             // 加速 1.4×
+  let len = 0;
+  if(path && path.getTotalLength){ len = path.getTotalLength(); gsap.set(path, { strokeDasharray: len, strokeDashoffset: 0, autoAlpha: 1 }); }
+  // NO onComplete clearProps — leave the window collapsed/hidden; the module drops
+  // .open (~480ms) then the view fades. The next open (playSysDescent) resets it.
+  const tl = gsap.timeline();
+  if(blocks.length) tl.to(blocks, { opacity: 0, duration: 0.30 * S, ease: 'power2.in', stagger: { each: 0.03 * S, from: 'end' } }, 0);
+  tl.to(win, { scaleY: 0, duration: 0.24 * S, ease: 'power2.in', transformOrigin: '50% 50%' }, 0.06 * S);
+  if(path && len) tl.to(path, { strokeDashoffset: len, duration: 0.12 * S, ease: 'none' }, 0.20 * S);
+  view._sysTL = tl;
+}
+function glassInitDescent(){
+  if(!window.gsap) return;
+  SYS_HUDS.forEach(cfg => {
+    const view = document.getElementById(cfg.view);
+    if(!view) return;
+    _ensureSysFrame(view);
+    let wasOpen = view.classList.contains('open');
+    const win0 = _sysWindow(view);
+    if(win0){
+      requestAnimationFrame(() => _drawSysFrame(view, win0));   // resting hairline once laid out
+      if(window.ResizeObserver){
+        const ro = new ResizeObserver(() => {
+          if(view.classList.contains('open')){ const w = _sysWindow(view); if(w) _drawSysFrame(view, w); }
+        });
+        ro.observe(win0);
+      }
+    }
+    const mo = new MutationObserver(() => {
+      const win = _sysWindow(view); if(!win) return;
+      const isOpen = view.classList.contains('open');
+      const isClosing = view.classList.contains(cfg.closing);
+      if(isOpen && !isClosing && !wasOpen){ wasOpen = true; playSysDescent(view, win); }
+      else if(wasOpen && (isClosing || !isOpen)){ wasOpen = false; playSysFurl(view, win); }
+    });
+    mo.observe(view, { attributes: true, attributeFilter: ['class'] });
+  });
+}
+
 /* ── pointer tilt + light spot (JS lerp — no CSS transition fighting GSAP) ── */
 function glassInitTilt(){
   if(!(window.matchMedia && window.matchMedia('(hover:hover) and (pointer:fine)').matches)) return;
@@ -439,6 +596,9 @@ function glassInitTilt(){
 
 /* ── sketch trails v2 — more ink, pointer attraction, full frame rate ── */
 function glassInitTrails(){
+  // capability-gated: SOVEREIGN drops 'trails' permanently — without this gate the
+  // canvas is display:none yet its 15-walker rAF sim burns CPU forever (review, v7.34.0)
+  if(!document.documentElement.matches('[data-fx~="trails"]')) return;
   const cv = document.createElement('canvas');
   cv.id = 'glass-trails';
   document.body.appendChild(cv);
@@ -534,6 +694,10 @@ function initGlass(){
   mountHudShell('calendar-view', { hudClass:'cal-hud',   onClose:()=>{ if(typeof closeCalendar === 'function') closeCalendar(); } });
   mountHudShell('ai-view',       { hudClass:'ai-hud',    onClose:()=>{ if(typeof closeAi       === 'function') closeAi();       } });
   mountHudShell('store-view',    { hudClass:'store-hud', onClose:()=>{ if(typeof closeStore    === 'function') closeStore();    } });
+  // System-window descent: attach the frame overlay + open/close observers to all
+  // six HUDs. Runs even under reduced-motion (the play fns show statically there),
+  // so the resting hairline frame is present regardless.
+  glassInitDescent();
   if(glassReducedMotion()) return;
   glassInitLenis();
   glassInitFlip();       // restructure the trading panel before measuring

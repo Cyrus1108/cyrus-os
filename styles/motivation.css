@@ -115,3 +115,6 @@ body.motiv-locked{ overflow:hidden; }
   padding:6px 10px; line-height:1;
 }
 .motiv-player-close:hover{ color:var(--brass); }
+
+/* v7.34.0 review fix: transparent baseline so hover border-color renders */
+.motiv-card{ border:.5px solid transparent; }

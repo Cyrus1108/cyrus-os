@@ -10,16 +10,23 @@ let jpOpen=false;
 function toggleJPForm(){jpOpen=!jpOpen;document.getElementById('jp-new-form').style.display=jpOpen?'block':'none';}
 function addJPItem(){const t=document.getElementById('jp-new-text').value.trim();if(!t)return;const rs=document.getElementById('jp-new-repeat'),cs=document.getElementById('jp-new-custom');const rep=(rs&&rs.value)||'daily',cd=(cs&&parseInt(cs.value))||0;S.jp.list.push({id:'j'+Date.now(),t,d:false,repeat:rep,customDays:cd,since:TODAY});document.getElementById('jp-new-text').value='';if(cs){cs.value='';cs.style.display='none';}if(rs)rs.value='daily';jpOpen=false;document.getElementById('jp-new-form').style.display='none';jpSettle();saveJP();rJP();rMetrics();if(typeof rpgAfterChange==='function')rpgAfterChange();}
 function toggleJP(id){
-  const i=S.jp.list.find(i=>i.id===id);
-  if(i){
-    i.d=!i.d;
-    const r=jpSettle();
-    if(window.Sfx){
-      if(r.changed&&r.all)Sfx.quest();        // the check that completes the day
-      else i.d?Sfx.tick():Sfx.untick();
+  // 三拍:勾选框会被 rJP setHTML 重写,但其行(#jp-checklist [data-id])是 reconcile
+  // 复用的持久节点 → beatTap 对行 transform,渲染后仍是同一节点。
+  const row=document.querySelector(`#jp-checklist [data-id="${id}"]`);
+  const apply=function(){
+    const i=S.jp.list.find(i=>i.id===id);
+    if(i){
+      i.d=!i.d;
+      const r=jpSettle();
+      if(window.Sfx){
+        if(r.changed&&r.all)Sfx.quest();        // the check that completes the day
+        else i.d?Sfx.tick():Sfx.untick();
+      }
     }
-  }
-  saveJP();rJP();rMetrics();if(typeof rpgAfterChange==='function')rpgAfterChange();
+    saveJP();rJP();rMetrics();if(typeof rpgAfterChange==='function')rpgAfterChange();
+  };
+  if(window.beatTap && row) window.beatTap(row, apply);
+  else apply();
 }
 function delJP(id){if(editingJP===id)editingJP=null;S.jp.list=S.jp.list.filter(i=>i.id!==id);jpSettle();saveJP();rJP();rMetrics();if(typeof rpgAfterChange==='function')rpgAfterChange();}
 function startJPEdit(id){editingJP=id;rJP();}

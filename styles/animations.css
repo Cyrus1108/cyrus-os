@@ -3,7 +3,9 @@
 @keyframes paneFade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
 @keyframes widgetFade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
 @keyframes editSlide{from{opacity:0;transform:translateX(-4px);}to{opacity:1;transform:translateX(0);}}
-@keyframes sessPulse{0%,100%{box-shadow:0 0 0 3px var(--brass-ghost);}50%{box-shadow:0 0 0 5px rgba(168,132,85,0.15);}}
+/* Trading-session active indicator — functional, not decorative: pure-opacity micro-breath
+   (§2.4 静息零辉光). The static ring lives on .sess-dot.on; here only opacity moves (≤.15). */
+@keyframes sessPulse{0%,100%{opacity:1;}50%{opacity:.85;}}
 
 
 /* List row entrance — keeps rendering snappy (120 ms) */
@@ -13,17 +15,20 @@
    or the whole list flickers on every toggle */
 body.booted .todo-row, body.booted .row{ animation:none; }
 
-/* Staggered widget entrance on first load */
-@keyframes panelRise{ from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;} }
-.panel{ animation:panelRise var(--dur-slow) var(--ease-silk) both; }
+/* Staggered panel entrance on first load — SOVEREIGN: rise 10px→0 over 320ms on the
+   decelerating press curve, tightened 30ms stagger (was 40ms). Gated by body.booted so
+   a panel-shell re-render never replays the entrance (matches .todo-row/.row discipline). */
+@keyframes panelRise{ from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;} }
+.panel{ animation:panelRise var(--dur-slow) var(--ease-press) both; }
 .panel:nth-child(1){ animation-delay:0ms; }
-.panel:nth-child(2){ animation-delay:40ms; }
-.panel:nth-child(3){ animation-delay:80ms; }
-.panel:nth-child(4){ animation-delay:120ms; }
-.panel:nth-child(5){ animation-delay:160ms; }
-.panel:nth-child(6){ animation-delay:200ms; }
-.panel:nth-child(7){ animation-delay:240ms; }
-.panel:nth-child(n+8){ animation-delay:280ms; }
+.panel:nth-child(2){ animation-delay:30ms; }
+.panel:nth-child(3){ animation-delay:60ms; }
+.panel:nth-child(4){ animation-delay:90ms; }
+.panel:nth-child(5){ animation-delay:120ms; }
+.panel:nth-child(6){ animation-delay:150ms; }
+.panel:nth-child(7){ animation-delay:180ms; }
+.panel:nth-child(n+8){ animation-delay:210ms; }
+body.booted .panel{ animation:none; }
 
 /* Card hover lift + press */
 .panel{ transition:transform var(--dur-fast) var(--ease-press); }
@@ -45,11 +50,13 @@ body.booted .todo-row, body.booted .row{ animation:none; }
 /* ② "Today" column breathing — a single full-height bar overlaid on today's
    column (per-cell box-shadow was invisible on ~4px cells). The bar is aligned
    to the exact column via --col + calc in components.css; here it just breathes. */
+/* functional today-marker — pure opacity breath on a resting brass-glow bar (bg in
+   components.css), no box-shadow glow (§2.4). Amplitude ≤.15, slowed 2.2s→3.4s. */
 @keyframes todayColBreathe{
-  0%,100%{ box-shadow:0 0 4px 1px var(--brass-glow); background:var(--brass-ghost); }
-  50%    { box-shadow:0 0 10px 2px var(--brass);     background:var(--brass-glow); }
+  0%,100%{ opacity:.6; }
+  50%    { opacity:.75; }
 }
-.the90-today-col{ animation:todayColBreathe 2.2s var(--ease-silk) infinite; }
+.the90-today-col{ animation:todayColBreathe 3.4s var(--ease-silk) infinite; }
 
 /* ③ 倒计时 tagline 常驻辉光退役(§2.4:静息零辉光)。tagline 改纯 var(--brass) 静态;
    P2 再给它「终端点亮」终态动画。 */

@@ -166,3 +166,6 @@ html[data-fx~="deco"] .store-view .store-top{ background:transparent; }
   .store-grid{ grid-template-columns:repeat(auto-fill,minmax(132px,1fr)); gap:10px; }
   html[data-fx~="deco"] .store-view .sys-window.store-hud{ max-height:96vh; }
 }
+
+/* v7.34.0 review fix: transparent baseline so .p2 priority / hover border-color renders */
+.store-card{ border:.5px solid transparent; }

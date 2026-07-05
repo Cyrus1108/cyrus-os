@@ -203,7 +203,7 @@
 /* Trading sessions */
 .sess-row{display:flex;align-items:center;gap:12px;padding:7px 0;}
 .sess-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;background:var(--hair-strong);transition:background var(--dur-slow) ease,transform var(--dur-slow) ease;}
-.sess-dot.on{background:var(--brass);box-shadow:0 0 0 3px var(--brass-ghost);animation:sessPulse 2.5s ease-in-out infinite;}
+.sess-dot.on{background:var(--brass);box-shadow:0 0 0 3px var(--brass-ghost);animation:sessPulse 3.2s ease-in-out infinite;}
 .sess-name{font-size:13px;color:var(--mute);font-family:var(--serif);font-style:italic;letter-spacing:.01em;}
 .sess-name.on{color:var(--ink);font-style:normal;font-family:var(--serif);font-weight:400;}
 .sess-time{font-family:var(--mono);font-size:10px;color:var(--ghost);margin-left:auto;letter-spacing:.05em;}
@@ -483,6 +483,7 @@ button.check-btn.done{border-color:var(--brass);color:var(--brass);}
   left:calc((100% - 89px) / 90 * (var(--col) - 1) + (var(--col) - 1) * 1px);
   width:calc((100% - 89px) / 90);
   border-radius:1px; pointer-events:none; z-index:3;
+  background:var(--brass-glow);   /* resting fill — breathe now animates opacity only (§2.4 no glow) */
 }
 .the90-h-row{
   display:grid;grid-template-columns:repeat(90,1fr);gap:1px;
@@ -1116,7 +1117,11 @@ html[data-fx~="deco"] .row{
   border:0.5px solid var(--hair-strong); border-radius:var(--border-radius-md);
   color:var(--ink); font-family:var(--mono); position:relative;
   transition:border-color .2s ease, background .2s ease, color .2s ease, transform .1s ease; }
-.hn-ico{ width:23px; height:23px; flex:0 0 auto; stroke:var(--brass); fill:none; stroke-width:1.2; stroke-linejoin:round; stroke-linecap:round; }
+/* Lucide sprite icons (§2.8): stroke=currentColor, resting --mute; .ic keeps the
+   documented 1em generic size for future consumers, .hn-ico fixes the nav slot size. */
+.ic{ width:1em; height:1em; }
+.hn-ico,.ic{ flex:0 0 auto; color:var(--mute); stroke:currentColor; fill:none; stroke-linejoin:round; stroke-linecap:round; transition:color var(--dur-base) var(--ease-silk,ease); }
+.hn-ico{ width:23px; height:23px; }
 .hn-tx{ display:flex; flex-direction:column; gap:1px; min-width:0; }
 .hn-en{ font-size:12px; font-weight:700; letter-spacing:.09em; color:var(--ink); }
 .hn-zh{ font-size:11px; color:var(--mute); }
@@ -1144,16 +1149,18 @@ html[data-fx~="deco"] .row{
 .navd-close:hover{ color:var(--brass); }
 .navd-list{ display:flex; flex-direction:column; gap:10px; }
 .navd-item{ width:100%; padding:15px 16px; }
-.navd-item .hn-ico{ width:24px; height:24px; }
+.navd-item .hn-ico{ width:34px; height:34px; }
 @keyframes navSlideIn{ from{ opacity:0; transform:translateX(40px); } to{ opacity:1; transform:translateX(0); } }
+/* SOVEREIGN: 每块 320ms(--dur-slow)从右减速滑入(--ease-drawer),60ms 错峰;
+   第 7 块结束 ≈680ms,收敛 §2.5 的 800ms 自陶醉线。drawer.js 时序常量与此对齐。 */
 @media (prefers-reduced-motion:no-preference){
-  .drawer.open .navd-item{ animation:navSlideIn .45s var(--ease-silk,ease) both; }
-  .drawer.open .navd-item:nth-child(1){ animation-delay:.06s; }
-  .drawer.open .navd-item:nth-child(2){ animation-delay:.15s; }
-  .drawer.open .navd-item:nth-child(3){ animation-delay:.24s; }
-  .drawer.open .navd-item:nth-child(4){ animation-delay:.33s; }
-  .drawer.open .navd-item:nth-child(5){ animation-delay:.41s; }
-  .drawer.open .navd-item:nth-child(6){ animation-delay:.50s; }
+  .drawer.open .navd-item{ animation:navSlideIn var(--dur-slow) var(--ease-drawer,ease) both; }
+  .drawer.open .navd-item:nth-child(1){ animation-delay:0s; }
+  .drawer.open .navd-item:nth-child(2){ animation-delay:.06s; }
+  .drawer.open .navd-item:nth-child(3){ animation-delay:.12s; }
+  .drawer.open .navd-item:nth-child(4){ animation-delay:.18s; }
+  .drawer.open .navd-item:nth-child(5){ animation-delay:.24s; }
+  .drawer.open .navd-item:nth-child(6){ animation-delay:.30s; }
 }
 /* 导览面板:荧幕居中浮层(不再贴右边)。整块 #drawer 变成全屏居中舞台,靠透明度/可见性
    开合(transform 让位给频道动画);空白区点击穿透到背板 = 关闭。 */
@@ -1164,8 +1171,8 @@ html[data-fx~="deco"] .row{
 /* 选中编排:被选的滑到荧幕正中(.picked),其余按序淡出滑走;随后真 HUD 从中央用它
    自带的 sysScrollOpen 展开、自带的 furl 收起(不再压 HUD 动画,所以关闭恢复原样) */
 .navd-list.is-picking .navd-item{ animation:none; }
-.navd-list.is-picking .navd-item.picked{ position:relative; z-index:2; transition:transform .79s cubic-bezier(.22,1,.36,1); }
-.navd-list.is-picking .navd-item:not(.picked){ animation:navDismiss .38s var(--ease-silk,ease) both; }
+.navd-list.is-picking .navd-item.picked{ position:relative; z-index:2; transition:transform var(--dur-ritual) var(--ease-press); }
+.navd-list.is-picking .navd-item:not(.picked){ animation:navDismiss var(--dur-slow) var(--ease-silk,ease) both; }
 .navd-list.is-picking .navd-item:not(.picked):nth-child(2){ animation-delay:.04s; }
 .navd-list.is-picking .navd-item:not(.picked):nth-child(3){ animation-delay:.08s; }
 .navd-list.is-picking .navd-item:not(.picked):nth-child(4){ animation-delay:.11s; }
@@ -1173,7 +1180,7 @@ html[data-fx~="deco"] .row{
 .navd-list.is-picking .navd-item:not(.picked):nth-child(6){ animation-delay:.19s; }
 @keyframes navDismiss{ to{ opacity:0; transform:translateX(48px); } }
 /* 退出(关闭导览):六块按 PWR→SYS 反序向右滑出(红色顺序),与入场同一套动画镜像 */
-.navd-list.is-exiting .navd-item{ animation:navExit .42s var(--ease-silk,ease) both; }
+.navd-list.is-exiting .navd-item{ animation:navExit var(--dur-slow) var(--ease-silk,ease) both; }
 .navd-list.is-exiting .navd-item:nth-child(6){ animation-delay:0s; }    /* PWR 先走 */
 .navd-list.is-exiting .navd-item:nth-child(5){ animation-delay:.06s; }  /* CAL */
 .navd-list.is-exiting .navd-item:nth-child(4){ animation-delay:.13s; }  /* FIN */
@@ -1194,14 +1201,13 @@ html[data-fx~="deco"] .row{
 .nav-arrow:hover i{ border-color:var(--brass-soft); transform:rotate(45deg) translate(2px,-2px); }
 .nav-arrow:active i{ transform:rotate(45deg) scale(.88); }
 
-/* ── v7.19 导览 = 黄铜 3D logo（raster PNG，替换原线条 SVG）。放大到 42px 细节才读得清；
-   已抠掉深色底 → 浮在板上无方块补丁。图标固定金色、不再随主题染色（金配棕/配黑都好看）。 ── */
-.navd-item .hn-ico.hn-logo{ width:42px; height:42px; object-fit:contain; flex:0 0 auto;
-  filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.5)); }
-@media (hover:hover){ .navd-item:hover .hn-ico.hn-logo{ filter:drop-shadow(0 1px 3px rgba(0,0,0,.6)) brightness(1.07); } }
+/* ── v7.34 导览图标 = Lucide outline sprite(黄铜 raster PNG 退役,#i-sys…#i-shop)。
+   静息 --mute(§2.4 静息零辉光),hover/键盘焦点点亮为 brand;stroke=currentColor
+   由 .hn-ico 的 color 驱动。尺寸 34px,占原 42px 槽位(outline 比 raster 视重轻)。 ── */
+@media (hover:hover){ .navd-item:hover .hn-ico{ color:var(--brass); } }
+.navd-item:focus-visible .hn-ico{ color:var(--brass); }
 
-/* ── v7.22 第 7 频道「心愿/SHOP」：占位矢量购物袋图标(暂无黄铜版) + 把进/退/选级联动画从 6 扩到 7 ── */
-.navd-item .hn-ico.nav-shop-ico{ width:34px; height:34px; flex:0 0 auto; stroke-width:1.4; }
+/* ── v7.22 第 7 频道「心愿/SHOP」:级联动画从 6 扩到 7(图标已并入上面的 sprite 规则) ── */
 @media (prefers-reduced-motion:no-preference){ .drawer.open .navd-item:nth-child(7){ animation-delay:.59s; } }
 .navd-list.is-picking .navd-item:not(.picked):nth-child(7){ animation-delay:.23s; }
 /* 退场反序:SHOP(7) 先走 → SYS(1) 最后，整体重排 7 项 */

@@ -50,7 +50,17 @@ function addAcTask(){
   document.getElementById('f-rc').style.display='none';
   closeFormNav();toggleAcForm();saveAC();rAC();rMetrics();
 }
-function toggleAC(id){const t=S.ac.find(t=>t.id===id);if(t){ t.done=!t.done; if(window.Sfx){ t.done?Sfx.tick():Sfx.untick(); } }saveAC();rAC();rMetrics();if(typeof rpgAfterChange==='function')rpgAfterChange();}
+function toggleAC(id){
+  // 三拍:勾选框会被 rAC setHTML 重写,但其行(#ac-list [data-id])是 reconcile 复用的
+  // 持久节点 → beatTap 对行 transform,渲染后仍是同一节点。
+  const row=document.querySelector(`#ac-list [data-id="${id}"]`);
+  const apply=function(){
+    const t=S.ac.find(t=>t.id===id);if(t){ t.done=!t.done; if(window.Sfx){ t.done?Sfx.tick():Sfx.untick(); } }
+    saveAC();rAC();rMetrics();if(typeof rpgAfterChange==='function')rpgAfterChange();
+  };
+  if(window.beatTap && row) window.beatTap(row, apply);
+  else apply();
+}
 function delAC(id){if(editingAC===id)editingAC=null;S.ac=S.ac.filter(t=>t.id!==id);saveAC();rAC();rMetrics();}
 function startAcEdit(id){editingAC=id;rAC();}
 function cancelAcEdit(){closeFormNav();editingAC=null;rAC();}

@@ -291,6 +291,13 @@ function animateNumber(el, from, to, dur){
     if(p<1) requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);
+  // 三拍余韵:数字翻动时叠一层短促 y 位移 + opacity 微动(≤160ms,只碰 transform/opacity)。
+  // 递增从下、递减从上;overwrite:'auto' 防连续变化叠加;clearProps 复位不留内联残余。
+  // reduced-motion 已在上方早退,不会到这里。
+  if(window.gsap){
+    window.gsap.fromTo(el, { y: to > from ? 5 : -5, opacity: 0.5 },
+      { y: 0, opacity: 1, duration: 0.16, ease: 'power2.out', overwrite: 'auto', clearProps: 'transform,opacity' });
+  }
 }
 
 /* ── View Transitions helper ──

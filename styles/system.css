@@ -21,157 +21,49 @@ body.sys-locked{ overflow:hidden; }
 @media (max-width:559px){
   .sys-backdrop{ -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); }
 }
+/* SOVEREIGN 系统窗 — 面板级斜切壳(§2.3)。P2「系统窗降临」把开合动画层从卷轴
+   (sysScrollOpen 族,已退役)换成 glass.js 的 GSAP 三拍编排:拍1 斜切 hairline 描边
+   成形 → 拍2 窗体从中线 scaleY 展开 → 拍3 内容分块 stagger 点亮;关闭为反放 1.4×。
+   窗体不再自带 border / 阴影(flat-first,§2.4)—— 1px 结构线由 glass.js 挂在
+   .sys-view 上的 .sys-frame SVG 描出(全尺寸不随窗体 scaleY,故拍1 可先成形),
+   .sys-corner 括号与之协调新语言。clip-path 斜切给窗体形状(拍2 scaleY 时体积从
+   中线展开)。此壳同时是 5 个克隆 HUD(fin/fit/cal/ai/store,.fin-hud… 后缀)的基类。 */
 .sys-window{
   position:relative; z-index:1; width:100%; max-width:460px; max-height:86vh;
+  --sys-chamfer:16px;
   display:flex; flex-direction:column; overflow:hidden;
   background:var(--color-background-secondary);
-  border:.5px solid var(--hair); border-radius:var(--border-radius-md);
-  box-shadow:0 26px 80px -22px rgba(0,0,0,.6);
+  clip-path:polygon(
+    0 0, calc(100% - var(--sys-chamfer)) 0, 100% var(--sys-chamfer),
+    100% 100%, var(--sys-chamfer) 100%, 0 calc(100% - var(--sys-chamfer)));
+  transform-origin:50% 50%;   /* 拍2「从中线展开」支点 */
+  will-change:transform;
 }
-/* entrance — two-phase:
-   ① a compact seed strip springs in at the window's vertical centre and settles.
-   ② after the hold, the scroll unfurls upward + downward simultaneously, slowly.
-   Per-keyframe animation-timing-function controls each phase independently. */
-.sys-view.open .sys-window{ animation:sysScrollOpen 1300ms linear both; transform-origin:center center; }
-@keyframes sysScrollOpen{
-  /* ① seed materialises: from a hairline to a ~10% strip, springy pop */
-  0%  { clip-path:inset(50% 0 50% 0); opacity:0;
-        animation-timing-function:cubic-bezier(0.34,1.28,0.64,1); }
-  22% { clip-path:inset(45% 0 45% 0); opacity:1;
-        animation-timing-function:linear; }
-  /* ② settle — strip holds steady for a beat */
-  35% { clip-path:inset(45% 0 45% 0); opacity:1;
-        animation-timing-function:cubic-bezier(0.16,1,0.3,1); }
-  /* ③ bilateral unfurl — slow, stately expo-out */
-  100%{ clip-path:inset(0%  0 0%  0); opacity:1; }
+/* 降临 hairline 外框 —— glass.js 按窗体实测 viewport rect 定位并绘制斜切路径,
+   拍1 strokeDash 成形。position:absolute 的容纳块是 .sys-view 的 padding box;
+   .sys-view 无 border,padding box 原点即视口 (0,0),故直接用窗体 rect 定位即可。
+   pointer-events:none 不吃点击;视图关闭时随 .sys-view 的 visibility:hidden 隐去。 */
+.sys-frame{
+  position:absolute; z-index:2; pointer-events:none; overflow:visible;
+  left:0; top:0; width:0; height:0;
 }
-/* brass seam glows at the fold during the seed phase, fades as the panel opens */
-.sys-window::after{
-  content:''; position:absolute; left:0; right:0; top:50%; height:2px;
-  z-index:6; pointer-events:none; opacity:0; transform:translateY(-50%);
-  background:linear-gradient(90deg, transparent, var(--brass) 18%, var(--brass-soft) 50%, var(--brass) 82%, transparent);
-  box-shadow:0 0 22px 6px var(--brass-glow);
+.sys-frame path{
+  fill:none; stroke:var(--hair); stroke-width:1; vector-effect:non-scaling-stroke;
 }
-.sys-view.open .sys-window::after{ animation:sysFold 1300ms linear both; }
-@keyframes sysFold{
-  0%  { opacity:0; }
-  14% { opacity:1; }   /* glows through hold */
-  35% { opacity:1; }
-  65% { opacity:.35; } /* fades as scroll opens */
-  100%{ opacity:0; }
-}
-/* exit — the scroll furls back the SAME way it opened: rolls up into the centre
-   strip and fades, the brass seam glowing at the fold as it closes. Snappier than
-   the open (you want to dismiss, not wait). */
-.sys-view.sys-closing .sys-window{ animation:sysScrollClose 500ms cubic-bezier(0.5,0,0.78,0.2) both; transform-origin:center center; }
-@keyframes sysScrollClose{
-  0%  { clip-path:inset(0%  0 0%  0); opacity:1; }
-  80% { clip-path:inset(45% 0 45% 0); opacity:1; }
-  100%{ clip-path:inset(50% 0 50% 0); opacity:0; }
-}
-.sys-view.sys-closing .sys-window::after{ animation:sysFoldClose 500ms ease both; }
-@keyframes sysFoldClose{ 0%{ opacity:0; } 55%{ opacity:1; } 100%{ opacity:0; } }
-.sys-view.sys-closing .sys-backdrop{ animation:sysBackFade 500ms var(--ease-silk) both; }
-@keyframes sysBackFade{ from{ opacity:1; } to{ opacity:0; } }
-@media (prefers-reduced-motion:reduce){
-  .sys-view.open .sys-window,.sys-view.open .sys-window::after{ animation:none !important; clip-path:none !important; opacity:1 !important; }
-}
-
-/* ── entrance cover: a brass "system boot" screen that masks the live HUD while
-   the window unfurls, then dissolves with a brass sweep once the panel settles.
-   z-index:2 keeps it above the interior (z-auto) but below the frame corners
-   (z:3) and fold seam (::after, z:6). pointer-events:auto eats stray clicks
-   during the ~1.85s ceremony; visibility:hidden at the end stops capturing. ── */
-.sys-cover{
-  position:absolute; inset:0; z-index:2; pointer-events:auto; overflow:hidden;
-  display:flex; align-items:center; justify-content:center;
-  background:var(--color-background-tertiary);   /* dark matte gate — occludes any boot content through the strip */
-}
-.sys-view.open .sys-cover{ animation:sysCoverHold 1850ms linear both; }
-@keyframes sysCoverHold{ 0%{ opacity:1; } 70%{ opacity:1; } 100%{ opacity:0; visibility:hidden; } }
-/* scroll rods: two brass frosted-glass handles (the scroll's holding bars). Now
-   direct children of .sys-window so they animate on BOTH open (split to the edges,
-   riding the unfurl) and close (converge back to the centre). Hidden when idle —
-   the keyframes fade them in/out. */
-.sys-rod{
-  position:absolute; left:0; right:0; height:14px; z-index:5; pointer-events:none; opacity:0;
-  background:linear-gradient(180deg,
-    color-mix(in srgb,var(--brass) 22%,transparent) 0%, color-mix(in srgb,var(--brass-soft) 34%,transparent) 42%,
-    color-mix(in srgb,var(--brass) 20%,transparent) 58%, color-mix(in srgb,var(--brass) 28%,transparent) 100%);   /* cylindrical specular → reads as a void-glass rod */
-  border-top:.5px solid color-mix(in srgb,var(--brass-soft) 30%,transparent);
-  border-bottom:.5px solid rgba(0,0,0,.20);
-  box-shadow:0 0 16px -3px var(--brass-glow);   /* transient — only during the descent ceremony (opacity:0 at rest) */
-}
-.sys-rod.top{ top:0; }
-.sys-rod.bottom{ bottom:0; }
-/* open — split from the centre line to the edges (riding the unfurl), then fade */
-.sys-view.open .sys-rod.top{ animation:sysRodTop 1300ms linear both; }
-.sys-view.open .sys-rod.bottom{ animation:sysRodBottom 1300ms linear both; }
-@keyframes sysRodTop{
-  0%  { top:50%; opacity:1; animation-timing-function:cubic-bezier(0.34,1.28,0.64,1); }
-  22% { top:45%; animation-timing-function:linear; }
-  35% { top:45%; opacity:1; animation-timing-function:cubic-bezier(0.16,1,0.3,1); }
-  100%{ top:0; opacity:0; }
-}
-@keyframes sysRodBottom{
-  0%  { bottom:50%; opacity:1; animation-timing-function:cubic-bezier(0.34,1.28,0.64,1); }
-  22% { bottom:45%; animation-timing-function:linear; }
-  35% { bottom:45%; opacity:1; animation-timing-function:cubic-bezier(0.16,1,0.3,1); }
-  100%{ bottom:0; opacity:0; }
-}
-/* close — the two handles converge from the edges back to the centre as it furls */
-.sys-view.sys-closing .sys-rod.top{ animation:sysRodTopClose 500ms cubic-bezier(0.5,0,0.78,0.2) both; }
-.sys-view.sys-closing .sys-rod.bottom{ animation:sysRodBottomClose 500ms cubic-bezier(0.5,0,0.78,0.2) both; }
-@keyframes sysRodTopClose{ 0%{ top:0; opacity:0; } 15%{ opacity:1; } 80%{ top:45%; opacity:1; } 100%{ top:50%; opacity:0; } }
-@keyframes sysRodBottomClose{ 0%{ bottom:0; opacity:0; } 15%{ opacity:1; } 80%{ bottom:45%; opacity:1; } 100%{ bottom:50%; opacity:0; } }
-
-/* ── brass lock: a circle + a square set as a diamond. The core cranks ~1.5 turns
-   clockwise as the scroll unfurls (the "unlocking"). Lives in the dark gate. ── */
-.sys-lock{ position:relative; width:58px; height:58px; z-index:1; }
-.sys-lock-ring{
-  position:absolute; inset:0; border-radius:50%;
-  border:1.5px solid var(--brass);
-  box-shadow:0 0 16px -4px var(--brass-glow), inset 0 0 10px -6px var(--brass-glow);
-}
-.sys-lock-core{
-  position:absolute; left:50%; top:50%; width:22px; height:22px;
-  border:1.5px solid var(--brass); background:var(--brass-ghost);
-  transform:translate(-50%,-50%) rotate(45deg);     /* square shown as a diamond */
-}
-.sys-view.open .sys-lock-core{ animation:sysLockSpin 1300ms cubic-bezier(0.2,0.7,0.3,1) both; }
-@keyframes sysLockSpin{
-  from{ transform:translate(-50%,-50%) rotate(45deg); }
-  to  { transform:translate(-50%,-50%) rotate(585deg); }   /* +540° = 1.5 clockwise turns */
-}
-
-/* ── expanding ring wave: sits over the window (OUTSIDE the cover) so it plays over
-   the revealed System as the cover dissolves. Two rings stagger into a wave. ── */
-.sys-ripple{ position:absolute; inset:0; z-index:5; pointer-events:none; }
-.sys-ripple i{
-  /* base size = the lock ring's outer diameter (58px), so the wave emerges from the
-     circle's outer frame. Size (not transform:scale) is animated so the 1.5px border
-     stays as thin as the lock's, instead of thickening as the ring grows. */
-  position:absolute; left:50%; top:50%; width:58px; height:58px; margin:-29px 0 0 -29px;
-  border-radius:50%; border:1.5px solid var(--brass); opacity:0;
-}
-.sys-view.open .sys-ripple i{ animation:sysRippleWave 1520ms var(--ease-silk) 1250ms both; }   /* ~half the old speed */
-.sys-view.open .sys-ripple i:nth-child(2){ animation-delay:1550ms; }
-@keyframes sysRippleWave{
-  0%  { width:58px;  height:58px;  margin:-29px  0 0 -29px;  opacity:0; }
-  12% { opacity:.8; }
-  100%{ width:300px; height:300px; margin:-150px 0 0 -150px; opacity:0; }
-}
-
-/* interior stays hidden beneath the cover, then fades in as the cover lifts */
-.sys-view.open .sys-top,
-.sys-view.open .sys-tabs,
-.sys-view.open #sys-body{ animation:sysContentIn 600ms var(--ease-silk) 1300ms both; }
-@keyframes sysContentIn{ from{ opacity:0; } to{ opacity:1; } }
+/* 卷轴叙事覆层退役:#system-view 原生 HTML 里的 .sys-cover / .sys-lock / .sys-ripple
+   / .sys-rod 属旧「卷轴解锁」叙事,随 sysScrollOpen 族一并退役。元素留在 DOM(此代理
+   不动 index.html),此处令其彻底隐身,不再参与降临。 */
+.sys-cover, .sys-lock, .sys-ripple, .sys-rod{ display:none !important; }
 
 @media (prefers-reduced-motion:reduce){
-  .sys-cover, .sys-rod, .sys-ripple{ display:none !important; }
-  .sys-view.open .sys-top,.sys-view.open .sys-tabs,.sys-view.open #sys-body{ animation:none !important; opacity:1 !important; }
+  /* 降临退化为直接显示(现状语义保留):glass.js 不跑时间轴,窗体静态呈现。
+     只压 transform;clip-path 斜切形状与内容 opacity 保持,不可 reset。 */
+  .sys-view.open .sys-window{ transform:none !important; }
 }
+
+/* 拍3 内容点亮由 glass.js 的 GSAP stagger 驱动(.sys-top / .sys-tabs / #sys-body 等
+   窗体直接子块),不再需要 sysContentIn 卷轴内容淡入。reduced-motion 下内容默认 opacity:1
+   (无 CSS 置 0),glass.js 亦不置 0,故静态可见。 */
 .sys-top{ display:flex; align-items:center; gap:12px; padding:14px 16px 10px; }
 .sys-title{ flex:1; font-family:var(--mono); font-size:12px; letter-spacing:.24em; text-transform:uppercase; color:var(--brass); }
 .sys-back{
@@ -496,8 +388,13 @@ body.sys-locked{ overflow:hidden; }
 .sys-toast.show{ opacity:1; transform:translate(-50%, 0); }
 
 /* ── ceremonial-gold molten flow on the LEVEL UP title + rank letters (RITUAL only) ──
-   (brassFlow keyframes live in components.css). #E8C878 典礼金 is permitted here —
-   this is the celebration moment (§2.4). Achievement names stay ink. */
+   brassFlow was retired from components.css for RESTING text (§6) — the keyframes now
+   live HERE, celebration-scoped. #E8C878 典礼金 is permitted here — this is the
+   celebration moment (§2.4). Achievement names stay ink. */
+@keyframes brassFlow{
+  0%,100%{ background-position:0% 50%; }
+  50%    { background-position:100% 50%; }
+}
 .sys-cele-level .sys-cele-title, .sys-cele-rank{
   background:linear-gradient(115deg,
     color-mix(in srgb, #E8C878, #000 42%) 0%,
@@ -518,3 +415,6 @@ body.sys-locked{ overflow:hidden; }
 @media (prefers-reduced-motion:reduce){
   .sys-cele-level .sys-cele-title, .sys-cele-rank{ animation:none; }
 }
+
+/* v7.34.0 review fix: transparent baseline so state border-colors render */
+.sys-skill{ border:.5px solid transparent; }

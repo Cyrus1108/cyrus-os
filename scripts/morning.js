@@ -199,22 +199,29 @@ document.addEventListener('keydown', e => { if(e.key === 'Escape' && _mrDetailId
 
 function toggleMR(id,event){
   if(_mrDetailId) return;   // a pill is expanded — its taps aren't toggles
-  const i=S.mr.list.find(i=>i.id===id);
-  if(i){
-    i.d=!i.d;
-    // SFX inside the guard — saveMR/rMR below run even on a failed id lookup.
-    // The all-done fanfare is latched per day: untick+retick replays only a tick.
-    if(window.Sfx){
-      if(i.d && S.mr.list.every(x=>x.d) && _mrQuestDate !== TODAY){ _mrQuestDate = TODAY; Sfx.quest(); }
-      else if(i.d) Sfx.tick(); else Sfx.untick();
+  // 三拍:被点的 pill 是 reconcile 复用的持久节点(data-id),beatTap transform 与
+  // 既有的 .flash(box-shadow 脉冲)正交共存,互不打架。
+  const pill=document.querySelector(`#mr-list [data-id="${id}"]`);
+  const apply=function(){
+    const i=S.mr.list.find(i=>i.id===id);
+    if(i){
+      i.d=!i.d;
+      // SFX inside the guard — saveMR/rMR below run even on a failed id lookup.
+      // The all-done fanfare is latched per day: untick+retick replays only a tick.
+      if(window.Sfx){
+        if(i.d && S.mr.list.every(x=>x.d) && _mrQuestDate !== TODAY){ _mrQuestDate = TODAY; Sfx.quest(); }
+        else if(i.d) Sfx.tick(); else Sfx.untick();
+      }
     }
-  }
-  saveMR();rMR();
-  if(typeof rpgAfterChange==='function')rpgAfterChange();
-  if(event){
-    setTimeout(()=>{
-      const el=document.querySelector(`.mr-pill[data-id="${id}"]`);
-      if(el){el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),500);}
-    },10);
-  }
+    saveMR();rMR();
+    if(typeof rpgAfterChange==='function')rpgAfterChange();
+    if(event){
+      setTimeout(()=>{
+        const el=document.querySelector(`.mr-pill[data-id="${id}"]`);
+        if(el){el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),500);}
+      },10);
+    }
+  };
+  if(window.beatTap && pill) window.beatTap(pill, apply);
+  else apply();
 }

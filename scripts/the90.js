@@ -105,39 +105,53 @@ function ensureThe90Defaults(){
 
 let _the90PerfectSfxDate = null;   // SFX latch: 5/5 flourish at most once per day
 function toggleThe90(targetId){
-  ensureThe90Defaults();
-  const today = TODAY;
-  if(!S.the90.daily[today]) S.the90.daily[today] = { scores: {}, note: '' };
-  const day = the90Day();
-  const phase = the90Phase(day);
-  const cur = S.the90.daily[today].scores[targetId];
+  // 三拍:被点的打卡格是 reconcile 复用的持久节点(data-key=targetId),beatTap 的
+  // transform 不会被 apply 里的 rThe90() 重渲染打断。拿不到格子则直接落地状态。
+  const cell = document.querySelector('#the90-cells [data-key="' + targetId + '"]');
+  const apply = function(){
+    ensureThe90Defaults();
+    const today = TODAY;
+    if(!S.the90.daily[today]) S.the90.daily[today] = { scores: {}, note: '' };
+    const day = the90Day();
+    const phase = the90Phase(day);
+    const cur = S.the90.daily[today].scores[targetId];
+    const targets = (S.the90.meta && S.the90.meta.targets) || [];
+    // 达成态 BEFORE 本次点击 —— 用于 false→true 的满勤仪式判定(镜像 the90WasComplete 语义)
+    const wasAll = targets.length > 0 && targets.every(t => the90ScoreMet(S.the90.daily[today].scores[t.id], phase));
 
-  if(phase === 'stabilize'){
-    // Cycle 0 → 3 → 2 → 1 → 0 (start at 3 on first tap = deep work day)
-    const next = cur === undefined ? 3 : cur === 3 ? 2 : cur === 2 ? 1 : cur === 1 ? 0 : 3;
-    S.the90.daily[today].scores[targetId] = next;
-  } else {
-    // standardize + optimize: ✓ ↔ ✗
-    S.the90.daily[today].scores[targetId] = !cur;
-  }
-  saveThe90Daily();
-  /* SFX — direction by MET status, not raw value (stabilize 3→2→1 stays met).
-     Gesture-only: toggleThe90 is reachable solely from the cell onclick.
-     The 5/5 flourish is latched per day — untick+retick replays only a tick. */
-  if(window.Sfx){
+    if(phase === 'stabilize'){
+      // Cycle 0 → 3 → 2 → 1 → 0 (start at 3 on first tap = deep work day)
+      const next = cur === undefined ? 3 : cur === 3 ? 2 : cur === 2 ? 1 : cur === 1 ? 0 : 3;
+      S.the90.daily[today].scores[targetId] = next;
+    } else {
+      // standardize + optimize: ✓ ↔ ✗
+      S.the90.daily[today].scores[targetId] = !cur;
+    }
+    saveThe90Daily();
     const scores = S.the90.daily[today].scores;
-    const wasMet = the90ScoreMet(cur, phase), isMet = the90ScoreMet(scores[targetId], phase);
-    if(isMet && !wasMet){
-      const targets = (S.the90.meta && S.the90.meta.targets) || [];
-      const all = targets.length > 0 && targets.every(t => the90ScoreMet(scores[t.id], phase));
-      if(all && _the90PerfectSfxDate !== today){ _the90PerfectSfxDate = today; Sfx.perfect(); }
-      else Sfx.tick();
-    } else if(wasMet && !isMet){ Sfx.untick(); }
-    else { Sfx.tick(); }                         // met→met step-down (stabilize) — plain tactile tick
-  }
-  rThe90();
-  if(typeof rpgAfterChange === 'function') rpgAfterChange();   // settle EXP / level / achievements
-  if(typeof window.lifeTreePulse === 'function') window.lifeTreePulse();   // tree energy feedback on check-in
+    const isAll = targets.length > 0 && targets.every(t => the90ScoreMet(scores[t.id], phase));
+    /* SFX — direction by MET status, not raw value (stabilize 3→2→1 stays met).
+       Gesture-only: toggleThe90 is reachable solely from the cell onclick.
+       The 5/5 flourish is latched per day — untick+retick replays only a tick. */
+    if(window.Sfx){
+      const wasMet = the90ScoreMet(cur, phase), isMet = the90ScoreMet(scores[targetId], phase);
+      if(isMet && !wasMet){
+        if(isAll && _the90PerfectSfxDate !== today){ _the90PerfectSfxDate = today; Sfx.perfect(); }
+        else Sfx.tick();
+      } else if(wasMet && !isMet){ Sfx.untick(); }
+      else { Sfx.tick(); }                         // met→met step-down (stabilize) — plain tactile tick
+    }
+    // 满勤庆祝 → ritualPulse(false→true 达成瞬间;§2.4 配额辉光,零 S 副作用)。
+    // 音效闩锁(_the90PerfectSfxDate)与 Sfx.perfect 时点原样保留,与视觉解耦。
+    if(isAll && !wasAll && typeof window.ritualPulse === 'function'){
+      window.ritualPulse(document.getElementById('the90-panel'));
+    }
+    rThe90();
+    if(typeof rpgAfterChange === 'function') rpgAfterChange();   // settle EXP / level / achievements
+    if(typeof window.lifeTreePulse === 'function') window.lifeTreePulse();   // tree energy feedback on check-in
+  };
+  if(window.beatTap && cell) window.beatTap(cell, apply);
+  else apply();
 }
 
 /* RPG v2: a real module (AI 产出 / 健身打卡) auto-marks its The 90 pillar met for today,

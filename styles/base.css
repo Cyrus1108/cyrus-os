@@ -88,30 +88,22 @@ textarea:focus,input:focus,select:focus{
 textarea::placeholder,input::placeholder{color:var(--ghost);font-style:italic;font-family:var(--serif);font-size:13px;}
 textarea.bias-input{font-family:var(--serif);font-style:italic;}
 
-/* DATE / TIME PICKER — Themed */
+/* DATE / TIME PICKER — dark-only app (v7.34.0): force dark native controls even on
+   a light-mode OS, else white popup pickers flash inside the void UI */
 input[type=date],input[type=time]{
-  color-scheme:light dark;
+  color-scheme:dark;
   accent-color:var(--brass);
-}
-@media (prefers-color-scheme:dark){
-  input[type=date],input[type=time]{color-scheme:dark;}
 }
 
 input[type=date]::-webkit-calendar-picker-indicator,
 input[type=time]::-webkit-calendar-picker-indicator{
-  filter:invert(56%) sepia(25%) saturate(700%) hue-rotate(356deg) brightness(88%) contrast(87%);
+  filter:invert(75%) sepia(20%) saturate(500%) hue-rotate(0deg) brightness(90%) contrast(85%);
   cursor:pointer;
   opacity:0.7;
   transition:opacity .2s;
 }
 input[type=date]::-webkit-calendar-picker-indicator:hover,
 input[type=time]::-webkit-calendar-picker-indicator:hover{opacity:1;}
-@media (prefers-color-scheme:dark){
-  input[type=date]::-webkit-calendar-picker-indicator,
-  input[type=time]::-webkit-calendar-picker-indicator{
-    filter:invert(75%) sepia(20%) saturate(500%) hue-rotate(0deg) brightness(90%) contrast(85%);
-  }
-}
 
 input[type=checkbox]{transition:transform .15s var(--ease-press);cursor:pointer;}
 input[type=checkbox]:active{transform:scale(1.3);}

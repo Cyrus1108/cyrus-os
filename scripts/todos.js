@@ -270,16 +270,23 @@ function repeatLabel(r,customDays){
 function toggleTd(id){
   const t = S.todos.find(t=>t.id===id);
   if(!t) return;
-  t.done = !t.done;
-  if(t.done){t.doneAt = Date.now();}
-  if(t.done && t.repeat && t.repeat !== 'none' && t.date){
-    const nextDate = computeNextRepeatDate(t.date, t.repeat, t.customDays);
-    if(nextDate){
-      S.todos.push({...t,id:crypto.randomUUID(),date:nextDate,done:false,doneAt:null,created:TODAY,position:S.todos.reduce((m,x)=>Math.max(m,x.position||0),0)+1});
+  // 三拍:勾选的复选框会被 rTodos 的 setHTML 重写,但其所在行(.todo-row[data-id])是
+  // reconcile 复用的持久节点 → beatTap 对行做 transform,渲染后仍是同一节点,动画不断。
+  const row = document.querySelector(`#td-rows [data-id="${id}"]`);
+  const apply = function(){
+    t.done = !t.done;
+    if(t.done){t.doneAt = Date.now();}
+    if(t.done && t.repeat && t.repeat !== 'none' && t.date){
+      const nextDate = computeNextRepeatDate(t.date, t.repeat, t.customDays);
+      if(nextDate){
+        S.todos.push({...t,id:crypto.randomUUID(),date:nextDate,done:false,doneAt:null,created:TODAY,position:S.todos.reduce((m,x)=>Math.max(m,x.position||0),0)+1});
+      }
     }
-  }
-  if(window.Sfx){ t.done ? Sfx.tick() : Sfx.untick(); }
-  saveTodos(); rTodos(); rMetrics(); updateShowDoneBtn(); if(typeof rpgAfterChange==='function')rpgAfterChange();
+    if(window.Sfx){ t.done ? Sfx.tick() : Sfx.untick(); }
+    saveTodos(); rTodos(); rMetrics(); updateShowDoneBtn(); if(typeof rpgAfterChange==='function')rpgAfterChange();
+  };
+  if(window.beatTap && row) window.beatTap(row, apply);
+  else apply();
 }
 function computeNextRepeatDate(currentDate, repeat, customDays){
   const next = new Date(currentDate+'T00:00:00');
