@@ -48,6 +48,18 @@ const MR_DEFAULT = [
 ];
 const defaultMorning = () => MR_DEFAULT.map(i => ({ ...i }));
 
+// Trading-desk pre-market checklist default — mirrors scripts/state.js DEF_TR.
+// Used as the fallback when the user has no prior `trading` row to carry forward.
+const DEF_TR = [
+  { id: 't1', t: '宏观背景确认(油/金/BTC联动)', d: false },
+  { id: 't2', t: 'BTC 日线市场结构', d: false },
+  { id: 't3', t: '黄金 关键流动性位', d: false },
+  { id: 't4', t: '原油 趋势方向', d: false },
+  { id: 't5', t: '设置关键价位提醒', d: false },
+  { id: 't6', t: '记录今日交易偏向', d: false },
+];
+const defaultTradingList = () => DEF_TR.map(i => ({ ...i }));
+
 // ── lazy client (vendor supabase.js is a UMD global: window.supabase) ────────
 // scripts/supabase.js does `const { createClient } = window.supabase;` off the
 // classic <script src="../vendor/supabase.js">. We mirror that exactly. Lazy so
@@ -218,6 +230,35 @@ export async function loadTrading(uid) {
   return { accounts: aRes.data || [], transactions: tRes.data || [], categories: cRes.data || [] };
 }
 
+// TRADING desk (盘前封条) — the daily trading checklist + bias + seal (table
+// `trading`, one row per user/day; distinct from the fin_* finance tables above).
+// Prototype B / by-day: read TODAY's row; if none, carry the most recent prior
+// day's checklist forward (reset every d:false, bias/seal cleared) — exactly the
+// app's daily rollover (sync.js pullTrading + app.js rollover), matching how
+// loadMorning carries the ritual list forward. First write creates today's row.
+export async function loadTradingDesk(uid) {
+  const empty = () => ({ date: TODAY, bias: '', list: defaultTradingList(), sealed: false, sealedAt: null, broke: false, exists: false, seeded: true });
+  const sb = client(); if (!sb || !uid) return empty();
+  const today = await sb.from('trading').select('*').eq('user_id', uid).eq('date', TODAY).maybeSingle();
+  if (today.error) throw today.error;
+  if (today.data) {
+    const d = today.data;
+    return {
+      date: TODAY, bias: d.bias || '',
+      list: Array.isArray(d.list) ? d.list : defaultTradingList(),
+      sealed: !!d.sealed, sealedAt: d.sealed_at ? new Date(d.sealed_at).getTime() : null,
+      broke: !!d.broke, exists: true, seeded: false,
+    };
+  }
+  const prior = await sb.from('trading').select('list,date').eq('user_id', uid)
+    .lt('date', TODAY).order('date', { ascending: false }).limit(1).maybeSingle();
+  if (prior.error) throw prior.error;
+  const base = (prior.data && Array.isArray(prior.data.list) && prior.data.list.length)
+    ? prior.data.list : defaultTradingList();
+  return { date: TODAY, bias: '', list: base.map(i => ({ ...i, d: false })),
+    sealed: false, sealedAt: null, broke: false, exists: false, seeded: true };
+}
+
 export async function loadSystem(uid) {
   const sb = client(); if (!sb || !uid) return { settings: null, notices: [] };
   const [sRes, nRes] = await Promise.all([
@@ -233,8 +274,8 @@ export async function loadSystem(uid) {
 // Load every domain in parallel; individual failures don't sink the others.
 // the90 === null signals a hard failure (→ caller falls back to demo/LINK DOWN).
 export async function loadAll(uid) {
-  const keys = ['the90', 'morning', 'academics', 'japanese', 'todos', 'trading', 'system'];
-  const fns  = [loadThe90, loadMorning, loadAcademics, loadJapanese, loadTodos, loadTrading, loadSystem];
+  const keys = ['the90', 'morning', 'academics', 'japanese', 'todos', 'trading', 'system', 'tradingDesk'];
+  const fns  = [loadThe90, loadMorning, loadAcademics, loadJapanese, loadTodos, loadTrading, loadSystem, loadTradingDesk];
   const results = await Promise.allSettled(fns.map(fn => fn(uid)));
   const out = { errors: {} };
   results.forEach((r, i) => {
@@ -449,4 +490,68 @@ export async function deleteTransaction(id) {
   const { error } = await sb.from('fin_transactions').delete().eq('id', id).eq('user_id', uid);
   if (error) throw error;
   return true;
+}
+
+// ── TRADING desk writers (盘前封条) ──────────────────────────────────────────
+// The whole desk (bias + checklist + seal) lives in ONE `trading` row per
+// user/day, so every mutation writes the full row via a single-row upsert
+// (onConflict user_id,date) — identical shape to sync.js syncPushTrading, never
+// a replace-all. uid always from the live session. Each writer takes the current
+// desk, computes the next state WITHOUT mutating the caller, upserts, and returns
+// the normalized next desk (the caller does the optimistic UI + revert).
+async function _pushTradingDesk(desk) {
+  const sb = client(); const uid = await currentUid();
+  if (!sb || !uid) throw new Error('NO SESSION');
+  const list = Array.isArray(desk.list) ? desk.list : [];
+  const bias = desk.bias || '';
+  const sealed = !!desk.sealed;
+  const sealedAt = sealed ? (desk.sealedAt || Date.now()) : null;
+  const broke = !!desk.broke;
+  const { error } = await sb.from('trading').upsert({
+    user_id: uid, date: TODAY, bias, list,
+    sealed, sealed_at: sealedAt ? new Date(sealedAt).toISOString() : null, broke,
+  }, { onConflict: 'user_id,date' });
+  if (error) throw error;
+  return { date: TODAY, bias, list, sealed, sealedAt, broke, exists: true, seeded: false };
+}
+
+// Toggle one checklist item's done flag for TODAY. Sealed = read-only (mirrors
+// trading.js toggleTR's `if(S.tr.sealed) return`). Returns the next desk.
+export async function toggleTradingItem(itemId, desk) {
+  if (desk && desk.sealed) return desk;                    // locked
+  const base = desk || {};
+  const list = (Array.isArray(base.list) ? base.list : [])
+    .map(it => it && it.id === itemId ? { ...it, d: !it.d } : it);
+  return _pushTradingDesk({ ...base, list });
+}
+
+// Set TODAY's bias. Typing/clearing the bias auto-(un)checks the「记录今日交易偏向」
+// item (id t6, else by text) ONLY on the empty↔non-empty transition — faithful
+// to trading.js onBias so a deliberate manual (un)check with text present stands.
+export async function setTradingBias(bias, desk) {
+  if (desk && desk.sealed) return desk;                    // bias read-only once sealed
+  const base = desk || {};
+  const nextBias = (bias || '').trim();
+  const wasEmpty = !((base.bias || '').trim().length > 0);
+  const nowEmpty = !(nextBias.length > 0);
+  const list = (Array.isArray(base.list) ? base.list : []).map(it => ({ ...it }));
+  if (nowEmpty !== wasEmpty) {
+    const it = list.find(i => i && i.id === 't6') || list.find(i => i && i.t === '记录今日交易偏向');
+    if (it) it.d = !nowEmpty;
+  }
+  return _pushTradingDesk({ ...base, bias: nextBias, list });
+}
+
+// 盘前封存 — seal TODAY's commitment (bias + checklist go read-only). Stamps
+// sealed_at. Mirrors trading.js trSeal.
+export async function sealTradingDesk(desk) {
+  if (desk && desk.sealed) return desk;
+  return _pushTradingDesk({ ...(desk || {}), sealed: true, sealedAt: Date.now() });
+}
+
+// 破封 — break the seal: unlocks and leaves a `broke` trace. Mirrors trading.js
+// trBreak (the caller owns the confirm gate).
+export async function unsealTradingDesk(desk) {
+  if (desk && !desk.sealed) return desk;
+  return _pushTradingDesk({ ...(desk || {}), sealed: false, broke: true });
 }

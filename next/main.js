@@ -56,10 +56,11 @@ const MOCK = (() => {
   const viz = {
     sys30: real.slice(-30).map(d => d.score),                    // The90 last 30d
     rise7: real.slice(-7).map(d => d.tracks[0]),                 // wake-ritual 7d dots
-    candles,                                                     // 12 mini candles
+    candles,                                                     // 12 mini candles (FINANCE ledger)
     credits: 108 / 120,
     todos: 12 / (12 + 7),
     jp: 1 - 88 / 120,                                            // exam prep progress
+    trade: 4 / 6,                                                // TRADING pre-market checklist
   };
 
   const the90info = {
@@ -93,13 +94,20 @@ const MOCK = (() => {
           { k: 'Grammar', v: '86', unit: '%' },
           { k: 'Exam', v: 'D-88', accent: 'cyan' },
         ], note: 'Weak on 聴解 — <b>62%</b>. Shadowing block scheduled daily 21:00.' } },
-      { id: 'TRADING', label: 'TRADING', glyph: '↗', tag: 'WIN <b>61%</b> · R <b>2.3</b>',
-        hud: { kicker: 'MARKETS / K線碑', cells: [
-          { k: 'Win rate', v: '61', unit: '%' },
-          { k: 'Avg R', v: '2.3', accent: 'cyan' },
-          { k: 'Trades', v: '214', unit: 'YTD' },
-          { k: 'Max DD', v: '-8.4', unit: '%', accent: 'cyan' },
-        ], note: 'Journal discipline <b>96%</b> · no revenge trades in 21 sessions.' } },
+      { id: 'TRADING', label: 'TRADING', glyph: '↗', tag: 'CHECK <b>4/6</b> · OPEN',
+        hud: { kicker: 'PRE-MARKET / 盘前封条', cells: [
+          { k: 'Checklist', v: '4', unit: '/ 6' },
+          { k: 'Complete', v: '67', unit: '%', accent: 'cyan' },
+          { k: 'Seal', v: 'OPEN' },
+          { k: 'Bias', v: 'SET', accent: 'cyan' },
+        ], note: 'Pre-market discipline — set today’s bias, run the checklist, then 盘前封存 to lock the plan.' } },
+      { id: 'FINANCE', label: 'FINANCE', glyph: '¥', tag: 'ACCTS <b>4</b> · TX <b>214</b>',
+        hud: { kicker: 'LEDGER / 账簿碑', cells: [
+          { k: 'Accounts', v: '4' },
+          { k: 'Transactions', v: '214', unit: 'YTD', accent: 'cyan' },
+          { k: 'Liabilities', v: '1' },
+          { k: 'Last entry', v: 'JUL 06', accent: 'cyan' },
+        ], note: 'Full ledger — link to record, edit and delete transactions.' } },
       { id: 'TODOS', label: 'TODOS', glyph: '▤', tag: 'OPEN <b>7</b> · DONE <b>12</b>',
         hud: { kicker: 'BACKLOG / 堆叠', cells: [
           { k: 'Open', v: '7' },
@@ -380,7 +388,8 @@ function buildViz(id) {
   const L = (v && v.labels) || {};       // live labels override the demo defaults
   switch (id) {
     case 'SYSTEM': return { k: L.SYSTEM || 'THE 90 · LAST 30 DAYS', h: svgBars(v.sys30, v.sys30.length - 1) };
-    case 'TRADING': return { k: L.TRADING || 'LAST 12 SESSIONS', h: svgCandles(v.candles) };
+    case 'FINANCE': return { k: L.FINANCE || 'LEDGER · LAST 12', h: svgCandles(v.candles) };
+    case 'TRADING': return { k: L.TRADING || 'PRE-MARKET · CHECKLIST', h: svgMeter(v.trade || 0) };
     case 'MORNING': return { k: L.MORNING || 'WAKE RITUAL · 7 DAYS', h: svgDots(v.rise7, 0.5) };
     case 'ACADEMICS': return { k: L.ACADEMICS || 'CREDITS · 108 / 120', h: svgMeter(v.credits) };
     case 'JP-N2': return { k: L['JP-N2'] || 'EXAM PREP · D-88', h: svgRing(v.jp) };
@@ -446,7 +455,8 @@ const WRITE_HANDLERS = {
   japanese: (btn, st, scene) => onJapaneseRowClick(btn, scene),
 };
 function renderStationBody(st, scene) {
-  if (st.id === 'TRADING' && LIVE) { renderTradingBody(st, scene); return; }   // custom CRUD body
+  if (st.id === 'FINANCE' && LIVE) { renderFinanceBody(st, scene); return; }        // finance CRUD body
+  if (st.id === 'TRADING' && LIVE) { renderTradingDeskBody(st, scene); return; }     // pre-market desk body
   const body = document.getElementById('hud-body');
   let html = stationCellsHTML(st.hud.cells);
   const writable = LIVE && st.writable && WRITE_HANDLERS[st.writable] && Array.isArray(st.hud.rows);
@@ -481,7 +491,7 @@ function paintDoneRow(btn, done) {
 function openHUD(id, scene) {
   const st = DATA.stations.find(s => s.id === id); if (!st) return;
   hudKind = 'station'; hudFlew = true;                    // reached via camera fly
-  if (id === 'TRADING') tradeForm = { type: 'expense', editId: null };   // fresh form each open
+  if (id === 'FINANCE') finForm = { type: 'expense', editId: null };   // fresh finance form each open
   document.getElementById('hud-glyph').textContent = st.glyph;
   document.getElementById('hud-kicker').textContent = st.hud.kicker;
   document.getElementById('hud-title').textContent = st.label;
@@ -683,9 +693,9 @@ function closeHUD(scene) {
 // ════════════════════════════════════════════════════════════════════════════
 // live data → MOCK-shaped DATA (drop-in for scene + openHUD + buildViz)
 // ════════════════════════════════════════════════════════════════════════════
-const STATION_GLYPH  = { MORNING: '☉', ACADEMICS: '§', 'JP-N2': '⛩', TRADING: '↗', TODOS: '▤', SYSTEM: '◇' };
+const STATION_GLYPH  = { MORNING: '☉', ACADEMICS: '§', 'JP-N2': '⛩', TRADING: '↗', FINANCE: '¥', TODOS: '▤', SYSTEM: '◇' };
 const STATION_KICKER = { MORNING: 'RITUAL / 日冕', ACADEMICS: 'SCHOLARSHIP / 书碑', 'JP-N2': 'LANGUAGE / 鳥居',
-  TRADING: 'MARKETS / K線碑', TODOS: 'BACKLOG / 堆叠', SYSTEM: 'CORE / 核心' };
+  TRADING: 'PRE-MARKET / 盘前封条', FINANCE: 'LEDGER / 账簿碑', TODOS: 'BACKLOG / 堆叠', SYSTEM: 'CORE / 核心' };
 const MON = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 function fmtMon(iso) { const p = String(iso).slice(0, 10).split('-'); return p.length === 3 ? `${MON[+p[1] - 1]} ${p[2]}` : String(iso); }
 function dLabel(iso) { const s = String(iso).slice(0, 10); const du = DB.daysUntil(s); return du >= 0 ? ('D-' + du) : fmtMon(s); }
@@ -748,16 +758,34 @@ function japaneseStation(jp, jpDone, jpTotal) {
   }
   return st;
 }
-function tradingStation(trading, txns) {
+function financeStation(trading, txns) {
   const accts = trading.accounts || [];
   const liab = accts.filter(a => a && a.is_liability).length;
   const lastTx = txns[0];
-  return baseStation('TRADING', `ACCTS <b>${accts.length}</b> · TX <b>${txns.length}</b>`, [
+  return baseStation('FINANCE', `ACCTS <b>${accts.length}</b> · TX <b>${txns.length}</b>`, [
     { k: 'Accounts', v: String(accts.length) },
     { k: 'Transactions', v: String(txns.length), accent: 'cyan' },
     { k: 'Liabilities', v: String(liab) },
     { k: 'Last entry', v: lastTx ? fmtMon(lastTx.date) : '—', accent: 'cyan' },
   ], lastTx ? `Latest: <b>${esc(lastTx.type || 'entry')}</b> ${esc(String(lastTx.amount ?? ''))} ${esc(lastTx.currency || '')} · tap an entry below to edit.` : 'No transactions on file.');
+}
+// TRADING = the daily trading DESK (盘前封条): bias + pre-market checklist + seal.
+// Summary cells only here; the writable body (bias field / toggle rows / seal
+// bar) is rendered by renderTradingDeskBody when LIVE.
+function tradingDeskStation(desk) {
+  desk = desk || { list: [], bias: '', sealed: false, broke: false };
+  const list = Array.isArray(desk.list) ? desk.list : [];
+  const done = list.filter(i => i && i.d).length, total = list.length;
+  const pct = total ? Math.round(done / total * 100) : 0;
+  const hasBias = !!(desk.bias && String(desk.bias).trim());
+  return baseStation('TRADING', `CHECK <b>${done}/${total}</b> · ${desk.sealed ? 'SEALED' : 'OPEN'}`, [
+    { k: 'Checklist', v: String(done), unit: '/ ' + total },
+    { k: 'Complete', v: String(pct), unit: '%', accent: 'cyan' },
+    { k: 'Seal', v: desk.sealed ? 'SEALED' : 'OPEN' },
+    { k: 'Bias', v: hasBias ? 'SET' : '—', accent: 'cyan' },
+  ], desk.sealed
+    ? `盘前已封存 · commitment locked${desk.broke ? ' · 今日已破封' : ''}.`
+    : (hasBias ? `Bias: <b>${esc(desk.bias)}</b>` : 'No bias logged — set today’s bias & seal the plan.'));
 }
 function todosStation(open, doneToday, all) {
   all = all || [];
@@ -831,40 +859,50 @@ function rebuildJapaneseStation() {
   DATA.viz.jp = list.length ? jpDone / list.length : 0;
   DATA.viz.labels['JP-N2'] = `CHECKLIST · ${jpDone} / ${list.length}`;
 }
-function rebuildTradingStation() {
+function rebuildFinanceStation() {
   const trading = DATA._trading || { accounts: [], transactions: [], categories: [] };
   const txns = trading.transactions || [];
-  const idx = DATA.stations.findIndex(s => s.id === 'TRADING');
-  if (idx >= 0) DATA.stations[idx] = tradingStation(trading, txns);
+  const idx = DATA.stations.findIndex(s => s.id === 'FINANCE');
+  if (idx >= 0) DATA.stations[idx] = financeStation(trading, txns);
   DATA.viz.candles = buildLedgerCandles(txns);
-  DATA.viz.labels.TRADING = `LEDGER · ${txns.length} ENTRIES`;
+  DATA.viz.labels.FINANCE = `LEDGER · ${txns.length} ENTRIES`;
+}
+function rebuildTradingDeskStation() {
+  const desk = DATA._tradingDesk || { list: [], bias: '', sealed: false, broke: false };
+  const list = Array.isArray(desk.list) ? desk.list : [];
+  const done = list.filter(i => i && i.d).length;
+  const idx = DATA.stations.findIndex(s => s.id === 'TRADING');
+  if (idx >= 0) DATA.stations[idx] = tradingDeskStation(desk);
+  DATA.viz.trade = list.length ? done / list.length : 0;
+  DATA.viz.labels.TRADING = `CHECKLIST · ${done} / ${list.length}`;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// TRADING (finance) full CRUD — add / edit / delete fin_transactions inside the
-// TRADING station HUD. Currency is ALWAYS derived from the selected account
-// (never a form field), mirroring finSubmitTx. DOM form + recent-tx list.
+// FINANCE full CRUD — add / edit / delete fin_transactions inside the FINANCE
+// station HUD (re-homed from the former TRADING station; logic byte-identical).
+// Currency is ALWAYS derived from the selected account (never a form field),
+// mirroring finSubmitTx. DOM form + recent-tx list.
 // ════════════════════════════════════════════════════════════════════════════
-let tradeForm = { type: 'expense', editId: null };
+let finForm = { type: 'expense', editId: null };
 const fmtAmt = n => Math.abs(+n || 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
-const currentTradingStation = () => DATA.stations.find(s => s.id === 'TRADING');
-function tradeAccounts() {
+const currentFinanceStation = () => DATA.stations.find(s => s.id === 'FINANCE');
+function finAccounts() {
   return ((DATA._trading && DATA._trading.accounts) || [])
     .filter(a => a && a.status !== 0)                       // exclude inactive (status 0)
     .slice().sort((a, b) => (a.sort || 0) - (b.sort || 0));
 }
-function tradeCats(kind) {
+function finCats(kind) {
   return ((DATA._trading && DATA._trading.categories) || [])
     .filter(c => c && !c.archived && c.kind === kind)
     .slice().sort((a, b) => (a.sort || 0) - (b.sort || 0));
 }
 const acctById = id => ((DATA._trading && DATA._trading.accounts) || []).find(a => a && a.id === id);
 function acctOptions(sel) {
-  return tradeAccounts().map(a =>
+  return finAccounts().map(a =>
     `<option value="${esc(a.id)}"${a.id === sel ? ' selected' : ''}>${esc(a.name)} · ${esc(a.currency)}</option>`).join('');
 }
 function catOptions(kind, sel) {
-  return `<option value="">— none —</option>` + tradeCats(kind).map(c =>
+  return `<option value="">— none —</option>` + finCats(kind).map(c =>
     `<option value="${esc(c.id)}"${c.id === sel ? ' selected' : ''}>${esc((c.icon ? c.icon + ' ' : '') + c.name)}</option>`).join('');
 }
 function txRowHTML(tx) {
@@ -888,9 +926,9 @@ function txRowHTML(tx) {
     <button type="button" class="tx-del" data-del="${esc(tx.id)}" aria-label="Delete">🗑</button>
   </div>`;
 }
-function renderTradingBody(st, scene) {
+function renderFinanceBody(st, scene) {
   const body = document.getElementById('hud-body');
-  const accts = tradeAccounts();
+  const accts = finAccounts();
   let html = stationCellsHTML(st.hud.cells);
   if (!accts.length) {
     html += `<div class="hud-cell wide"><div class="hud-note">NO ACCOUNTS — create one in the main app first.</div></div>`;
@@ -898,7 +936,7 @@ function renderTradingBody(st, scene) {
     body.querySelectorAll('.hud-v .num').forEach(countUp);
     return;
   }
-  const editing = tradeForm.editId, t = tradeForm.type;
+  const editing = finForm.editId, t = finForm.type;
   const a0 = accts[0].id, a1 = accts[1] ? accts[1].id : a0;
   html += `<div class="hud-cell wide tx-panel">
     <div class="log-head">${editing ? 'EDIT ENTRY' : 'NEW ENTRY'}</div>
@@ -934,26 +972,26 @@ function renderTradingBody(st, scene) {
     ${recent.length ? `<div class="tx-list">${recent.map(txRowHTML).join('')}</div>` : `<div class="hud-note">No transactions yet.</div>`}
   </div>`;
   body.innerHTML = html;
-  wireTradingBody(scene);
+  wireFinanceBody(scene);
   body.querySelectorAll('.hud-v .num').forEach(countUp);
 }
-function wireTradingBody(scene) {
+function wireFinanceBody(scene) {
   const body = document.getElementById('hud-body');
   body.querySelectorAll('#tx-seg .tx-seg-btn').forEach(b =>
-    b.addEventListener('click', () => { tradeForm.type = b.dataset.t; tradeSyncType(); }));
+    b.addEventListener('click', () => { finForm.type = b.dataset.t; finSyncType(); }));
   const acct = document.getElementById('tx-account'), toAcct = document.getElementById('tx-toaccount');
-  if (acct) acct.addEventListener('change', tradeSyncCurrency);
-  if (toAcct) toAcct.addEventListener('change', tradeSyncCurrency);
+  if (acct) acct.addEventListener('change', finSyncCurrency);
+  if (toAcct) toAcct.addEventListener('change', finSyncCurrency);
   const submit = document.getElementById('tx-submit');
-  if (submit) submit.addEventListener('click', () => onTradeSubmit(scene));
+  if (submit) submit.addEventListener('click', () => onFinSubmit(scene));
   const cancel = document.getElementById('tx-cancel');
-  if (cancel) cancel.addEventListener('click', () => { tradeForm.editId = null; tradeForm.type = 'expense'; renderTradingBody(currentTradingStation(), scene); });
+  if (cancel) cancel.addEventListener('click', () => { finForm.editId = null; finForm.type = 'expense'; renderFinanceBody(currentFinanceStation(), scene); });
   body.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => loadTxIntoForm(b.dataset.edit, scene)));
   body.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => onDeleteClick(b, scene)));
-  tradeSyncType();
+  finSyncType();
 }
-function tradeSyncType() {
-  const t = tradeForm.type, isXfer = t === 'transfer';
+function finSyncType() {
+  const t = finForm.type, isXfer = t === 'transfer';
   document.querySelectorAll('#tx-seg .tx-seg-btn').forEach(b => b.classList.toggle('active', b.dataset.t === t));
   const toWrap = document.getElementById('tx-toacct-wrap'), catWrap = document.getElementById('tx-cat-wrap');
   const acctLabel = document.querySelector('label[for="tx-account"]');
@@ -961,27 +999,27 @@ function tradeSyncType() {
   if (catWrap) catWrap.style.display = isXfer ? 'none' : '';
   if (acctLabel) acctLabel.textContent = isXfer ? 'FROM' : 'ACCOUNT';
   if (!isXfer) { const cs = document.getElementById('tx-category'); if (cs) cs.innerHTML = catOptions(t === 'income' ? 'income' : 'expense', ''); }
-  tradeSyncCurrency();
+  finSyncCurrency();
 }
-function tradeSyncCurrency() {
+function finSyncCurrency() {
   const acctEl = document.getElementById('tx-account'); if (!acctEl) return;
   const acct = acctById(acctEl.value);
   const curEl = document.getElementById('tx-cur'); if (curEl) curEl.textContent = acct ? '· ' + acct.currency : '';
   const toWrap = document.getElementById('tx-toamt-wrap');
-  if (tradeForm.type === 'transfer') {
+  if (finForm.type === 'transfer') {
     const to = acctById(document.getElementById('tx-toaccount').value);
     const cross = acct && to && acct.currency !== to.currency;
     if (toWrap) toWrap.style.display = cross ? '' : 'none';
     const tocur = document.getElementById('tx-tocur'); if (tocur) tocur.textContent = to ? '· ' + to.currency : '';
   } else if (toWrap) { toWrap.style.display = 'none'; }
 }
-function flashTradeMsg(msg) { const el = document.getElementById('tx-msg'); if (el) el.textContent = msg; }
+function flashFinMsg(msg) { const el = document.getElementById('tx-msg'); if (el) el.textContent = msg; }
 function loadTxIntoForm(id, scene) {
   const tx = ((DATA._trading && DATA._trading.transactions) || []).find(t => t && t.id === id);
   if (!tx) return;
   audio.arm(); audio.tick();
-  tradeForm.editId = id; tradeForm.type = tx.type;
-  renderTradingBody(currentTradingStation(), scene);   // renders edit mode + builds options for type
+  finForm.editId = id; finForm.type = tx.type;
+  renderFinanceBody(currentFinanceStation(), scene);   // renders edit mode + builds options for type
   const set = (elId, v) => { const el = document.getElementById(elId); if (el) el.value = (v == null ? '' : v); };
   set('tx-account', tx.account_id);
   if (tx.type === 'transfer') set('tx-toaccount', tx.to_account_id);
@@ -990,23 +1028,23 @@ function loadTxIntoForm(id, scene) {
   set('tx-note', tx.note || '');
   set('tx-date', String(tx.date).slice(0, 10));
   if (tx.type === 'transfer' && tx.to_amount != null) set('tx-toamount', tx.to_amount);
-  tradeSyncCurrency();
+  finSyncCurrency();
   const p = document.querySelector('#hud-body .tx-panel'); if (p && p.scrollIntoView) p.scrollIntoView({ block: 'nearest' });
 }
-async function onTradeSubmit(scene) {
-  const type = tradeForm.type;
+async function onFinSubmit(scene) {
+  const type = finForm.type;
   const amount = Math.round((parseFloat(document.getElementById('tx-amount').value) || 0) * 100) / 100;
-  if (!(amount > 0)) { flashTradeMsg('ENTER AN AMOUNT'); return; }
+  if (!(amount > 0)) { flashFinMsg('ENTER AN AMOUNT'); return; }
   const date = document.getElementById('tx-date').value || DB.TODAY;
   const note = document.getElementById('tx-note').value.trim();
   const accountId = document.getElementById('tx-account').value;
   const acct = acctById(accountId);
-  if (!acct) { flashTradeMsg('SELECT AN ACCOUNT'); return; }
+  if (!acct) { flashFinMsg('SELECT AN ACCOUNT'); return; }
   // currency ALWAYS from the account, never a form field (mirrors finSubmitTx)
   const tx = { type, amount, date, note, accountId, toAccountId: null, toAmount: null, categoryId: null, currency: acct.currency };
   if (type === 'transfer') {
     const toAccountId = document.getElementById('tx-toaccount').value;
-    if (accountId === toAccountId) { flashTradeMsg('ACCOUNTS MUST DIFFER'); return; }
+    if (accountId === toAccountId) { flashFinMsg('ACCOUNTS MUST DIFFER'); return; }
     const to = acctById(toAccountId);
     tx.toAccountId = toAccountId;
     tx.currency = acct.currency;                       // transfer amount is in the FROM-account currency
@@ -1020,46 +1058,157 @@ async function onTradeSubmit(scene) {
   audio.arm(); audio.tick();
   const submit = document.getElementById('tx-submit'); if (submit) submit.disabled = true;
   try {
-    if (tradeForm.editId) {
+    if (finForm.editId) {
       const patch = {                                  // NO tags key → the user's tags are preserved
         date: tx.date, type: tx.type, amount: tx.amount, currency: tx.currency,
         account_id: tx.accountId || null, to_account_id: tx.toAccountId || null,
         to_amount: tx.toAmount != null ? tx.toAmount : null,
         category_id: tx.categoryId || null, note: tx.note || null,
       };
-      await DB.updateTransaction(tradeForm.editId, patch);
-      tradeForm.editId = null;
+      await DB.updateTransaction(finForm.editId, patch);
+      finForm.editId = null;
     } else {
       await DB.addTransaction(tx);
     }
-    tradeForm.type = 'expense';
-    await reloadTrading(scene);                        // re-pull → cells + candles + recent list
+    finForm.type = 'expense';
+    await reloadFinance(scene);                        // re-pull → cells + candles + recent list
     if (audio.hud) audio.hud();
     setLink('ok');
   } catch (err) {
     if (submit) submit.disabled = false;
-    flashTradeMsg('WRITE FAILED — RETRY');
+    flashFinMsg('WRITE FAILED — RETRY');
     setLink('down');
   }
 }
 function onDeleteClick(btn, scene) {
   const id = btn.dataset.del;
-  if (btn.dataset.armed === '1') { clearTimeout(btn._t); onTradeDelete(id, scene); return; }   // 2nd tap → delete
+  if (btn.dataset.armed === '1') { clearTimeout(btn._t); onFinDelete(id, scene); return; }   // 2nd tap → delete
   btn.dataset.armed = '1'; btn.classList.add('armed'); btn.textContent = 'CONFIRM DELETE';
   audio.arm(); audio.tick();
   btn._t = setTimeout(() => { btn.dataset.armed = '0'; btn.classList.remove('armed'); btn.textContent = '🗑'; }, 3000);
 }
-async function onTradeDelete(id, scene) {
+async function onFinDelete(id, scene) {
   audio.arm(); audio.tick();
   let ok = true;
   try { await DB.deleteTransaction(id); } catch { ok = false; }
-  await reloadTrading(scene);                          // re-pull authoritative state either way
+  await reloadFinance(scene);                          // re-pull authoritative state either way
   setLink(ok ? 'ok' : 'down');
 }
-async function reloadTrading(scene) {
+async function reloadFinance(scene) {
   try { if (DATA._uid) DATA._trading = await DB.loadTrading(DATA._uid); } catch { /* keep prior _trading */ }
-  rebuildTradingStation();
-  refreshOpenStation('TRADING', scene);
+  rebuildFinanceStation();
+  refreshOpenStation('FINANCE', scene);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// TRADING desk (盘前封条) — bias + pre-market checklist + seal. NEW code, but it
+// follows the SAME safe daily-write pattern as the other writers: optimistic UI
+// → single-row upsert (onConflict user_id,date) via data.js → revert on failure.
+// Sealed = read-only (bias field + toggle rows disabled), mirroring trading.js.
+// ════════════════════════════════════════════════════════════════════════════
+const deskClone = d => ({ ...(d || {}), list: ((d && d.list) || []).map(x => ({ ...x })) });
+function renderTradingDeskBody(st, scene) {
+  const body = document.getElementById('hud-body');
+  const desk = DATA._tradingDesk || { list: [], bias: '', sealed: false, sealedAt: null, broke: false };
+  const list = Array.isArray(desk.list) ? desk.list : [];
+  const sealed = !!desk.sealed;
+  let html = stationCellsHTML(st.hud.cells);
+  // today's bias (read-only once sealed)
+  html += `<div class="hud-cell wide tx-panel">
+    <div class="log-head">${sealed ? 'BIAS · SEALED' : 'TODAY’S BIAS'}</div>
+    <div class="tx-field">
+      <textarea id="td-bias" rows="2" maxlength="400" placeholder="记录今日交易偏向…"${sealed ? ' readonly' : ''}>${esc(desk.bias || '')}</textarea>
+    </div>
+  </div>`;
+  // pre-market checklist (toggle rows; disabled once sealed)
+  html += `<div class="hud-cell wide"><div class="log-head">${sealed ? 'PRE-MARKET · LOCKED' : 'PRE-MARKET CHECKLIST'}</div>`;
+  html += list.length
+    ? `<div class="log-wrap">` + list.map(i =>
+        `<button class="log-row${i.d ? ' is-on' : ''}${sealed ? ' is-locked' : ''}" data-tdid="${esc(i.id)}"${sealed ? ' disabled' : ''}>` +
+        `<span class="log-lbl">${esc(i.t || '(item)')}</span><span class="log-state">${i.d ? '✓' : '—'}</span></button>`).join('') + `</div>`
+    : `<div class="hud-note">No checklist — set one in the main app.</div>`;
+  html += `</div>`;
+  // 盘前封条 seal bar
+  html += `<div class="hud-cell wide"><div class="td-seal-bar">`;
+  if (sealed) {
+    const tm = desk.sealedAt ? new Date(desk.sealedAt) : null;
+    const tstr = tm ? `${pad(tm.getHours())}:${pad(tm.getMinutes())}` : '';
+    html += `<div class="td-seal"><span class="td-seal-stamp">封</span>
+      <span class="td-seal-meta"><b>盘前已封存</b><small>${esc(tstr)} · 今日承诺已锁定</small></span>
+      <button type="button" class="tx-btn ghost" id="td-break">破封 UNSEAL</button></div>`;
+  } else {
+    html += `<button type="button" class="tx-btn primary" id="td-seal">🔒 盘前封存 · SEAL</button>${desk.broke ? '<span class="td-broke">今日已破封</span>' : ''}`;
+  }
+  html += `</div></div>`;
+  body.innerHTML = html;
+  if (!sealed) {
+    body.querySelectorAll('.log-row[data-tdid]').forEach(btn =>
+      btn.addEventListener('click', () => onDeskItemClick(btn, scene)));
+    const bias = document.getElementById('td-bias');
+    if (bias) bias.addEventListener('blur', () => onDeskBiasCommit(bias, scene));
+    const seal = document.getElementById('td-seal');
+    if (seal) seal.addEventListener('click', () => onDeskSeal(scene));
+  } else {
+    const brk = document.getElementById('td-break');
+    if (brk) brk.addEventListener('click', () => onDeskUnseal(scene));
+  }
+  body.querySelectorAll('.hud-v .num').forEach(countUp);
+}
+async function onDeskItemClick(btn, scene) {
+  const desk = DATA._tradingDesk; if (!desk || desk.sealed) return;
+  const id = btn.dataset.tdid;
+  audio.arm(); audio.tick();
+  const prev = deskClone(desk);
+  const it = (desk.list || []).find(x => x && x.id === id); if (!it) return;
+  it.d = !it.d;                                            // optimistic (in-place)
+  paintDoneRow(btn, it.d);
+  rebuildTradingDeskStation();
+  try {
+    DATA._tradingDesk = await DB.toggleTradingItem(id, prev);
+    rebuildTradingDeskStation(); refreshOpenStation('TRADING', scene);
+    setLink('ok');
+  } catch (err) {
+    DATA._tradingDesk = prev;                              // revert
+    rebuildTradingDeskStation(); refreshOpenStation('TRADING', scene);
+    setLink('down');
+  }
+}
+async function onDeskBiasCommit(biasEl, scene) {
+  const desk = DATA._tradingDesk; if (!desk || desk.sealed) return;
+  const val = biasEl.value.trim();
+  if (val === (desk.bias || '').trim()) return;            // no change → no write
+  audio.arm();
+  const prev = deskClone(desk);
+  try {
+    DATA._tradingDesk = await DB.setTradingBias(val, prev);
+    rebuildTradingDeskStation();
+    refreshOpenStation('TRADING', scene);                  // reflects the t6 auto-(un)check
+    setLink('ok');
+  } catch (err) { setLink('down'); }                       // leave the typed text in place
+}
+async function onDeskSeal(scene) {
+  const desk = DATA._tradingDesk; if (!desk || desk.sealed) return;
+  audio.arm(); audio.tick();
+  const prev = deskClone(desk);
+  const biasEl = document.getElementById('td-bias');
+  if (biasEl) prev.bias = biasEl.value.trim();             // fold in any uncommitted bias edit
+  try {
+    DATA._tradingDesk = await DB.sealTradingDesk(prev);
+    rebuildTradingDeskStation(); refreshOpenStation('TRADING', scene);
+    if (audio.hud) audio.hud();                            // 印章 / quest cue
+    setLink('ok');
+  } catch (err) { setLink('down'); }
+}
+async function onDeskUnseal(scene) {
+  const desk = DATA._tradingDesk; if (!desk || !desk.sealed) return;
+  if (!confirm('破封？今日已封存的盘前承诺将解锁，并留下「已破封」记录。')) return;
+  audio.arm(); audio.tick();
+  const prev = deskClone(desk);
+  try {
+    DATA._tradingDesk = await DB.unsealTradingDesk(prev);
+    rebuildTradingDeskStation(); refreshOpenStation('TRADING', scene);
+    setLink('ok');
+  } catch (err) { setLink('down'); }
 }
 
 function buildLiveData(loaded, session) {
@@ -1076,7 +1225,8 @@ function buildLiveData(loaded, session) {
   const acad = loaded.academics || [];
   const jp = loaded.japanese || null;
   const todosArr = loaded.todos || [];
-  const trading = loaded.trading || { accounts: [], transactions: [] };
+  const trading = loaded.trading || { accounts: [], transactions: [] };   // FINANCE ledger
+  const desk = loaded.tradingDesk || null;                                // TRADING pre-market desk
   const sys = loaded.system || { settings: null, notices: [] };
   const txns = trading.transactions || [];
 
@@ -1087,10 +1237,13 @@ function buildLiveData(loaded, session) {
   const openTodos = todosArr.filter(t => t && !t.done && !t.archived);
   const doneToday = todosArr.filter(t => t && t.done && String(t.done_at || '').slice(0, 10) === DB.TODAY);
   const todosDen = openTodos.length + doneToday.length;
+  const deskList = Array.isArray(desk && desk.list) ? desk.list : [];
+  const deskDone = deskList.filter(i => i && i.d).length;
 
   const labels = {
     SYSTEM: 'THE 90 · LAST 30 DAYS',
-    TRADING: `LEDGER · ${txns.length} ENTRIES`,
+    FINANCE: `LEDGER · ${txns.length} ENTRIES`,
+    TRADING: `CHECKLIST · ${deskDone} / ${deskList.length}`,
     MORNING: `RITUALS TODAY · ${mDone} / ${mTotal}`,
     ACADEMICS: `DONE · ${acadDone} / ${acad.length}`,
     'JP-N2': `CHECKLIST · ${jpDone} / ${jpList.length}`,
@@ -1098,10 +1251,11 @@ function buildLiveData(loaded, session) {
   };
   const stations = [
     morningStation(morningList),
-    academicsStation(acad, acadDone),
+    tradingDeskStation(desk),
     japaneseStation(jp, jpDone, jpList.length),
-    tradingStation(trading, txns),
+    academicsStation(acad, acadDone),
     todosStation(openTodos.length, doneToday.length, todosArr),
+    financeStation(trading, txns),
     systemStation(S, sys),
   ];
   return {
@@ -1110,12 +1264,13 @@ function buildLiveData(loaded, session) {
     morning: { list: morningList, date: (loaded.morning && loaded.morning.date) || DB.TODAY },
     // raw domain arrays kept so the writable stations can recompute after a toggle
     _uid: (session.user && session.user.id) || null,
-    _todos: todosArr, _academics: acad, _japanese: jp, _trading: trading,
+    _todos: todosArr, _academics: acad, _japanese: jp, _trading: trading, _tradingDesk: desk,
     the90, todayIndex: S.todayIndex, avg30: S.avg30, best: S.best,
     viz: { sys30, rise7: morningList.map(i => i && i.d ? 1 : 0), candles: buildLedgerCandles(txns),
       credits: acad.length ? acadDone / acad.length : 0,
       todos: todosDen ? doneToday.length / todosDen : 0,
-      jp: jpList.length ? jpDone / jpList.length : 0, labels },
+      jp: jpList.length ? jpDone / jpList.length : 0,
+      trade: deskList.length ? deskDone / deskList.length : 0, labels },
     stations,
   };
 }

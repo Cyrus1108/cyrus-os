@@ -354,6 +354,26 @@ html[data-reticle="on"] .tx-field select{cursor:none;}
 .tx-del:hover{color:var(--danger);}
 .tx-del.armed{background:var(--danger);color:var(--bg);font-family:var(--mono);font-size:8.5px;font-weight:600;}
 
+/* ---- TRADING desk (盘前封条): bias textarea + pre-market seal -------------- */
+.tx-field textarea{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--ink);
+  font-family:var(--mono);font-size:12px;padding:8px 9px;line-height:1.5;resize:vertical;min-height:44px;}
+.tx-field textarea:focus{outline:none;border-color:var(--cyan);}
+.tx-field textarea[readonly]{color:var(--mute);border-style:dashed;cursor:default;}
+.log-row.is-locked{cursor:default;opacity:.82;border-left-color:var(--hair);}
+.log-row.is-locked::after{content:none;}
+.log-row.is-locked:hover{background:var(--bg-2);}
+.td-seal-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.td-seal{display:flex;align-items:center;gap:11px;width:100%;
+  background:var(--bg-2);border:1px solid var(--line);padding:10px 12px;}
+.td-seal-stamp{flex:0 0 auto;font-family:var(--disp);font-size:20px;line-height:1;color:var(--danger);
+  border:2px solid var(--danger);padding:4px 8px;transform:rotate(-6deg);}
+.td-seal-meta{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;}
+.td-seal-meta b{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--yellow);font-weight:500;}
+.td-seal-meta small{font-family:var(--mono);font-size:9px;letter-spacing:.06em;color:var(--mute);}
+.td-broke{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--danger);align-self:center;}
+#td-seal{flex:1;}
+html[data-reticle="on"] .tx-field textarea,html[data-reticle="on"] .log-row.is-locked{cursor:none;}
+
 /* ---- link affordance (demo / offline sign-in prompt) ---------------------- */
 #link{position:fixed;left:24px;bottom:52px;z-index:8;font-family:var(--mono);
   max-width:min(320px,86vw);}

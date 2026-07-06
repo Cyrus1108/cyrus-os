@@ -1,8 +1,8 @@
 // ============================================================================
 // CYRUS://NEXT — COMMAND DECK · scene.js  (v3)
 // The Three.js tactical deck. Hidden-line rendering: every wireframe structure
-// (90-pillar array + 6 stations) is backed by a bg-coloured SOLID OCCLUDER that
-// writes depth, so interior/back lines are culled by the depth buffer.
+// (90-pillar array + the district stations) is backed by a bg-coloured SOLID
+// OCCLUDER that writes depth, so interior/back lines are culled by the z-buffer.
 //
 // v3 additions:
 //   · Selective hand-written bloom (no examples/jsm): THREE.Layers → bright
@@ -20,6 +20,9 @@ const gsap = window.gsap;
 const DEG = Math.PI / 180;
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const lerp = (a, b, t) => a + (b - a) * t;
+// shortest-arc angular lerp (radians) — keeps the district tour sweep from
+// spinning the long way round when azimuths cross the ±180° seam.
+const lerpAngle = (a, b, t) => { let d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return a + d * t; };
 
 // bg / fog colour — occluders paint this so they read as "solid, unlit" ---------
 const BG = 0x0a0b06;
@@ -48,9 +51,46 @@ function pillarCorners(i, h) {
   ];
 }
 
-// -- station ring layout (angles chosen so none sits dead-center front) -------
-const STATION_ANGLE = { MORNING: -90, ACADEMICS: -30, 'JP-N2': 30, TRADING: 90, TODOS: 150, SYSTEM: -150 };
-const RING = 13.2;
+// -- districted "TERRITORY" layout ------------------------------------------
+// The 90 monument is the heart (origin). Stations live in thematic DISTRICTS —
+// angular sectors at distinct radius bands around it. Each district reserves a
+// fixed set of angular SLOTS so later batches drop new modules in without
+// re-laying-out the ones already built: a slot is instantiated only if its id
+// appears in mock.stations; reserved ids (and '__'-prefixed spacers) hold a gap,
+// never an empty station. Placement is deterministic — slots spread evenly
+// across [az-arc/2 … az+arc/2] at the district radius — so a module added later
+// lands exactly where the gap was held.
+const DISTRICTS = [
+  // DISCIPLINE — the daily cockpit; closest to the monument, front arc (faces
+  // the resting camera). Batch 1: all five instantiated.
+  { id: 'DISCIPLINE', az: -90, r: 13.5, arc: 104, phi: 60,
+    slots: ['ACADEMICS', 'JP-N2', 'MORNING', 'TRADING', 'TODOS'] },
+  // OPERATIONS — the big apps; right sector, pulled outward. Batch 1: FINANCE
+  // (centered); FITNESS/AI/CALENDAR/WISHLIST reserved for later batches.
+  { id: 'OPERATIONS', az: 0, r: 17.5, arc: 116, phi: 62,
+    slots: ['FITNESS', 'AI', 'FINANCE', 'CALENDAR', 'WISHLIST'] },
+  // ASCENSION — the game layer; back sector, behind the monument. Batch 1:
+  // SYSTEM (centered, spacers hold room for the real RPG later).
+  { id: 'ASCENSION', az: 90, r: 16, arc: 64, phi: 62,
+    slots: ['__asc_l', 'SYSTEM', '__asc_r'] },
+  // CREED — belief / resilience; left sector. All reserved for a later batch.
+  { id: 'CREED', az: 180, r: 17.5, arc: 80, phi: 62,
+    slots: ['PRINCIPLES', 'LOWDAY', 'MOTIVATION'] },
+];
+// derive per-slot world positions (once) + per-district framing info.
+const STATION_LAYOUT = {};   // id → { x, z, az, districtId }   (real modules only)
+const DISTRICT_INFO = {};    // id → { az, r, phi, cx, cz }     (centroid on its axis)
+for (const d of DISTRICTS) {
+  const n = d.slots.length, caz = d.az * DEG;
+  DISTRICT_INFO[d.id] = { az: d.az, r: d.r, phi: d.phi, cx: Math.cos(caz) * d.r, cz: Math.sin(caz) * d.r };
+  for (let k = 0; k < n; k++) {
+    const id = d.slots[k];
+    if (!id || id.startsWith('__')) continue;                    // spacer → hold a gap
+    const az = n === 1 ? d.az : d.az - d.arc / 2 + d.arc * (k / (n - 1));
+    const a = az * DEG;
+    STATION_LAYOUT[id] = { x: Math.cos(a) * d.r, z: Math.sin(a) * d.r, az, districtId: d.id };
+  }
+}
 
 // ---------------------------------------------------------------------------
 // merge an array of primitive parts into ONE line-segment geometry
@@ -162,7 +202,7 @@ function stationParts(id) {
         ],
         labelY: 3.5, pickR: 2.0,
       };
-    case 'TRADING': {
+    case 'FINANCE': {                    // K線碑 — candlestick ledger monument
       const C = [
         { x: -1.0, bLo: 0.6, bHi: 1.6, wLo: 0.3, wHi: 1.9 },
         { x: -0.5, bLo: 1.6, bHi: 2.4, wLo: 1.3, wHi: 2.8 },
@@ -180,6 +220,21 @@ function stationParts(id) {
       }
       return { wire, solid, labelY: 3.9, pickR: 1.9 };
     }
+    case 'TRADING':                      // 盘前封条 — a commitment stele with a wax-seal ring
+      return {
+        wire: [
+          { geo: B(1.9, 2.5, 0.34), pos: [0, 1.6, 0] },                              // upright tablet
+          { geo: B(2.4, 0.4, 1.0), pos: [0, 0.2, 0] },                               // base plinth
+          { geo: new THREE.TorusGeometry(0.5, 0.06, 4, 20), pos: [0, 1.78, 0.2] },   // wax-seal ring (on the face)
+          { geo: B(1.3, 0.05, 0.05), pos: [-0.1, 2.28, 0.18] },                      // checklist rules
+          { geo: B(1.3, 0.05, 0.05), pos: [-0.1, 1.02, 0.18] },
+        ],
+        solid: [
+          { geo: B(1.9, 2.5, 0.34), pos: [0, 1.6, 0] },
+          { geo: B(2.4, 0.4, 1.0), pos: [0, 0.2, 0] },
+        ],
+        labelY: 3.5, pickR: 1.9,
+      };
     case 'TODOS':
       return {
         wire: [
@@ -266,7 +321,7 @@ export function createScene(canvas, opts) {
   const dust = (!isMobile && !reducedMotion) ? buildDust(renderer) : null;
   if (dust) scene.add(dust);
 
-  // ===== 6 stations ==========================================================
+  // ===== district stations ===================================================
   const occMat = occluderMaterial();
   const stations = [];
   const pickMeshes = [];
@@ -278,8 +333,8 @@ export function createScene(canvas, opts) {
     let occ = null;
     if (s.solid && s.solid.length) { occ = new THREE.Mesh(mergeSolid(s.solid), occMat); group.add(occ); }
     group.add(line);
-    const a = STATION_ANGLE[def.id] * DEG;
-    group.position.set(Math.cos(a) * RING, 0, Math.sin(a) * RING);
+    const L = STATION_LAYOUT[def.id] || { x: 0, z: 0, districtId: null };
+    group.position.set(L.x, 0, L.z);
     const pick = new THREE.Mesh(new THREE.SphereGeometry(s.pickR, 8, 6),
       new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
     pick.position.y = s.labelY * 0.5;
@@ -287,8 +342,14 @@ export function createScene(canvas, opts) {
     group.add(pick); pickMeshes.push(pick);
     const anchor = new THREE.Object3D(); anchor.position.y = s.labelY; group.add(anchor);
     scene.add(group);
-    stations.push({ id: def.id, group, mat: line.material, line, occ, anchor, def, spin: !!s.spin, emph: 0, emphT: 0 });
+    stations.push({ id: def.id, group, mat: line.material, line, occ, anchor, def, spin: !!s.spin, emph: 0, emphT: 0, districtId: L.districtId || null });
   }
+
+  // districts that actually have a station this batch → the scroll tour's stops.
+  // Reserved districts (no instantiated slot yet, e.g. CREED) never become a
+  // stop, so the camera never frames an empty sector.
+  const _instDistricts = new Set(stations.map(s => s.districtId).filter(Boolean));
+  const TOUR = ['__overview', ...DISTRICTS.map(d => d.id).filter(id => _instDistricts.has(id))];
 
   // ===== selective bloom pipeline (desktop only) =============================
   let rtBright = null, rtA = null, rtB = null, quadScene = null, quadCam = null,
@@ -414,20 +475,42 @@ export function createScene(canvas, opts) {
     if (key !== pillarHovered) { pillarHovered = key; onPillarHover && onPillarHover(info); }
   }
 
-  // ===== camera resolve ======================================================
+  // ===== camera resolve — district tour ======================================
+  // cam.scroll (0..1, driven by Lenis) eases the camera across TOUR: an OVERVIEW
+  // pose first, then each instantiated district's framing pose. Adjacent stops
+  // are blended — position orbits the monument at a stop-specific azimuth / phi /
+  // radius, and the look-at point lerps from the monument toward the district
+  // centroid. Drag / idle-drift / boot-intro perturb on top. Reduced-motion has
+  // no Lenis → scroll stays 0 → a static overview (no district fly).
   const _p = new THREE.Vector3(), _tv = new THREE.Vector3();
-  function deckCamPos(out, extraTheta = 0) {
+  function stopParams(id) {
+    if (id === '__overview' || !DISTRICT_INFO[id]) return { az: cam.baseTheta, phi: cam.basePhi, r: cam.baseRadius, lx: 0, lz: 0 };
+    const info = DISTRICT_INFO[id];
+    // camera sits beyond the district (same azimuth, pulled back) looking inward,
+    // so the cluster reads in the foreground with the monument as the backdrop.
+    return { az: info.az * DEG, phi: info.phi * DEG, r: info.r + 12, lx: info.cx * 0.6, lz: info.cz * 0.6 };
+  }
+  function resolveDeck(outPos, outTarget) {
     const idleTh = Math.sin(cam._t * 0.209) * 2 * DEG * cam.idleW;   // 2π/30 period
     const idlePh = Math.sin(cam._t * 0.170) * 1.2 * DEG * cam.idleW; // 2π/37 period
-    const theta = cam.baseTheta + cam.scroll * (150 * DEG) + cam.dragYaw + extraTheta + idleTh - cam.intro * 12 * DEG;
-    const phi = clamp(cam.basePhi + cam.dragPitch + idlePh - cam.intro * 26 * DEG, 12 * DEG, 80 * DEG);
-    const r = cam.baseRadius - cam.scroll * 8 + cam.intro * 18;
-    out.set(
+    const s = clamp(cam.scroll, 0, 1) * (TOUR.length - 1);
+    const i = Math.floor(s), f = s - i;
+    const A = stopParams(TOUR[i]);
+    const Bp = stopParams(TOUR[Math.min(i + 1, TOUR.length - 1)]);
+    const baseTh = lerpAngle(A.az, Bp.az, f);
+    const basePh = lerp(A.phi, Bp.phi, f);
+    const baseR = lerp(A.r, Bp.r, f);
+    const lx = lerp(A.lx, Bp.lx, f), lz = lerp(A.lz, Bp.lz, f);
+    const theta = baseTh + cam.dragYaw + idleTh - cam.intro * 12 * DEG;
+    const phi = clamp(basePh + cam.dragPitch + idlePh - cam.intro * 26 * DEG, 12 * DEG, 80 * DEG);
+    const r = baseR + cam.intro * 18;
+    outTarget.set(target.x + lx, target.y, target.z + lz);
+    outPos.set(                                        // orbit the monument; look at the (shifted) target
       target.x + r * Math.sin(phi) * Math.cos(theta),
       target.y + r * Math.cos(phi),
       target.z + r * Math.sin(phi) * Math.sin(theta),
     );
-    return out;
+    return outPos;
   }
 
   // ===== focus / return (quadratic-bezier arc + banking roll) ================
@@ -450,12 +533,13 @@ export function createScene(canvas, opts) {
     gsap.to(focus, { u: 1, duration: 0.95, ease: 'power3.inOut', onComplete: () => opts.onFocusDone && opts.onFocusDone(id) });
   }
   function returnDeck() {
-    const dest = deckCamPos(new THREE.Vector3());
+    const dest = new THREE.Vector3(), destT = new THREE.Vector3();
+    resolveDeck(dest, destT);                            // district-aware home pose
     if (reducedMotion || !gsap) { cam.mode = 'deck'; opts.onReturnDone && opts.onReturnDone(); return; }
     fp.p0.copy(camera.position);
     fp.t0.copy(fp.t1);
     fp.p1.copy(dest);
-    fp.t1.set(target.x, target.y, target.z);
+    fp.t1.copy(destT);
     fp.c.copy(fp.p0).add(fp.p1).multiplyScalar(0.5); fp.c.y += 3.0;
     fp.rollDir = (dest.x - fp.p0.x) >= 0 ? 1 : -1;
     focus.u = 0;
@@ -490,8 +574,9 @@ export function createScene(canvas, opts) {
       camera.lookAt(_tv);
       roll = Math.sin(clamp(u, 0, 1) * Math.PI) * 2 * DEG * fp.rollDir;
     } else {
-      deckCamPos(_p); camera.position.copy(_p);
-      camera.lookAt(target.x + cam.dragYaw * 1.2, target.y, target.z);
+      resolveDeck(_p, _tv); camera.position.copy(_p);
+      _tv.x += cam.dragYaw * 1.2;                        // tiny yaw-follow parallax
+      camera.lookAt(_tv);
       roll = cam.intro * 1.4 * DEG;
     }
     if (roll) camera.rotateZ(roll);
@@ -605,6 +690,21 @@ export function createScene(canvas, opts) {
 
   // ===== public setters ======================================================
   function setScroll(p) { cam.scroll = clamp(p, 0, 1); noteInput(); }
+  // jump the tour to a district's framing pose (or 'overview'). Additive nav
+  // hook for later batches (e.g. district markers); the scroll tour already
+  // drives this continuum, so main.js need not call it. Eases via cam.scroll so
+  // it shares one code path with the Lenis tour + returnDeck. reduced-motion /
+  // no-gsap → instant. Unknown id is a no-op.
+  function frameDistrict(id) {
+    const idx = (id === 'overview' || id === '__overview') ? 0 : TOUR.indexOf(id);
+    if (idx < 0) return;
+    const p = TOUR.length > 1 ? idx / (TOUR.length - 1) : 0;
+    noteInput();
+    if (reducedMotion || !gsap) { cam.scroll = p; if (!running) renderOnce(); return; }
+    gsap.killTweensOf(cam, 'scroll');
+    gsap.to(cam, { scroll: p, duration: 0.9, ease: 'power2.inOut' });
+  }
+  function clearDistrict() { frameDistrict('overview'); }
   function applyDrag(dx, dy) {
     cam.dragYawT = clamp(cam.dragYawT - dx * 0.0022, -15 * DEG, 15 * DEG);
     cam.dragPitchT = clamp(cam.dragPitchT - dy * 0.0018, -15 * DEG, 15 * DEG);
@@ -664,9 +764,10 @@ export function createScene(canvas, opts) {
   return {
     start, stop, renderOnce, reveal, beginIntro, resize, dispose, pulseBloom,
     setScroll, applyDrag, setPointer, highlight, focusStation, returnDeck,
-    pickPillar, setTodayScore,
+    frameDistrict, clearDistrict, pickPillar, setTodayScore,
     get mode() { return cam.mode; }, get hovered() { return hovered; },
     get pillarHovered() { return pillarHovered; },
+    get districts() { return TOUR.slice(1); },
     labelFor: id => (labels.find(l => l.st.id === id) || {}).el,
   };
 }
