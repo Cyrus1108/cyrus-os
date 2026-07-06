@@ -28,6 +28,9 @@ const BG_V = [0x0a / 255, 0x0b / 255, 0x06 / 255];
 // bloom layer — objects on layer 1 (in addition to 0) feed the bright pass -------
 const BLOOM_LAYER = 1;
 
+// atmospheric dust field target opacity (additive; faded in on reveal) -----------
+const DUST_OPACITY = 0.5;
+
 // pillar grid layout constants (shared by builders + today-glow) -----------------
 const P_COLS = 10, P_ROWS = 9, P_SP = 1.55, P_HW = 0.22, GHOST_H = 0.5;
 const pillarX = i => ((i % P_COLS) - (P_COLS - 1) / 2) * P_SP;
@@ -256,6 +259,12 @@ export function createScene(canvas, opts) {
   // ===== grid floor ==========================================================
   const grid = buildGrid();
   scene.add(grid);
+
+  // ===== atmospheric dust motes (desktop, motion-on only) ====================
+  // GPU-drifted THREE.Points volume; excluded from the bloom pass (layer 0),
+  // paused with the loop on visibility-hidden, absent under mobile/reduced.
+  const dust = (!isMobile && !reducedMotion) ? buildDust(renderer) : null;
+  if (dust) scene.add(dust);
 
   // ===== 6 stations ==========================================================
   const occMat = occluderMaterial();
@@ -488,6 +497,7 @@ export function createScene(canvas, opts) {
     if (roll) camera.rotateZ(roll);
 
     pillars.mat.uniforms.uTime.value = t;
+    if (dust) dust.material.uniforms.uTime.value = t;
     const breathe = 0.5 + 0.5 * Math.sin(t * 2.2);
     beacon.line.material.opacity = pillars.mat.uniforms.uReveal.value * (0.35 + 0.5 * breathe);
     for (const st of stations) {
@@ -571,18 +581,26 @@ export function createScene(canvas, opts) {
     if (gsap) gsap.to(cam, { intro: 0.78, duration: 1.5, ease: 'power1.inOut' });
   }
   function reveal() {
+    const gu = grid.material.uniforms;
     if (reducedMotion || !gsap) {
-      cam.intro = 0; pillars.mat.uniforms.uReveal.value = 1; grid.material.opacity = 0.5;
+      cam.intro = 0; pillars.mat.uniforms.uReveal.value = 1;
+      gu.uReveal.value = 1; gu.uScan.value = 1;
       for (const st of stations) st.mat.opacity = 0.9;
+      if (dust) dust.material.uniforms.uOpacity.value = DUST_OPACITY;
       renderOnce(); return;
     }
     gsap.killTweensOf(cam);                 // kill the pre-drift, take over the descent
-    grid.material.opacity = 0;
-    gsap.timeline()
-      .to(cam, { intro: 0, duration: 1.5, ease: 'power2.inOut' }, 0)
-      .to(grid.material, { opacity: 0.5, duration: 0.8, ease: 'power2.out' }, 0.1)
-      .to(pillars.mat.uniforms.uReveal, { value: 1, duration: 1.25, ease: 'power2.out' }, 0.25)
-      .to(stations.map(s => s.mat), { opacity: 0.6, duration: 0.6, ease: 'power1.out' }, 0.6);
+    gu.uReveal.value = 0; gu.uScan.value = 0;
+    // showstopper (~1.7s, ≤2.6s): grid ink-fades then SCAN-BUILDS radially from
+    // the monument outward; pillars rise with a back-out overshoot staggered by
+    // distance (aOrder, baked in the shader); stations + dust settle behind it.
+    const tl = gsap.timeline();
+    tl.to(cam, { intro: 0, duration: 1.5, ease: 'power2.inOut' }, 0)
+      .to(gu.uReveal, { value: 1, duration: 0.5, ease: 'power2.out' }, 0.05)
+      .to(gu.uScan, { value: 1, duration: 1.15, ease: 'power2.inOut' }, 0.05)
+      .to(pillars.mat.uniforms.uReveal, { value: 1, duration: 1.35, ease: 'power2.out' }, 0.35)
+      .to(stations.map(s => s.mat), { opacity: 0.6, duration: 0.6, ease: 'power1.out' }, 0.7);
+    if (dust) tl.to(dust.material.uniforms.uOpacity, { value: DUST_OPACITY, duration: 1.2, ease: 'power1.out' }, 0.4);
   }
 
   // ===== public setters ======================================================
@@ -621,6 +639,7 @@ export function createScene(canvas, opts) {
     camera.aspect = W0() / H0(); camera.updateProjectionMatrix();
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(W0(), H0());
+    if (dust) dust.material.uniforms.uPixelRatio.value = renderer.getPixelRatio();
     if (bloomOn) { rtBright.dispose(); rtA.dispose(); rtB.dispose(); makeTargets(); }
     if (!running) renderOnce();
   }
@@ -631,6 +650,7 @@ export function createScene(canvas, opts) {
     if (pillarPick) { pillarPick.geometry.dispose(); pillarPick.material.dispose(); }
     beacon.line.geometry.dispose(); beacon.line.material.dispose();
     grid.geometry.dispose(); grid.material.dispose();
+    if (dust) { dust.geometry.dispose(); dust.material.dispose(); }
     for (const st of stations) { st.line.geometry.dispose(); st.mat.dispose(); if (st.occ) st.occ.geometry.dispose(); }
     occMat.dispose();
     if (bloomOn) {
@@ -686,8 +706,15 @@ function buildPillars(mock) {
   g.setAttribute('aGhost', new THREE.Float32BufferAttribute(gh, 1));
 
   const uReveal = { value: 0 }, uTime = { value: 0 };
+  // shared reveal easing. revRaw = linear per-pillar progress, staggered by
+  // distance via aOrder (center rises first). revEase = back-out overshoot for
+  // the height rise (settles to exactly 1 at progress 1). reveal = smoothstepped
+  // progress for alpha. Line AND occluder call revEase for their y-scale so the
+  // hidden-line depth stays consistent through the overshoot.
   const REVEAL = /* glsl */`
-    float reveal(float ord){ return smoothstep(0.0,1.0, clamp((uReveal - ord*0.55)/0.45, 0.0,1.0)); }`;
+    float revRaw(float ord){ return clamp((uReveal - ord*0.55)/0.45, 0.0, 1.0); }
+    float revEase(float ord){ float x = revRaw(ord); float c1 = 1.70158, c3 = c1 + 1.0; float xm = x - 1.0; return 1.0 + c3*xm*xm*xm + c1*xm*xm; }
+    float reveal(float ord){ return smoothstep(0.0, 1.0, revRaw(ord)); }`;
 
   const mat = new THREE.ShaderMaterial({
     transparent: true, depthWrite: false,
@@ -695,25 +722,28 @@ function buildPillars(mock) {
     vertexShader: /* glsl */`
       attribute float aScore; attribute float aOrder; attribute float aToday; attribute float aGhost;
       uniform float uReveal;
-      varying float vScore; varying float vToday; varying float vGhost; varying float vRev;
+      varying float vScore; varying float vToday; varying float vGhost; varying float vRev; varying float vY;
       ${REVEAL}
       void main(){
-        float rv = reveal(aOrder);
-        vec3 p = position; p.y *= rv;
-        vScore = aScore; vToday = aToday; vGhost = aGhost; vRev = rv;
+        vec3 p = position; p.y = position.y * revEase(aOrder);
+        vScore = aScore; vToday = aToday; vGhost = aGhost; vRev = reveal(aOrder); vY = position.y;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(p,1.0);
       }`,
     fragmentShader: /* glsl */`
       precision mediump float;
       uniform float uTime;
-      varying float vScore; varying float vToday; varying float vGhost; varying float vRev;
+      varying float vScore; varying float vToday; varying float vGhost; varying float vRev; varying float vY;
       void main(){
         vec3 dim = vec3(0.12,0.13,0.08);
         vec3 hot = vec3(0.82,0.80,0.06);
         vec3 pcol = mix(dim, hot, vScore*vScore*0.55 + vScore*0.45);
         float breathe = 0.5 + 0.5*sin(uTime*2.2);
         pcol += vToday * (0.2 + 0.6*breathe) * vec3(0.95,0.92,0.35);
-        float pa = 0.32 + 0.55*vScore + vToday*0.4*breathe;
+        // vertical gradient: warmer & brighter near the base, dissolving upward
+        // (skips ghost stubs) so the field reads lit rather than flat.
+        float lit = (1.0 - vGhost) * exp(-vY * 0.55);
+        pcol += lit * 0.12 * vec3(1.0, 0.92, 0.32);
+        float pa = 0.32 + 0.55*vScore + vToday*0.4*breathe + lit*0.10;
         vec3 gcol = vec3(0.22,0.23,0.15);              // dim ghost outline
         vec3 col = mix(pcol, gcol, vGhost);
         float a = mix(pa, 0.12, vGhost);
@@ -731,7 +761,7 @@ function buildPillars(mock) {
     vertexShader: /* glsl */`
       attribute float aOrder; uniform float uReveal;
       ${REVEAL}
-      void main(){ vec3 p = position; p.y *= reveal(aOrder);
+      void main(){ vec3 p = position; p.y = position.y * revEase(aOrder);
         gl_Position = projectionMatrix * modelViewMatrix * vec4(p,1.0); }`,
     fragmentShader: /* glsl */`
       precision mediump float;
@@ -830,7 +860,12 @@ function updateTodayGlowHeight(glow, i, h) {
 }
 
 // ============================================================================
-// grid floor — one LineSegments, faded in on reveal
+// grid floor — one LineSegments on a ShaderMaterial. Distance-faded: lines
+// dissolve into the fog with radial distance (computed per-fragment from an
+// interpolated world position, so long spans fade by true distance-to-origin,
+// not by their far endpoints). Faint brighter central cross + base ring.
+// reveal() drives two uniforms: uReveal (ink fade-in) and uScan (a radial
+// wipe that SCAN-BUILDS the floor from the monument outward, hot leading edge).
 // ============================================================================
 function buildGrid() {
   const half = 26, step = 2, pos = [];
@@ -840,6 +875,100 @@ function buildGrid() {
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  const m = new THREE.LineBasicMaterial({ color: 0x2a4a48, transparent: true, opacity: 0 });
+  const m = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false,
+    uniforms: {
+      uReveal: { value: 0 }, uScan: { value: 0 }, uMaxR: { value: half },
+      uColor: { value: new THREE.Color(0x2a4a48) }, uHot: { value: new THREE.Color(0x38d9d0) },
+    },
+    vertexShader: /* glsl */`
+      varying vec2 vXZ;
+      void main(){ vXZ = position.xz; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+    fragmentShader: /* glsl */`
+      precision mediump float;
+      uniform float uReveal; uniform float uScan; uniform float uMaxR;
+      uniform vec3 uColor; uniform vec3 uHot;
+      varying vec2 vXZ;
+      void main(){
+        float d = length(vXZ);
+        // radial distance fade — brighter near origin, gone before the hard edge
+        float distFade = 1.0 - smoothstep(uMaxR*0.34, uMaxR*0.92, d);
+        float nearBoost = smoothstep(uMaxR*0.55, 0.0, d);          // 0 far → 1 at origin
+        // faint brighter central cross at the monument base (cyan-kissed)
+        float xhair = max(smoothstep(0.28, 0.0, abs(vXZ.x)), smoothstep(0.28, 0.0, abs(vXZ.y))) * nearBoost;
+        // faint ring hugging the monument footprint
+        float ring = smoothstep(1.4, 0.0, abs(d - 10.0));
+        // radial scan-build: front expands from origin; hot edge only while building
+        float front = uScan * uMaxR * 1.12;
+        float built = 1.0 - smoothstep(front, front + 2.6, d);
+        float edge = smoothstep(2.4, 0.0, abs(d - front)) * step(0.001, uScan) * (1.0 - step(1.0, uScan));
+        vec3 col = mix(uColor, uHot, clamp(xhair*0.6 + edge, 0.0, 1.0));
+        float base = 0.42 + nearBoost*0.22 + xhair*0.40 + ring*0.18;
+        float a = base * distFade * built * uReveal + edge * 0.5 * uReveal;
+        gl_FragColor = vec4(col, clamp(a, 0.0, 1.0));
+      }`,
+  });
   return new THREE.LineSegments(g, m);
+}
+
+// ============================================================================
+// atmospheric dust motes — a cheap GPU-drifted THREE.Points volume around the
+// deck (dim yellow, some cyan; additive, size-attenuated). Drift + size are
+// done in the vertex shader from uTime, so per-frame cost is one uniform write.
+// Kept off the bloom layer; built only on desktop with motion enabled.
+// ============================================================================
+function buildDust(renderer) {
+  const N = 460;
+  const pos = new Float32Array(N * 3), size = new Float32Array(N),
+    phase = new Float32Array(N), col = new Float32Array(N * 3);
+  const YEL = [0.55, 0.50, 0.08], CYA = [0.10, 0.42, 0.40];
+  for (let i = 0; i < N; i++) {
+    pos[i * 3] = (Math.random() * 2 - 1) * 24;
+    pos[i * 3 + 1] = 1.0 + Math.random() * 15.0;
+    pos[i * 3 + 2] = (Math.random() * 2 - 1) * 24;
+    size[i] = 1.0 + Math.random() * 2.2;
+    phase[i] = Math.random() * Math.PI * 2;
+    const c = Math.random() < 0.72 ? YEL : CYA;            // mostly yellow, some cyan
+    col[i * 3] = c[0]; col[i * 3 + 1] = c[1]; col[i * 3 + 2] = c[2];
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('aSize', new THREE.Float32BufferAttribute(size, 1));
+  g.setAttribute('aPhase', new THREE.Float32BufferAttribute(phase, 1));
+  g.setAttribute('aColor', new THREE.Float32BufferAttribute(col, 3));
+  const m = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, depthTest: true,
+    blending: THREE.AdditiveBlending,
+    uniforms: {
+      uTime: { value: 0 }, uOpacity: { value: 0 },
+      uPixelRatio: { value: renderer ? renderer.getPixelRatio() : Math.min(window.devicePixelRatio || 1, 2) },
+    },
+    vertexShader: /* glsl */`
+      uniform float uTime; uniform float uPixelRatio;
+      attribute float aSize; attribute float aPhase; attribute vec3 aColor;
+      varying vec3 vColor; varying float vFade;
+      void main(){
+        vec3 p = position;
+        p.x += sin(uTime * 0.60 + aPhase) * 0.6;
+        p.y += sin(uTime * 0.42 + aPhase * 1.7) * 0.4;
+        p.z += cos(uTime * 0.50 + aPhase * 1.3) * 0.6;
+        vec4 mv = modelViewMatrix * vec4(p, 1.0);
+        float dist = max(0.001, -mv.z);
+        gl_PointSize = clamp(aSize * uPixelRatio * (18.0 / dist), 1.0, 9.0);
+        gl_Position = projectionMatrix * mv;
+        vColor = aColor;
+        vFade = smoothstep(3.0, 11.0, dist) * (1.0 - smoothstep(46.0, 72.0, dist));
+      }`,
+    fragmentShader: /* glsl */`
+      precision mediump float;
+      uniform float uOpacity; varying vec3 vColor; varying float vFade;
+      void main(){
+        float d = length(gl_PointCoord - 0.5);
+        float a = smoothstep(0.5, 0.0, d);
+        gl_FragColor = vec4(vColor, a * a * vFade * uOpacity);
+      }`,
+  });
+  const pts = new THREE.Points(g, m);
+  pts.frustumCulled = false;
+  return pts;
 }

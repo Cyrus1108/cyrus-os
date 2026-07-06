@@ -132,6 +132,33 @@ let hudKind = 'station';          // 'station' | 'the90'
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+// ── terminal decode/scramble — glyph churn that settles into the final text ──
+// Hand-rolled (rAF), cheap, cancellable. reduced-motion → final text instantly.
+// Purely presentational: only writes el.textContent, never touches data.
+const SCRAMBLE_GLYPHS = '▚▞▛▜░▒▓#<>/\\|=+*·:.—_0123456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+function scramble(el, finalText, dur = 460) {
+  if (!el) return;
+  const text = finalText != null ? finalText : el.textContent;
+  if (REDUCED || !text) { el.textContent = text || ''; return; }
+  if (el._scrRAF) cancelAnimationFrame(el._scrRAF);
+  const chars = [...text];
+  const settleAt = chars.map(() => 0.15 + Math.random() * 0.6);   // per-char lock-in
+  const g = SCRAMBLE_GLYPHS, gl = g.length;
+  const start = (typeof performance !== 'undefined' ? performance : Date).now();
+  const step = (t) => {
+    const p = Math.min(1, (t - start) / dur);
+    let out = '';
+    for (let i = 0; i < chars.length; i++) {
+      const c = chars[i];
+      out += (c === ' ' || p >= settleAt[i]) ? c : g[(Math.random() * gl) | 0];
+    }
+    el.textContent = out;
+    if (p < 1) { el._scrRAF = requestAnimationFrame(step); }
+    else { el.textContent = text; el._scrRAF = null; }
+  };
+  el._scrRAF = requestAnimationFrame(step);
+}
+
 // The 90 per-target display helpers (mirror data.js scoreMet semantics) --------
 function the90IsMet(score, phase) {
   return phase === 'stabilize' ? (typeof score === 'number' ? score > 0 : !!score) : !!score;
@@ -170,7 +197,29 @@ const audio = (() => {
     if (ctx.state === 'suspended') { try { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); } catch {} }
     return ctx;
   };
-  const arm = () => { armed = true; ensure(); };
+  // low breathing ambient drone — started ONCE after the first gesture, sits far
+  // under the cues (gentle LFO on its own gain, lowpassed so it's felt not heard).
+  let drone = null;
+  const startDrone = () => {
+    if (drone || REDUCED || !ctx || !master) return;
+    try {
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.03, ctx.currentTime + 4);   // slow fade-in
+      const o1 = ctx.createOscillator(); o1.type = 'sine'; o1.frequency.value = 55;      // A1
+      const o2 = ctx.createOscillator(); o2.type = 'sine'; o2.frequency.value = 82.4;    // fifth
+      o2.detune.value = 5;
+      const g2 = ctx.createGain(); g2.gain.value = 0.4;
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 180; lp.Q.value = 0.6;
+      const lfo = ctx.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 0.08;  // ~12.5s breath
+      const lfoG = ctx.createGain(); lfoG.gain.value = 0.013;
+      lfo.connect(lfoG); lfoG.connect(g.gain);
+      o1.connect(g); o2.connect(g2); g2.connect(g); g.connect(lp); lp.connect(master);
+      o1.start(); o2.start(); lfo.start();
+      drone = { g, o1, o2, lfo };
+    } catch { drone = null; }
+  };
+  const arm = () => { armed = true; ensure(); startDrone(); };
   const noise = () => {
     if (noiseBuf) return noiseBuf;
     const rate = ctx.sampleRate, len = Math.floor(rate * 0.5); noiseBuf = ctx.createBuffer(1, len, rate);
@@ -347,6 +396,29 @@ function countUp(el) {
   gsap.to(o, { v: target, duration: 0.42, ease: 'power2.out',
     onUpdate() { el.textContent = o.v.toFixed(dec); }, onComplete() { el.textContent = raw; } });
 }
+// animate the mini-viz IN on HUD open: bars/candles grow from baseline, wicks
+// fade, dots pop, the ring draws, the meter fills. Presentational only — reads
+// the SVG's own final geometry (built by svg*/buildViz) and tweens up to it.
+function animateViz(vizEl) {
+  if (!vizEl || !gsap || REDUCED) return;
+  vizEl.querySelectorAll('.mv-bar, .mv-hot, .mv-up').forEach((r, i) => {
+    const h = parseFloat(r.getAttribute('height')) || 0, y = parseFloat(r.getAttribute('y')) || 0;
+    gsap.fromTo(r, { attr: { height: 0.4, y: y + h - 0.4 } },
+      { attr: { height: h, y }, duration: 0.5, ease: 'power2.out', delay: 0.18 + i * 0.03, overwrite: true });
+  });
+  const wicks = vizEl.querySelectorAll('.mv-wick');
+  if (wicks.length) gsap.fromTo(wicks, { opacity: 0 }, { opacity: 1, duration: 0.4, delay: 0.3, stagger: 0.02, overwrite: true });
+  const dots = vizEl.querySelectorAll('.mv-dots span');
+  if (dots.length) gsap.fromTo(dots, { scale: 0 }, { scale: 1, duration: 0.34, ease: 'back.out(2)', stagger: 0.045, delay: 0.2, transformOrigin: '50% 50%', overwrite: true });
+  const ring = vizEl.querySelector('.mv-ring .rg-p');
+  if (ring) {
+    const c = parseFloat(ring.getAttribute('stroke-dasharray')) || 0;
+    gsap.fromTo(ring, { attr: { 'stroke-dashoffset': c } },
+      { attr: { 'stroke-dashoffset': ring.getAttribute('stroke-dashoffset') }, duration: 0.7, ease: 'power2.out', delay: 0.2, overwrite: true });
+  }
+  const meter = vizEl.querySelector('.mv-meter span');
+  if (meter) gsap.fromTo(meter, { width: '0%' }, { width: meter.style.width || '0%', duration: 0.6, ease: 'power2.out', delay: 0.2, overwrite: true });
+}
 
 const hudEl = document.getElementById('hud');
 let hudOpen = false;
@@ -413,10 +485,11 @@ function openHUD(id, scene) {
   document.getElementById('hud-glyph').textContent = st.glyph;
   document.getElementById('hud-kicker').textContent = st.hud.kicker;
   document.getElementById('hud-title').textContent = st.label;
+  scramble(document.getElementById('hud-title'), st.label);   // decode-in the title
   renderStationBody(st, scene);
   const viz = buildViz(id);
   const vizEl = document.getElementById('hud-viz');
-  if (viz) { vizEl.hidden = false; vizEl.innerHTML = `<div class="hud-viz-k">${esc(viz.k)}</div>${viz.h}`; }
+  if (viz) { vizEl.hidden = false; vizEl.innerHTML = `<div class="hud-viz-k">${esc(viz.k)}</div>${viz.h}`; animateViz(vizEl); }
   else { vizEl.hidden = true; vizEl.innerHTML = ''; }
   document.getElementById('hud-foot').innerHTML = `<span>${esc(id)} · ${LIVE ? 'LIVE' : 'DEMO'}</span><span>ESC / BACKPLATE ⟵ DECK</span>`;
   const sysAvg = document.getElementById('sys-avg'); if (sysAvg) sysAvg.textContent = DATA.avg30 + '%';
@@ -429,6 +502,7 @@ function openHUD(id, scene) {
     gsap.fromTo('#hud-body .hud-cell', { opacity: 0, y: 8 },
       { opacity: 1, y: 0, duration: 0.4, stagger: 0.05, ease: 'power2.out', delay: 0.12, overwrite: true });
     gsap.fromTo('#hud-viz', { opacity: 0 }, { opacity: 1, duration: 0.5, delay: 0.18, overwrite: true });
+    gsap.fromTo('.hud-rule', { scaleX: 0 }, { scaleX: 1, duration: 0.5, ease: 'power2.out', delay: 0.15, transformOrigin: 'left', overwrite: true });
   }
   if (scene && scene.pulseBloom) scene.pulseBloom();     // HUD-open bloom pulse
   audio.arm(); audio.hud(); audio.sink();                 // sweep + low-frequency sink
@@ -444,6 +518,7 @@ function openThe90HUD(scene) {
   document.getElementById('hud-glyph').textContent = '❖';
   document.getElementById('hud-kicker').textContent = 'THE 90 / 碑阵';
   document.getElementById('hud-title').textContent = 'THE 90';
+  scramble(document.getElementById('hud-title'), 'THE 90');   // decode-in the title
   const vizEl = document.getElementById('hud-viz'); vizEl.hidden = true; vizEl.innerHTML = '';
   const body = document.getElementById('hud-body');
   const rows = (info.targets || []).map(t => {
@@ -464,6 +539,7 @@ function openThe90HUD(scene) {
   if (gsap && !REDUCED) {
     gsap.fromTo('#hud-body .log-row', { opacity: 0, x: 10 },
       { opacity: 1, x: 0, duration: 0.35, stagger: 0.04, ease: 'power2.out', delay: 0.12, overwrite: true });
+    gsap.fromTo('.hud-rule', { scaleX: 0 }, { scaleX: 1, duration: 0.5, ease: 'power2.out', delay: 0.15, transformOrigin: 'left', overwrite: true });
   }
   if (scene && scene.pulseBloom) scene.pulseBloom();
   audio.arm(); audio.hud(); audio.sink();
@@ -1120,6 +1196,13 @@ async function main() {
   const useReticle = !COARSE;
   if (useReticle) document.documentElement.dataset.reticle = 'on';
 
+  // re-arm the one-shot ping ring on each new target lock (CSS animation restart)
+  const retPing = reticle.querySelector('.ret-ping');
+  function pingReticle() {
+    if (REDUCED || !retPing) return;
+    retPing.classList.remove('is-ping'); void retPing.offsetWidth; retPing.classList.add('is-ping');
+  }
+
   const scene = createScene(canvas, {
     mock: DATA, reducedMotion: REDUCED, isMobile: IS_MOBILE,
     labelsEl: document.getElementById('labels'),
@@ -1129,6 +1212,9 @@ async function main() {
         reticle.classList.add('is-locked'); retTag.textContent = 'LOCK · ' + id;
         readout.textContent = id + ' · TARGET';
         audio.tick();
+        pingReticle();                                   // lock ping (presentational)
+        const lbl = scene.labelFor(id);                  // decode-in the station label
+        if (lbl) { const nm = lbl.querySelector('.lbl-name'); if (nm) scramble(nm, nm.dataset.full || nm.textContent, 360); }
       } else {
         reticle.classList.remove('is-locked'); retTag.textContent = '';
         if (!hudOpen) readout.textContent = 'DECK · IDLE';
@@ -1150,6 +1236,15 @@ async function main() {
     onFocusDone: (id) => openHUD(id, scene),
     onReturnDone: () => { if (lenis) lenis.start(); },
   });
+
+  // stash each station label's true text so hover-lock decode always settles
+  // to the real name (never to a garbage frame of an interrupted scramble).
+  DATA.stations.forEach(s => {
+    const el = scene.labelFor(s.id); if (!el) return;
+    const nm = el.querySelector('.lbl-name'); if (nm) nm.dataset.full = nm.textContent;
+  });
+  // decode-in the deck nameplate once the boot ceremony hands off to the deck.
+  const decodeNameplate = () => { const np = document.querySelector('.np-main'); if (np) scramble(np, np.textContent, 620); };
 
   // ── reticle follows the pointer (desktop) ──────────────────────────────────
   if (useReticle) {
@@ -1223,11 +1318,11 @@ async function main() {
   // types; when boot finishes the overlay fades and reveal() completes the same
   // descent as the grid scans in and pillars rise — one continuous shot, no cut.
   if (REDUCED) {
-    runBoot(() => { scene.reveal(); scene.renderOnce(); });
+    runBoot(() => { scene.reveal(); scene.renderOnce(); decodeNameplate(); });
   } else {
     scene.beginIntro();      // seed approach pose + slow pre-drift (behind boot)
     scene.start();           // render loop on immediately
-    runBoot(() => { scene.reveal(); });
+    runBoot(() => { scene.reveal(); decodeNameplate(); });
   }
 }
 

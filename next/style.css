@@ -118,9 +118,25 @@ html[data-reticle="on"] #reticle{opacity:1;}
   opacity:0;white-space:nowrap;
 }
 #reticle.is-locked{width:64px;height:64px;}
-#reticle.is-locked [class^="ret-t"],#reticle.is-locked [class^="ret-b"]{opacity:1;}
+#reticle.is-locked [class^="ret-t"],#reticle.is-locked [class^="ret-b"]{opacity:1;
+  animation:retbrk 2.4s var(--ease-press) infinite;}
 #reticle.is-locked .ret-h,#reticle.is-locked .ret-v{opacity:.9;}
 #reticle.is-locked .ret-tag{opacity:1;}
+@keyframes retbrk{0%,100%{opacity:1}50%{opacity:.5}}
+/* faint dashed ring: fades/scales in on lock, then rotates slowly while held */
+#reticle::before{content:"";position:absolute;top:50%;left:50%;width:30px;height:30px;
+  border:1px dashed var(--yellow-dim);border-radius:50%;
+  transform:translate(-50%,-50%) scale(.55);opacity:0;
+  transition:opacity .2s var(--ease-press),transform .24s var(--ease-expo);}
+#reticle.is-locked::before{opacity:.5;transform:translate(-50%,-50%) scale(1);
+  animation:retspin 4.5s linear infinite;}
+@keyframes retspin{to{transform:translate(-50%,-50%) scale(1) rotate(1turn)}}
+/* one-shot expanding ping ring, re-armed by pingReticle() on each new lock */
+.ret-ping{position:absolute;top:50%;left:50%;width:52px;height:52px;border-radius:50%;
+  border:1px solid var(--yellow);transform:translate(-50%,-50%) scale(.4);opacity:0;}
+.ret-ping.is-ping{animation:retping .55s var(--ease-expo);}
+@keyframes retping{0%{opacity:.55;transform:translate(-50%,-50%) scale(.4)}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(1.55)}}
 
 /* ---- persistent deck chrome ----------------------------------------------- */
 #chrome{position:fixed;inset:0;z-index:2;pointer-events:none;
@@ -138,8 +154,33 @@ html[data-boot="done"] #chrome{opacity:1;}
   border:1px solid var(--line);}
 #chrome::before{top:14px;left:14px;border-right:0;border-bottom:0;}
 #chrome::after{bottom:14px;right:14px;border-left:0;border-top:0;}
-.scan{position:fixed;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(56,217,208,.35),transparent);
-  top:0;opacity:.5;animation:scanline 7s linear infinite;}
+/* ---- atmosphere grade (vignette · CRT veil · film grain · scan) ----------- */
+/* Above the canvas (z1) / labels (z3), below reticle (z9) & HUD (z12). Pure
+   presentation — pointer-events:none so it never eats a click. */
+#fx{position:fixed;inset:0;z-index:4;pointer-events:none;overflow:hidden;
+  opacity:0;transition:opacity .8s var(--ease-press) .2s;}
+html[data-boot="done"] #fx{opacity:1;}
+.fx-vignette{position:absolute;inset:0;
+  background:radial-gradient(125% 125% at 50% 46%,
+    transparent 50%,rgba(4,5,2,.30) 78%,rgba(1,2,0,.64) 100%);}
+.fx-scanlines{position:absolute;inset:0;opacity:.5;mix-blend-mode:multiply;
+  background:repeating-linear-gradient(to bottom,
+    rgba(0,0,0,0) 0,rgba(0,0,0,0) 2px,rgba(0,0,0,.16) 3px,rgba(0,0,0,0) 4px);}
+/* boiling film grain — inline SVG fractal-noise tile, jittered in steps.
+   ~4% opacity is what makes any frame read as "graded" rather than flat. */
+.fx-grain{position:absolute;top:-60%;left:-60%;width:220%;height:220%;
+  opacity:.045;will-change:transform;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation:grain .5s steps(4) infinite;}
+@keyframes grain{
+  0%{transform:translate(0,0)}   20%{transform:translate(-4%,3%)}
+  40%{transform:translate(3%,-5%)} 60%{transform:translate(-3%,4%)}
+  80%{transform:translate(4%,-2%)} 100%{transform:translate(0,0)}}
+.fx-scan{position:absolute;left:0;right:0;height:1px;top:0;opacity:.5;
+  background:linear-gradient(90deg,transparent,rgba(56,217,208,.35),transparent);
+  animation:scanline 7s linear infinite;}
+.fx-scan::after{content:"";position:absolute;left:0;right:0;top:-16px;height:32px;
+  background:linear-gradient(180deg,transparent,rgba(56,217,208,.05),transparent);}
 @keyframes scanline{0%{top:2%}100%{top:98%}}
 
 /* ---- boot overlay --------------------------------------------------------- */
@@ -176,6 +217,10 @@ html[data-boot="done"] #chrome{opacity:1;}
   overflow-y:auto;
 }
 #hud.is-open #hud-panel{transform:translateX(0);opacity:1;}
+/* tactical corner accent (top-right — the only unclipped corner of the slant) */
+#hud-panel::after{content:"";position:absolute;top:16px;right:16px;width:14px;height:14px;
+  border-top:1px solid var(--yellow-dim);border-right:1px solid var(--yellow-dim);
+  opacity:.6;pointer-events:none;}
 #hud-panel header{display:flex;align-items:flex-start;gap:16px;
   border-bottom:1px solid var(--hair);padding-bottom:18px;}
 #hud-glyph{font-family:var(--mono);font-size:26px;color:var(--yellow);line-height:1;
@@ -183,10 +228,17 @@ html[data-boot="done"] #chrome{opacity:1;}
 #hud-kicker{font-family:var(--mono);font-size:9px;letter-spacing:.3em;color:var(--mute);}
 #hud-title{font-family:var(--disp);font-weight:500;font-size:clamp(28px,4vw,40px);
   letter-spacing:.05em;text-transform:uppercase;color:var(--ink);line-height:1;margin-top:5px;}
-#hud-close{margin-left:auto;background:none;border:1px solid var(--line);color:var(--mute);
+/* engraved rule under the title — drawn L→R on open (gsap), rests visible */
+.hud-rule{display:block;height:1px;margin-top:10px;transform-origin:left;
+  background:linear-gradient(90deg,var(--yellow),rgba(239,224,0,0));}
+#hud-close{position:relative;z-index:0;overflow:hidden;
+  margin-left:auto;background:none;border:1px solid var(--line);color:var(--mute);
   font-family:var(--mono);font-size:10px;letter-spacing:.12em;padding:7px 11px;cursor:pointer;
   transition:color .2s,border-color .2s;}
-#hud-close:hover{color:var(--yellow);border-color:var(--yellow);}
+#hud-close::before{content:"";position:absolute;inset:0;z-index:-1;background:var(--yellow);
+  transform:scaleY(0);transform-origin:bottom;transition:transform .28s var(--ease-expo);}
+#hud-close:hover{color:var(--bg);border-color:var(--yellow);}
+#hud-close:hover::before{transform:scaleY(1);}
 #hud-body{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--hair);
   border:1px solid var(--hair);}
 .hud-cell{background:var(--bg-2);padding:16px 16px 18px;}
@@ -226,11 +278,19 @@ html[data-boot="done"] #chrome{opacity:1;}
   color:var(--mute);padding:2px 0 11px;}
 .log-wrap{display:flex;flex-direction:column;gap:1px;background:var(--hair);
   border:1px solid var(--hair);}
-.log-row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
+.log-row{position:relative;z-index:0;overflow:hidden;
+  display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
   background:var(--bg-2);border:0;border-left:2px solid transparent;padding:13px 15px;
   font-family:var(--mono);color:var(--ink);
   transition:border-color .18s var(--ease-press),background .18s var(--ease-press),color .18s var(--ease-press);}
+/* easing fill-sweep (behind the text via z-index:-1) instead of a flat swap */
+.log-row::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(90deg,rgba(56,217,208,.11),transparent 62%);
+  opacity:0;transform:translateX(-8%);
+  transition:opacity .24s var(--ease-press),transform .32s var(--ease-expo);}
 .log-row:hover{background:#12140b;}
+.log-row:hover::after{opacity:1;transform:translateX(0);}
+.log-row:not(.is-on):hover{border-left-color:var(--yellow-dim);}
 .log-row .log-id{font-size:9px;letter-spacing:.1em;color:var(--mute);min-width:24px;}
 .log-row .log-lbl{flex:1;font-size:12px;letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .log-row .log-state{font-family:var(--disp);font-weight:500;font-size:18px;color:var(--yellow-dim);
@@ -242,10 +302,14 @@ html[data-reticle="on"] .log-row{cursor:none;}
 /* ---- TRADING CRUD form + recent-tx list ----------------------------------- */
 .tx-panel{background:var(--bg-2);padding:15px 16px 17px;display:flex;flex-direction:column;gap:11px;}
 .tx-seg{display:flex;gap:1px;background:var(--hair);border:1px solid var(--hair);}
-.tx-seg-btn{flex:1;background:var(--bg-2);border:0;color:var(--mute);cursor:pointer;
+.tx-seg-btn{position:relative;overflow:hidden;flex:1;background:var(--bg-2);border:0;color:var(--mute);cursor:pointer;
   font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;padding:9px 4px;
   transition:color .18s,background .18s;}
+.tx-seg-btn::after{content:"";position:absolute;left:0;bottom:0;height:2px;width:100%;
+  background:var(--yellow);transform:scaleX(0);transform-origin:left;
+  transition:transform .26s var(--ease-expo);}
 .tx-seg-btn:hover{color:var(--ink);}
+.tx-seg-btn:hover::after{transform:scaleX(1);}
 .tx-seg-btn.active{background:#12140b;color:var(--yellow);box-shadow:inset 0 -2px 0 var(--yellow);}
 .tx-field{display:flex;flex-direction:column;gap:5px;}
 .tx-field label{font-family:var(--mono);font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--mute);}
@@ -257,12 +321,17 @@ html[data-reticle="on"] .log-row{cursor:none;}
 .tx-field input:focus,.tx-field select:focus{outline:none;border-color:var(--cyan);}
 .tx-msg{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--danger);min-height:11px;}
 .tx-form-btns{display:flex;gap:8px;justify-content:flex-end;}
-.tx-btn{font-family:var(--mono);font-size:10px;letter-spacing:.14em;padding:9px 14px;cursor:pointer;
+.tx-btn{position:relative;z-index:0;overflow:hidden;
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;padding:9px 14px;cursor:pointer;
   border:1px solid var(--line);background:none;transition:background .2s,color .2s,border-color .2s;}
 .tx-btn.ghost{color:var(--mute);}
 .tx-btn.ghost:hover{color:var(--ink);border-color:var(--mute);}
 .tx-btn.primary{color:var(--yellow);border-color:var(--yellow);}
-.tx-btn.primary:hover{background:var(--yellow);color:var(--bg);}
+/* primary confirm: yellow wipes in from the left rather than a flat fill */
+.tx-btn.primary::before{content:"";position:absolute;inset:0;z-index:-1;background:var(--yellow);
+  transform:scaleX(0);transform-origin:left;transition:transform .3s var(--ease-expo);}
+.tx-btn.primary:hover{color:var(--bg);}
+.tx-btn.primary:hover::before{transform:scaleX(1);}
 .tx-btn:disabled{opacity:.5;cursor:default;}
 html[data-reticle="on"] .tx-seg-btn,html[data-reticle="on"] .tx-btn,
 html[data-reticle="on"] .tx-row-main,html[data-reticle="on"] .tx-del,
@@ -329,5 +398,8 @@ html[data-reticle="on"] .tx-field select{cursor:none;}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;
     transition-duration:.001ms!important;}
-  .scan{display:none;}
+  .fx-scan{display:none;}                 /* no moving scan */
+  .fx-grain{animation:none;opacity:.03;}  /* grain stays static + fainter */
+  #reticle::before{animation:none;}        /* ring holds, no spin */
+  .ret-ping{display:none;}
 }

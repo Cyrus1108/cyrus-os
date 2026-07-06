@@ -35,11 +35,20 @@
   <!-- ═══ projected yellow station labels (DOM, positioned each frame) ═══ -->
   <div id="labels" aria-hidden="true"></div>
 
+  <!-- ═══ atmosphere grade: vignette · CRT veil · film grain · scan ═══ -->
+  <div id="fx" aria-hidden="true">
+    <div class="fx-vignette"></div>
+    <div class="fx-scanlines"></div>
+    <div class="fx-grain"></div>
+    <span class="fx-scan"></span>
+  </div>
+
   <!-- ═══ reticle crosshair cursor (desktop pointer only) ═══ -->
   <div id="reticle" aria-hidden="true">
     <span class="ret-h"></span><span class="ret-v"></span>
     <span class="ret-tl"></span><span class="ret-tr"></span>
     <span class="ret-bl"></span><span class="ret-br"></span>
+    <span class="ret-ping"></span>
     <b class="ret-tag"></b>
   </div>
 
@@ -49,7 +58,6 @@
     <div class="chrome-tr">COMMAND DECK</div>
     <div class="chrome-bl"><span id="readout">DECK · IDLE</span></div>
     <div class="chrome-br">DRAG ORBIT · SCROLL ADVANCE · CLICK STATION</div>
-    <span class="scan"></span>
   </div>
 
   <!-- ═══ boot self-check overlay ═══ -->
@@ -66,6 +74,7 @@
         <div>
           <div id="hud-kicker">STATION</div>
           <h1 id="hud-title">—</h1>
+          <i class="hud-rule" aria-hidden="true"></i>
         </div>
         <button id="hud-close" aria-label="Return to deck">ESC ⟵</button>
       </header>
