@@ -35,6 +35,19 @@ const TARGETS_DEFAULT = [
   { id: 'V',   label: '性能量管理' },
 ];
 
+// Morning ritual default — mirrors scripts/state.js MR_DEFAULT (身心灵, v7.7).
+// Used only as the ultimate fallback when the user has NO morning row at all;
+// otherwise loadMorning carries forward the most recent prior day's list.
+const MR_DEFAULT = [
+  { id: 'mr1', t: 'Water', mins: 1, d: false },
+  { id: 'mr3', t: 'Meditation', mins: 10, d: false },
+  { id: 'mr8', t: 'Bath · 切换', mins: 3, d: false },
+  { id: 'mr7', t: 'Calisthenics', mins: 30, d: false },
+  { id: 'mr9', t: 'Bath · 洗净', mins: 13, d: false },
+  { id: 'mr2', t: "Men's work", mins: 3, d: false },
+];
+const defaultMorning = () => MR_DEFAULT.map(i => ({ ...i }));
+
 // ── lazy client (vendor supabase.js is a UMD global: window.supabase) ────────
 // scripts/supabase.js does `const { createClient } = window.supabase;` off the
 // classic <script src="../vendor/supabase.js">. We mirror that exactly. Lazy so
@@ -88,6 +101,34 @@ export function daysUntil(target, from) {
   return Math.ceil((dateMs(target) - dateMs(from || TODAY)) / 86400000);
 }
 
+// ── JP check-in helpers (faithful port of scripts/japanese.js) ───────────────
+// Whether a checklist item is scheduled on date `ds` per its repeat rule. Pure
+// calendar math (matches jpItemDueOn: local-midnight Date → getDay/date diff).
+export function jpItemDueOn(it, ds) {
+  const r = (it && it.repeat) || 'daily';
+  if (r === 'daily') return true;
+  const d = new Date(ds + 'T00:00:00'), dow = d.getDay();
+  if (r === 'weekdays') return dow >= 1 && dow <= 5;
+  if (r === 'weekends') return dow === 0 || dow === 6;
+  const anchor = new Date(((it && it.since) || ds) + 'T00:00:00');
+  const days = Math.round((d - anchor) / 86400000);
+  if (days < 0) return false;
+  if (r === 'weekly') return dow === anchor.getDay();
+  if (r === 'biweekly') return dow === anchor.getDay() && Math.floor(days / 7) % 2 === 0;
+  if (r === 'monthly') return d.getDate() === anchor.getDate();
+  if (r === 'custom_days') return it.customDays > 0 && days % it.customDays === 0;
+  return true;
+}
+// streak = consecutive logged days ending today (or yesterday if today unlogged),
+// derived purely from the log — mirrors jpComputeStreak, iterated in Taipei.
+function jpComputeStreak(log) {
+  log = log || {};
+  let cur = TODAY, s = 0;
+  if (!log[cur]) cur = isoMinusDays(cur, 1);
+  while (log[cur]) { s++; cur = isoMinusDays(cur, 1); }
+  return s;
+}
+
 // ── auth ────────────────────────────────────────────────────────────────────
 export async function getSession() {
   const sb = client(); if (!sb) return null;
@@ -124,12 +165,23 @@ export async function loadThe90(uid) {
   return { meta: metaRes.data || null, daily: dailyRes.data || [] };
 }
 
+// Today's rituals. If no row exists for today, replicate scripts/sync.js
+// pullMorning: carry forward the most recent PRIOR day's list (all d:false), or
+// fall back to MR_DEFAULT. `seeded:true` means this is a template not yet in the
+// DB — the first toggleMorningItem upsert then creates today's row.
 export async function loadMorning(uid) {
-  const sb = client(); if (!sb || !uid) return { list: [], date: TODAY, exists: false };
-  const { data, error } = await sb.from('morning').select('*')
-    .eq('user_id', uid).eq('date', TODAY).maybeSingle();
-  if (error) throw error;
-  return { list: (data && Array.isArray(data.list)) ? data.list : [], date: TODAY, exists: !!data };
+  const sb = client(); if (!sb || !uid) return { list: defaultMorning(), date: TODAY, exists: false, seeded: true };
+  const today = await sb.from('morning').select('*').eq('user_id', uid).eq('date', TODAY).maybeSingle();
+  if (today.error) throw today.error;
+  if (today.data && Array.isArray(today.data.list)) {
+    return { list: today.data.list, date: TODAY, exists: true, seeded: false };
+  }
+  const prior = await sb.from('morning').select('list,date').eq('user_id', uid)
+    .lt('date', TODAY).order('date', { ascending: false }).limit(1).maybeSingle();
+  if (prior.error) throw prior.error;
+  const base = (prior.data && Array.isArray(prior.data.list) && prior.data.list.length)
+    ? prior.data.list : defaultMorning();
+  return { list: base.map(i => ({ ...i, d: false })), date: TODAY, exists: false, seeded: true };
 }
 
 export async function loadAcademics(uid) {
@@ -270,4 +322,86 @@ export async function toggleMorningItem(itemId, list) {
     .upsert({ user_id: uid, date: TODAY, list: next }, { onConflict: 'user_id,date' });
   if (error) throw error;
   return next;
+}
+
+// Toggle one TODO's done flag via a TARGETED update (never replace-all; only the
+// one row the user tapped is touched). Mirrors scripts/todos.js toggleTd:
+// done_at gets a timestamp when completing and is left untouched when un-doing.
+// NOTE: does NOT spawn the next occurrence of a repeating todo (see main-app
+// toggleTd + computeNextRepeatDate) — spawn logic is non-trivial and out of
+// scope here; a repeat's next occurrence still spawns when toggled in the app.
+export async function toggleTodo(id, currentDone) {
+  const sb = client(); const uid = await currentUid();
+  if (!sb || !uid) throw new Error('NO SESSION');
+  const done = !currentDone;
+  const patch = { done };
+  if (done) patch.done_at = new Date().toISOString();   // set on completion; leave on un-done
+  const { error } = await sb.from('todos').update(patch).eq('id', id).eq('user_id', uid);
+  if (error) throw error;
+  return done;
+}
+
+// Toggle one ACADEMICS item's done flag — targeted update, boolean only
+// (academics has no done timestamp). Mirrors scripts/academics.js toggleAC.
+export async function toggleAcademic(id, currentDone) {
+  const sb = client(); const uid = await currentUid();
+  if (!sb || !uid) throw new Error('NO SESSION');
+  const done = !currentDone;
+  const { error } = await sb.from('academics').update({ done }).eq('id', id).eq('user_id', uid);
+  if (error) throw error;
+  return done;
+}
+
+// ── JP-N2 daily check-in (single row/user) ──────────────────────────────────
+// CRITICAL: re-read the cloud row's log first and UNION it (never replace/shrink)
+// so a concurrent device's logged days survive — mirrors syncPushJP + jpUnionLog.
+// This device is authoritative for TODAY only. streak/last_date are DERIVED from
+// the merged log (never manually incremented). `state.log` must already reflect
+// the intended TODAY value (settled by the caller). No onConflict → user_id is PK.
+async function _jpPush(state) {
+  const sb = client(); const uid = await currentUid();
+  if (!sb || !uid) throw new Error('NO SESSION');
+  let log = state.log || {};
+  try {
+    const { data: cur } = await sb.from('japanese').select('log').eq('user_id', uid).maybeSingle();
+    if (cur && cur.log && typeof cur.log === 'object') {
+      const merged = Object.assign({}, cur.log, log);   // per-key local wins (jpUnionLog)
+      if (log[TODAY]) merged[TODAY] = true; else delete merged[TODAY];   // TODAY authority
+      log = merged;
+    }
+  } catch { /* cloud read failed → push local log as-is (no worse than old behaviour) */ }
+  const streak = jpComputeStreak(log);
+  const last_date = Object.keys(log).sort().reverse()[0] || null;
+  const { error } = await sb.from('japanese').upsert({
+    user_id: uid, date: TODAY, streak, last_date, log,
+    note: state.note || '', list: state.list || [],
+  });
+  if (error) throw error;
+  return { log, streak, last_date, list: state.list || [], note: state.note || '' };
+}
+
+// Toggle one checklist item's `.d`, re-settle log[TODAY] against TODAY's DUE items
+// (mirrors jpSettle), then push with the union-preserving writer.
+export async function toggleJapaneseItem(itemId, jpRow) {
+  const list = (jpRow && Array.isArray(jpRow.list)) ? jpRow.list.map(x => ({ ...x })) : [];
+  const it = list.find(i => i && i.id === itemId);
+  if (!it) throw new Error('NO ITEM');
+  it.d = !it.d;
+  const log = { ...((jpRow && jpRow.log) || {}) };
+  const due = list.filter(i => jpItemDueOn(i, TODAY));
+  const all = due.length > 0 && due.every(i => i.d);
+  const had = !!log[TODAY];
+  if (all && !had) log[TODAY] = true;
+  else if (!all && had && due.length > 0) delete log[TODAY];
+  const res = await _jpPush({ list, note: (jpRow && jpRow.note) || '', log });
+  return { ...res, itemDone: it.d };
+}
+
+// Manual daily check-in when nothing is due today — toggles log[TODAY] directly
+// (mirrors jpCheckInToday). Leaves the checklist untouched.
+export async function checkInJapanese(jpRow) {
+  const log = { ...((jpRow && jpRow.log) || {}) };
+  if (log[TODAY]) delete log[TODAY]; else log[TODAY] = true;
+  const list = (jpRow && Array.isArray(jpRow.list)) ? jpRow.list : [];
+  return _jpPush({ list, note: (jpRow && jpRow.note) || '', log });
 }

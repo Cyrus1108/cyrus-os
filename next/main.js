@@ -366,22 +366,43 @@ function logRowsHTML(rows, attr, head) {
       `<span class="log-lbl">${esc(r.label)}</span><span class="log-state">${esc(r.state)}</span></button>`).join('') +
     `</div></div>`;
 }
+// station id → writable row-click handler (all defined below; hoisted)
+const WRITE_HANDLERS = {
+  morning: (btn, st, scene) => onMorningRowClick(btn, scene),
+  todos: (btn, st, scene) => onTodoRowClick(btn, scene),
+  academics: (btn, st, scene) => onAcademicRowClick(btn, scene),
+  japanese: (btn, st, scene) => onJapaneseRowClick(btn, scene),
+};
 function renderStationBody(st, scene) {
   const body = document.getElementById('hud-body');
   let html = stationCellsHTML(st.hud.cells);
-  if (LIVE && st.writable === 'morning' && Array.isArray(st.hud.rows)) {
+  const writable = LIVE && st.writable && WRITE_HANDLERS[st.writable] && Array.isArray(st.hud.rows);
+  if (writable) {
     html += st.hud.rows.length
-      ? logRowsHTML(st.hud.rows, 'data-mid', st.hud.rowsHead || 'TAP TO LOG')
-      : `<div class="hud-cell wide"><div class="hud-note">NO SIGNAL — no rituals logged today.</div></div>`;
+      ? logRowsHTML(st.hud.rows, 'data-rid', st.hud.rowsHead || 'TAP TO LOG')
+      : `<div class="hud-cell wide"><div class="hud-note">${st.hud.emptyNote || 'NO SIGNAL — nothing to log.'}</div></div>`;
   } else {
     html += `<div class="hud-cell wide"><div class="hud-note">${st.hud.note}</div></div>`;
   }
   body.innerHTML = html;
-  if (LIVE && st.writable === 'morning' && Array.isArray(st.hud.rows)) {
-    body.querySelectorAll('.log-row[data-mid]').forEach(btn =>
-      btn.addEventListener('click', () => onMorningRowClick(btn, scene)));
+  if (writable) {
+    const handler = WRITE_HANDLERS[st.writable];
+    body.querySelectorAll('.log-row[data-rid]').forEach(btn =>
+      btn.addEventListener('click', () => handler(btn, st, scene)));
   }
   body.querySelectorAll('.hud-v .num').forEach(countUp);
+}
+// re-render the currently-open station HUD's body + viz (after a write settles)
+function refreshOpenStation(id, scene) {
+  if (!(hudOpen && hudKind === 'station')) return;
+  const st = DATA.stations.find(x => x.id === id); if (!st) return;
+  renderStationBody(st, scene);
+  const viz = buildViz(id); const vizEl = document.getElementById('hud-viz');
+  if (viz) { vizEl.hidden = false; vizEl.innerHTML = `<div class="hud-viz-k">${esc(viz.k)}</div>${viz.h}`; }
+}
+function paintDoneRow(btn, done) {
+  btn.classList.toggle('is-on', done);
+  const s = btn.querySelector('.log-state'); if (s) s.textContent = done ? '✓' : '—';
 }
 
 function openHUD(id, scene) {
@@ -482,29 +503,91 @@ async function onThe90RowClick(btn, scene) {
   }
 }
 async function onMorningRowClick(btn, scene) {
-  const mid = btn.dataset.mid;
+  const mid = btn.dataset.rid;
   audio.arm(); audio.tick();
   const list = (DATA.morning && DATA.morning.list) || [];
   const prev = list.map(x => ({ ...x }));
   const it = list.find(x => x && x.id === mid); if (!it) return;
   it.d = !it.d;                                            // optimistic (in-place)
-  btn.classList.toggle('is-on', it.d);
-  const s = btn.querySelector('.log-state'); if (s) s.textContent = it.d ? '✓' : '—';
+  paintDoneRow(btn, it.d);
   try {
     const nextList = await DB.toggleMorningItem(mid, prev);
-    DATA.morning.list = nextList;
+    DATA.morning.list = nextList;                          // first toggle seeds today's row
     rebuildMorningStation();
-    const st = DATA.stations.find(x => x.id === 'MORNING');
-    if (hudOpen && hudKind === 'station' && st) {          // refresh cells + viz
-      renderStationBody(st, scene);
-      const viz = buildViz('MORNING'); const vizEl = document.getElementById('hud-viz');
-      if (viz) { vizEl.hidden = false; vizEl.innerHTML = `<div class="hud-viz-k">${esc(viz.k)}</div>${viz.h}`; }
-    }
+    refreshOpenStation('MORNING', scene);
     setLink('ok');
   } catch (err) {
     DATA.morning.list = prev; it.d = !it.d;                // revert
-    btn.classList.toggle('is-on', it.d);
-    if (s) s.textContent = it.d ? '✓' : '—';
+    paintDoneRow(btn, it.d);
+    setLink('down');
+  }
+}
+async function onTodoRowClick(btn, scene) {
+  const id = btn.dataset.rid;
+  audio.arm(); audio.tick();
+  const item = (DATA._todos || []).find(t => t && t.id === id); if (!item) return;
+  const prevDone = !!item.done;
+  item.done = !prevDone;                                   // optimistic (in-place)
+  if (item.done) item.done_at = new Date().toISOString(); // keep row in "done today" set
+  paintDoneRow(btn, item.done);
+  rebuildTodosStation(); refreshOpenStation('TODOS', scene);
+  try {
+    await DB.toggleTodo(id, prevDone);
+    setLink('ok');
+  } catch (err) {
+    item.done = prevDone;                                  // revert (done_at left as-is, mirrors app)
+    rebuildTodosStation(); refreshOpenStation('TODOS', scene);
+    setLink('down');
+  }
+}
+async function onAcademicRowClick(btn, scene) {
+  const id = btn.dataset.rid;
+  audio.arm(); audio.tick();
+  const item = (DATA._academics || []).find(a => a && a.id === id); if (!item) return;
+  const prevDone = !!item.done;
+  item.done = !prevDone;                                   // optimistic (in-place)
+  paintDoneRow(btn, item.done);
+  rebuildAcademicsStation(); refreshOpenStation('ACADEMICS', scene);
+  try {
+    await DB.toggleAcademic(id, prevDone);
+    setLink('ok');
+  } catch (err) {
+    item.done = prevDone;                                  // revert
+    rebuildAcademicsStation(); refreshOpenStation('ACADEMICS', scene);
+    setLink('down');
+  }
+}
+async function onJapaneseRowClick(btn, scene) {
+  const rid = btn.dataset.rid;
+  audio.arm(); audio.tick();
+  const jp = DATA._japanese || { list: [], log: {}, note: '' };
+  if (rid === '__checkin__') {                             // manual daily check-in
+    const wasLogged = !!(jp.log && jp.log[DB.TODAY]);
+    paintDoneRow(btn, !wasLogged);
+    try {
+      const res = await DB.checkInJapanese(jp);
+      DATA._japanese = { ...jp, log: res.log, streak: res.streak, last_date: res.last_date };
+      rebuildJapaneseStation(); refreshOpenStation('JP-N2', scene);
+      setLink('ok');
+    } catch (err) { paintDoneRow(btn, wasLogged); setLink('down'); }
+    return;
+  }
+  const item = (jp.list || []).find(i => i && i.id === rid); if (!item) return;
+  const prevDone = !!item.d;
+  // snapshot the row BEFORE the optimistic flip: toggleJapaneseItem flips the
+  // item itself, so handing it the already-flipped jp.list would double-flip
+  // (persisting the original value + settling log[TODAY] from the wrong state).
+  const jpSnapshot = { ...jp, list: (jp.list || []).map(x => ({ ...x })) };
+  item.d = !prevDone;                                      // optimistic (in-place)
+  paintDoneRow(btn, item.d);
+  try {
+    const res = await DB.toggleJapaneseItem(rid, jpSnapshot); // re-reads + unions log, derives streak
+    DATA._japanese = { ...jp, list: res.list, log: res.log, streak: res.streak, last_date: res.last_date };
+    rebuildJapaneseStation(); refreshOpenStation('JP-N2', scene);
+    setLink('ok');
+  } catch (err) {
+    item.d = prevDone;                                     // revert
+    paintDoneRow(btn, item.d);
     setLink('down');
   }
 }
@@ -548,26 +631,44 @@ function morningStation(list) {
   return st;
 }
 function academicsStation(acad, done) {
+  acad = acad || [];
   const open = acad.filter(a => a && !a.done);
   const dated = open.filter(a => a.date).sort((a, b) => String(a.date).localeCompare(String(b.date)));
   const nx = dated[0];
-  return baseStation('ACADEMICS', `ITEMS <b>${acad.length}</b> · OPEN <b>${open.length}</b>`, [
+  const st = baseStation('ACADEMICS', `ITEMS <b>${acad.length}</b> · OPEN <b>${open.length}</b>`, [
     { k: 'Items', v: String(acad.length) },
     { k: 'Done', v: String(done), accent: 'cyan' },
     { k: 'Open', v: String(open.length) },
     { k: 'Next', v: nx ? dLabel(nx.date) : '—', accent: 'cyan' },
   ], nx ? `Next: <b>${esc(nx.name || nx.sub || 'item')}</b> · ${esc(fmtMon(nx.date))}.` : 'Backlog clear — no open items.');
+  st.writable = 'academics'; st.hud.rowsHead = 'TAP TO MARK DONE'; st.hud.emptyNote = 'No coursework items.';
+  // all items, done sunk to bottom (label is escaped by logRowsHTML — no pre-esc)
+  const rows = acad.slice().sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0) || (a.position || 0) - (b.position || 0));
+  st.hud.rows = rows.map(a => ({ id: a.id, tag: '', label: (a.sub ? a.sub + ' · ' : '') + (a.name || 'item'), met: !!a.done, state: a.done ? '✓' : '—' }));
+  return st;
 }
 function japaneseStation(jp, jpDone, jpTotal) {
   const streak = (jp && jp.streak) || 0;
   const last = (jp && jp.last_date) ? fmtMon(jp.last_date) : '—';
   const pct = jpTotal ? Math.round(jpDone / jpTotal * 100) : 0;
-  return baseStation('JP-N2', `STREAK <b>${streak}d</b> · ${jpDone}/${jpTotal}`, [
+  const st = baseStation('JP-N2', `STREAK <b>${streak}d</b> · ${jpDone}/${jpTotal}`, [
     { k: 'Streak', v: String(streak), unit: 'days' },
     { k: 'Checklist', v: String(jpDone), unit: '/ ' + jpTotal, accent: 'cyan' },
     { k: 'Progress', v: String(pct), unit: '%' },
     { k: 'Last', v: last, accent: 'cyan' },
   ], (jp && jp.note) ? esc(jp.note) : 'No note logged.');
+  st.writable = 'japanese'; st.hud.emptyNote = 'No checklist — add items in the app.';
+  const list = Array.isArray(jp && jp.list) ? jp.list : [];
+  const due = list.filter(i => DB.jpItemDueOn(i, DB.TODAY));   // only DUE-today items gate check-in
+  if (due.length) {
+    st.hud.rowsHead = `TODAY ${due.filter(i => i && i.d).length}/${due.length} · CHECK-IN`;
+    st.hud.rows = due.map(i => ({ id: i.id, tag: '', label: i.t || '(item)', met: !!i.d, state: i.d ? '✓' : '—' }));
+  } else {                                                     // nothing due → manual "studied today"
+    const logged = !!(jp && jp.log && jp.log[DB.TODAY]);
+    st.hud.rowsHead = 'DAILY CHECK-IN';
+    st.hud.rows = [{ id: '__checkin__', tag: '', label: 'Studied today', met: logged, state: logged ? '✓' : '—' }];
+  }
+  return st;
 }
 function tradingStation(trading, txns) {
   const accts = trading.accounts || [];
@@ -581,13 +682,20 @@ function tradingStation(trading, txns) {
   ], lastTx ? `Latest: <b>${esc(lastTx.type || 'entry')}</b> ${esc(String(lastTx.amount ?? ''))} ${esc(lastTx.currency || '')} · ledger is insert-only.` : 'No transactions on file.');
 }
 function todosStation(open, doneToday, all) {
-  const overdue = (all || []).filter(t => t && !t.done && !t.archived && t.date && String(t.date).slice(0, 10) < DB.TODAY).length;
-  return baseStation('TODOS', `OPEN <b>${open}</b> · DONE <b>${doneToday}</b>`, [
+  all = all || [];
+  const overdue = all.filter(t => t && !t.done && !t.archived && t.date && String(t.date).slice(0, 10) < DB.TODAY).length;
+  const st = baseStation('TODOS', `OPEN <b>${open}</b> · DONE <b>${doneToday}</b>`, [
     { k: 'Open', v: String(open) },
     { k: 'Done today', v: String(doneToday), accent: 'cyan' },
     { k: 'Overdue', v: String(overdue) },
-    { k: 'Total', v: String((all || []).length), accent: 'cyan' },
+    { k: 'Total', v: String(all.length), accent: 'cyan' },
   ], open ? `${open} open · ${overdue} overdue.` : 'Inbox zero — all clear.');
+  st.writable = 'todos'; st.hud.rowsHead = 'TAP TO LOG · TODAY'; st.hud.emptyNote = 'Inbox zero — nothing to log.';
+  // open + today's-done (so a just-completed row stays visible & reversible), done sunk
+  const rows = all.filter(t => t && !t.archived && (!t.done || String(t.done_at || '').slice(0, 10) === DB.TODAY));
+  rows.sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0) || (a.position || 0) - (b.position || 0));
+  st.hud.rows = rows.map(t => ({ id: t.id, tag: '', label: t.text || '(untitled)', met: !!t.done, state: t.done ? '✓' : '—' }));
+  return st;
 }
 function systemStation(S, sys) {
   const notices = (sys && sys.notices) || [];
@@ -617,6 +725,33 @@ function rebuildMorningStation() {
   DATA.viz.rise7 = list.map(i => i && i.d ? 1 : 0);
   const done = list.filter(i => i && i.d).length;
   DATA.viz.labels.MORNING = `RITUALS TODAY · ${done} / ${list.length}`;
+}
+function rebuildTodosStation() {
+  const all = DATA._todos || [];
+  const open = all.filter(t => t && !t.done && !t.archived).length;
+  const doneToday = all.filter(t => t && t.done && String(t.done_at || '').slice(0, 10) === DB.TODAY).length;
+  const idx = DATA.stations.findIndex(s => s.id === 'TODOS');
+  if (idx >= 0) DATA.stations[idx] = todosStation(open, doneToday, all);
+  const den = open + doneToday;
+  DATA.viz.todos = den ? doneToday / den : 0;
+  DATA.viz.labels.TODOS = `CLEARED TODAY · ${doneToday} / ${den}`;
+}
+function rebuildAcademicsStation() {
+  const acad = DATA._academics || [];
+  const done = acad.filter(a => a && a.done).length;
+  const idx = DATA.stations.findIndex(s => s.id === 'ACADEMICS');
+  if (idx >= 0) DATA.stations[idx] = academicsStation(acad, done);
+  DATA.viz.credits = acad.length ? done / acad.length : 0;
+  DATA.viz.labels.ACADEMICS = `DONE · ${done} / ${acad.length}`;
+}
+function rebuildJapaneseStation() {
+  const jp = DATA._japanese;
+  const list = Array.isArray(jp && jp.list) ? jp.list : [];
+  const jpDone = list.filter(x => x && (x.d || x.done || x.checked)).length;
+  const idx = DATA.stations.findIndex(s => s.id === 'JP-N2');
+  if (idx >= 0) DATA.stations[idx] = japaneseStation(jp, jpDone, list.length);
+  DATA.viz.jp = list.length ? jpDone / list.length : 0;
+  DATA.viz.labels['JP-N2'] = `CHECKLIST · ${jpDone} / ${list.length}`;
 }
 
 function buildLiveData(loaded, session) {
@@ -665,6 +800,8 @@ function buildLiveData(loaded, session) {
     version: 'v1.0-live', build: DB.TODAY, user: email, tz: '+08:00', live: true,
     the90info: { demo: false, phase: S.phase, targets: S.targets, todayScores: S.todayScores, todayNote: S.todayNote, todayDate: S.todayDate },
     morning: { list: morningList, date: (loaded.morning && loaded.morning.date) || DB.TODAY },
+    // raw domain arrays kept so the writable stations can recompute after a toggle
+    _todos: todosArr, _academics: acad, _japanese: jp,
     the90, todayIndex: S.todayIndex, avg30: S.avg30, best: S.best,
     viz: { sys30, rise7: morningList.map(i => i && i.d ? 1 : 0), candles: buildLedgerCandles(txns),
       credits: acad.length ? acadDone / acad.length : 0,
