@@ -206,14 +206,16 @@ export async function loadTodos(uid) {
 }
 
 export async function loadTrading(uid) {
-  const sb = client(); if (!sb || !uid) return { accounts: [], transactions: [] };
-  const [aRes, tRes] = await Promise.all([
+  const sb = client(); if (!sb || !uid) return { accounts: [], transactions: [], categories: [] };
+  const [aRes, tRes, cRes] = await Promise.all([
     sb.from('fin_accounts').select('*').eq('user_id', uid),
     sb.from('fin_transactions').select('*').eq('user_id', uid).order('date', { ascending: false }),
+    sb.from('fin_categories').select('*').eq('user_id', uid),
   ]);
   if (aRes.error) throw aRes.error;
   if (tRes.error) throw tRes.error;
-  return { accounts: aRes.data || [], transactions: tRes.data || [] };
+  if (cRes.error) throw cRes.error;
+  return { accounts: aRes.data || [], transactions: tRes.data || [], categories: cRes.data || [] };
 }
 
 export async function loadSystem(uid) {
@@ -404,4 +406,47 @@ export async function checkInJapanese(jpRow) {
   if (log[TODAY]) delete log[TODAY]; else log[TODAY] = true;
   const list = (jpRow && Array.isArray(jpRow.list)) ? jpRow.list : [];
   return _jpPush({ list, note: (jpRow && jpRow.note) || '', log });
+}
+
+// ── TRADING (finance) full CRUD — owner-authorized read/write/DELETE of
+// fin_transactions (the former insert-only rule is lifted for this table).
+// Mirrors sync.js finAddTx / finUpdateTx / finDeleteTx exactly. `tx` carries
+// camelCase fields (accountId/toAccountId/toAmount/categoryId) → DB columns.
+// CRITICAL: currency is NEVER passed as a form field — the caller derives it
+// from the selected account (see main.js), matching finSubmitTx.
+export async function addTransaction(tx) {
+  const sb = client(); const uid = await currentUid();
+  if (!sb || !uid) throw new Error('NO SESSION');
+  const { data, error } = await sb.from('fin_transactions').insert({
+    user_id: uid, date: tx.date, type: tx.type,
+    amount: tx.amount, currency: tx.currency,
+    account_id: tx.accountId || null, to_account_id: tx.toAccountId || null,
+    to_amount: tx.toAmount != null ? tx.toAmount : null,
+    category_id: tx.categoryId || null, note: tx.note || null,
+    tags: (tx.tags && tx.tags.length) ? tx.tags : null,
+  }).select().single();
+  if (error) throw error;
+  return data;
+}
+
+// Targeted single-row update, scoped to the owner. `patch` uses DB column names
+// and should OMIT any column you don't intend to change — unlisted columns keep
+// their value (so leaving `tags` out of the patch preserves the user's tags).
+export async function updateTransaction(id, patch) {
+  const sb = client(); const uid = await currentUid();
+  if (!sb || !uid) throw new Error('NO SESSION');
+  const { data, error } = await sb.from('fin_transactions')
+    .update(patch).eq('id', id).eq('user_id', uid).select().single();
+  if (error) throw error;
+  return data;
+}
+
+// Targeted single-row delete, scoped to the owner (irreversible — the UI gates
+// this behind an explicit confirm step). Never a bulk/replace-all delete.
+export async function deleteTransaction(id) {
+  const sb = client(); const uid = await currentUid();
+  if (!sb || !uid) throw new Error('NO SESSION');
+  const { error } = await sb.from('fin_transactions').delete().eq('id', id).eq('user_id', uid);
+  if (error) throw error;
+  return true;
 }

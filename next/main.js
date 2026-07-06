@@ -374,6 +374,7 @@ const WRITE_HANDLERS = {
   japanese: (btn, st, scene) => onJapaneseRowClick(btn, scene),
 };
 function renderStationBody(st, scene) {
+  if (st.id === 'TRADING' && LIVE) { renderTradingBody(st, scene); return; }   // custom CRUD body
   const body = document.getElementById('hud-body');
   let html = stationCellsHTML(st.hud.cells);
   const writable = LIVE && st.writable && WRITE_HANDLERS[st.writable] && Array.isArray(st.hud.rows);
@@ -408,6 +409,7 @@ function paintDoneRow(btn, done) {
 function openHUD(id, scene) {
   const st = DATA.stations.find(s => s.id === id); if (!st) return;
   hudKind = 'station'; hudFlew = true;                    // reached via camera fly
+  if (id === 'TRADING') tradeForm = { type: 'expense', editId: null };   // fresh form each open
   document.getElementById('hud-glyph').textContent = st.glyph;
   document.getElementById('hud-kicker').textContent = st.hud.kicker;
   document.getElementById('hud-title').textContent = st.label;
@@ -679,7 +681,7 @@ function tradingStation(trading, txns) {
     { k: 'Transactions', v: String(txns.length), accent: 'cyan' },
     { k: 'Liabilities', v: String(liab) },
     { k: 'Last entry', v: lastTx ? fmtMon(lastTx.date) : '—', accent: 'cyan' },
-  ], lastTx ? `Latest: <b>${esc(lastTx.type || 'entry')}</b> ${esc(String(lastTx.amount ?? ''))} ${esc(lastTx.currency || '')} · ledger is insert-only.` : 'No transactions on file.');
+  ], lastTx ? `Latest: <b>${esc(lastTx.type || 'entry')}</b> ${esc(String(lastTx.amount ?? ''))} ${esc(lastTx.currency || '')} · tap an entry below to edit.` : 'No transactions on file.');
 }
 function todosStation(open, doneToday, all) {
   all = all || [];
@@ -753,6 +755,236 @@ function rebuildJapaneseStation() {
   DATA.viz.jp = list.length ? jpDone / list.length : 0;
   DATA.viz.labels['JP-N2'] = `CHECKLIST · ${jpDone} / ${list.length}`;
 }
+function rebuildTradingStation() {
+  const trading = DATA._trading || { accounts: [], transactions: [], categories: [] };
+  const txns = trading.transactions || [];
+  const idx = DATA.stations.findIndex(s => s.id === 'TRADING');
+  if (idx >= 0) DATA.stations[idx] = tradingStation(trading, txns);
+  DATA.viz.candles = buildLedgerCandles(txns);
+  DATA.viz.labels.TRADING = `LEDGER · ${txns.length} ENTRIES`;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// TRADING (finance) full CRUD — add / edit / delete fin_transactions inside the
+// TRADING station HUD. Currency is ALWAYS derived from the selected account
+// (never a form field), mirroring finSubmitTx. DOM form + recent-tx list.
+// ════════════════════════════════════════════════════════════════════════════
+let tradeForm = { type: 'expense', editId: null };
+const fmtAmt = n => Math.abs(+n || 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
+const currentTradingStation = () => DATA.stations.find(s => s.id === 'TRADING');
+function tradeAccounts() {
+  return ((DATA._trading && DATA._trading.accounts) || [])
+    .filter(a => a && a.status !== 0)                       // exclude inactive (status 0)
+    .slice().sort((a, b) => (a.sort || 0) - (b.sort || 0));
+}
+function tradeCats(kind) {
+  return ((DATA._trading && DATA._trading.categories) || [])
+    .filter(c => c && !c.archived && c.kind === kind)
+    .slice().sort((a, b) => (a.sort || 0) - (b.sort || 0));
+}
+const acctById = id => ((DATA._trading && DATA._trading.accounts) || []).find(a => a && a.id === id);
+function acctOptions(sel) {
+  return tradeAccounts().map(a =>
+    `<option value="${esc(a.id)}"${a.id === sel ? ' selected' : ''}>${esc(a.name)} · ${esc(a.currency)}</option>`).join('');
+}
+function catOptions(kind, sel) {
+  return `<option value="">— none —</option>` + tradeCats(kind).map(c =>
+    `<option value="${esc(c.id)}"${c.id === sel ? ' selected' : ''}>${esc((c.icon ? c.icon + ' ' : '') + c.name)}</option>`).join('');
+}
+function txRowHTML(tx) {
+  const acct = acctById(tx.account_id);
+  const sign = tx.type === 'income' ? '+' : tx.type === 'expense' ? '−' : '⇄';
+  const cls = tx.type === 'income' ? 'tx-pos' : tx.type === 'expense' ? 'tx-neg' : 'tx-xfer';
+  let label;
+  if (tx.type === 'transfer') {
+    const to = acctById(tx.to_account_id);
+    label = `${acct ? acct.name : '?'} → ${to ? to.name : '?'}`;
+  } else {
+    const cat = ((DATA._trading && DATA._trading.categories) || []).find(c => c && c.id === tx.category_id);
+    label = (cat ? cat.name : 'uncategorized') + (acct ? ' · ' + acct.name : '');
+  }
+  return `<div class="tx-row">
+    <button type="button" class="tx-row-main" data-edit="${esc(tx.id)}">
+      <span class="tx-row-date">${esc(String(tx.date).slice(5))}</span>
+      <span class="tx-row-lbl">${esc(label)}${tx.note ? ' · ' + esc(tx.note) : ''}</span>
+      <span class="tx-row-amt ${cls}">${sign}${esc(fmtAmt(tx.amount))} ${esc(tx.currency || '')}</span>
+    </button>
+    <button type="button" class="tx-del" data-del="${esc(tx.id)}" aria-label="Delete">🗑</button>
+  </div>`;
+}
+function renderTradingBody(st, scene) {
+  const body = document.getElementById('hud-body');
+  const accts = tradeAccounts();
+  let html = stationCellsHTML(st.hud.cells);
+  if (!accts.length) {
+    html += `<div class="hud-cell wide"><div class="hud-note">NO ACCOUNTS — create one in the main app first.</div></div>`;
+    body.innerHTML = html;
+    body.querySelectorAll('.hud-v .num').forEach(countUp);
+    return;
+  }
+  const editing = tradeForm.editId, t = tradeForm.type;
+  const a0 = accts[0].id, a1 = accts[1] ? accts[1].id : a0;
+  html += `<div class="hud-cell wide tx-panel">
+    <div class="log-head">${editing ? 'EDIT ENTRY' : 'NEW ENTRY'}</div>
+    <div class="tx-seg" id="tx-seg">
+      ${[['expense', 'EXPENSE'], ['income', 'INCOME'], ['transfer', 'TRANSFER']].map(([k, l]) =>
+        `<button type="button" class="tx-seg-btn${k === t ? ' active' : ''}" data-t="${k}">${l}</button>`).join('')}
+    </div>
+    <div class="tx-field"><label for="tx-account">${t === 'transfer' ? 'FROM' : 'ACCOUNT'}</label>
+      <select id="tx-account">${acctOptions(a0)}</select></div>
+    <div class="tx-field" id="tx-toacct-wrap" style="${t === 'transfer' ? '' : 'display:none;'}">
+      <label for="tx-toaccount">TO</label><select id="tx-toaccount">${acctOptions(a1)}</select></div>
+    <div class="tx-field" id="tx-cat-wrap" style="${t === 'transfer' ? 'display:none;' : ''}">
+      <label for="tx-category">CATEGORY</label><select id="tx-category">${catOptions(t === 'income' ? 'income' : 'expense', '')}</select></div>
+    <div class="tx-field"><label for="tx-amount">AMOUNT <span class="tx-cur" id="tx-cur"></span></label>
+      <input id="tx-amount" type="number" step="0.01" min="0" inputmode="decimal" placeholder="0.00"></div>
+    <div class="tx-field" id="tx-toamt-wrap" style="display:none;">
+      <label for="tx-toamount">TO AMOUNT <span class="tx-cur" id="tx-tocur"></span> <small>cross-currency</small></label>
+      <input id="tx-toamount" type="number" step="0.01" min="0" inputmode="decimal" placeholder="received"></div>
+    <div class="tx-field"><label for="tx-note">NOTE <small>optional</small></label>
+      <input id="tx-note" type="text" maxlength="120" placeholder="—"></div>
+    <div class="tx-field"><label for="tx-date">DATE</label>
+      <input id="tx-date" type="date" value="${esc(DB.TODAY)}"></div>
+    <div class="tx-msg" id="tx-msg"></div>
+    <div class="tx-form-btns">
+      ${editing ? `<button type="button" class="tx-btn ghost" id="tx-cancel">CANCEL</button>` : ''}
+      <button type="button" class="tx-btn primary" id="tx-submit">${editing ? 'UPDATE ▸' : 'RECORD ▸'}</button>
+    </div>
+  </div>`;
+  const txns = (DATA._trading && DATA._trading.transactions) || [];
+  const recent = txns.slice(0, 8);
+  html += `<div class="hud-cell wide tx-panel">
+    <div class="log-head">RECENT · TAP TO EDIT</div>
+    ${recent.length ? `<div class="tx-list">${recent.map(txRowHTML).join('')}</div>` : `<div class="hud-note">No transactions yet.</div>`}
+  </div>`;
+  body.innerHTML = html;
+  wireTradingBody(scene);
+  body.querySelectorAll('.hud-v .num').forEach(countUp);
+}
+function wireTradingBody(scene) {
+  const body = document.getElementById('hud-body');
+  body.querySelectorAll('#tx-seg .tx-seg-btn').forEach(b =>
+    b.addEventListener('click', () => { tradeForm.type = b.dataset.t; tradeSyncType(); }));
+  const acct = document.getElementById('tx-account'), toAcct = document.getElementById('tx-toaccount');
+  if (acct) acct.addEventListener('change', tradeSyncCurrency);
+  if (toAcct) toAcct.addEventListener('change', tradeSyncCurrency);
+  const submit = document.getElementById('tx-submit');
+  if (submit) submit.addEventListener('click', () => onTradeSubmit(scene));
+  const cancel = document.getElementById('tx-cancel');
+  if (cancel) cancel.addEventListener('click', () => { tradeForm.editId = null; tradeForm.type = 'expense'; renderTradingBody(currentTradingStation(), scene); });
+  body.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => loadTxIntoForm(b.dataset.edit, scene)));
+  body.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => onDeleteClick(b, scene)));
+  tradeSyncType();
+}
+function tradeSyncType() {
+  const t = tradeForm.type, isXfer = t === 'transfer';
+  document.querySelectorAll('#tx-seg .tx-seg-btn').forEach(b => b.classList.toggle('active', b.dataset.t === t));
+  const toWrap = document.getElementById('tx-toacct-wrap'), catWrap = document.getElementById('tx-cat-wrap');
+  const acctLabel = document.querySelector('label[for="tx-account"]');
+  if (toWrap) toWrap.style.display = isXfer ? '' : 'none';
+  if (catWrap) catWrap.style.display = isXfer ? 'none' : '';
+  if (acctLabel) acctLabel.textContent = isXfer ? 'FROM' : 'ACCOUNT';
+  if (!isXfer) { const cs = document.getElementById('tx-category'); if (cs) cs.innerHTML = catOptions(t === 'income' ? 'income' : 'expense', ''); }
+  tradeSyncCurrency();
+}
+function tradeSyncCurrency() {
+  const acctEl = document.getElementById('tx-account'); if (!acctEl) return;
+  const acct = acctById(acctEl.value);
+  const curEl = document.getElementById('tx-cur'); if (curEl) curEl.textContent = acct ? '· ' + acct.currency : '';
+  const toWrap = document.getElementById('tx-toamt-wrap');
+  if (tradeForm.type === 'transfer') {
+    const to = acctById(document.getElementById('tx-toaccount').value);
+    const cross = acct && to && acct.currency !== to.currency;
+    if (toWrap) toWrap.style.display = cross ? '' : 'none';
+    const tocur = document.getElementById('tx-tocur'); if (tocur) tocur.textContent = to ? '· ' + to.currency : '';
+  } else if (toWrap) { toWrap.style.display = 'none'; }
+}
+function flashTradeMsg(msg) { const el = document.getElementById('tx-msg'); if (el) el.textContent = msg; }
+function loadTxIntoForm(id, scene) {
+  const tx = ((DATA._trading && DATA._trading.transactions) || []).find(t => t && t.id === id);
+  if (!tx) return;
+  audio.arm(); audio.tick();
+  tradeForm.editId = id; tradeForm.type = tx.type;
+  renderTradingBody(currentTradingStation(), scene);   // renders edit mode + builds options for type
+  const set = (elId, v) => { const el = document.getElementById(elId); if (el) el.value = (v == null ? '' : v); };
+  set('tx-account', tx.account_id);
+  if (tx.type === 'transfer') set('tx-toaccount', tx.to_account_id);
+  else set('tx-category', tx.category_id || '');
+  set('tx-amount', tx.amount);
+  set('tx-note', tx.note || '');
+  set('tx-date', String(tx.date).slice(0, 10));
+  if (tx.type === 'transfer' && tx.to_amount != null) set('tx-toamount', tx.to_amount);
+  tradeSyncCurrency();
+  const p = document.querySelector('#hud-body .tx-panel'); if (p && p.scrollIntoView) p.scrollIntoView({ block: 'nearest' });
+}
+async function onTradeSubmit(scene) {
+  const type = tradeForm.type;
+  const amount = Math.round((parseFloat(document.getElementById('tx-amount').value) || 0) * 100) / 100;
+  if (!(amount > 0)) { flashTradeMsg('ENTER AN AMOUNT'); return; }
+  const date = document.getElementById('tx-date').value || DB.TODAY;
+  const note = document.getElementById('tx-note').value.trim();
+  const accountId = document.getElementById('tx-account').value;
+  const acct = acctById(accountId);
+  if (!acct) { flashTradeMsg('SELECT AN ACCOUNT'); return; }
+  // currency ALWAYS from the account, never a form field (mirrors finSubmitTx)
+  const tx = { type, amount, date, note, accountId, toAccountId: null, toAmount: null, categoryId: null, currency: acct.currency };
+  if (type === 'transfer') {
+    const toAccountId = document.getElementById('tx-toaccount').value;
+    if (accountId === toAccountId) { flashTradeMsg('ACCOUNTS MUST DIFFER'); return; }
+    const to = acctById(toAccountId);
+    tx.toAccountId = toAccountId;
+    tx.currency = acct.currency;                       // transfer amount is in the FROM-account currency
+    if (to && acct.currency !== to.currency) {         // cross-currency → capture received amount
+      const ta = Math.round((parseFloat(document.getElementById('tx-toamount').value) || 0) * 100) / 100;
+      tx.toAmount = ta > 0 ? ta : amount;              // fallback 1:1 (matches finSubmitTx)
+    }
+  } else {
+    tx.categoryId = document.getElementById('tx-category').value || null;
+  }
+  audio.arm(); audio.tick();
+  const submit = document.getElementById('tx-submit'); if (submit) submit.disabled = true;
+  try {
+    if (tradeForm.editId) {
+      const patch = {                                  // NO tags key → the user's tags are preserved
+        date: tx.date, type: tx.type, amount: tx.amount, currency: tx.currency,
+        account_id: tx.accountId || null, to_account_id: tx.toAccountId || null,
+        to_amount: tx.toAmount != null ? tx.toAmount : null,
+        category_id: tx.categoryId || null, note: tx.note || null,
+      };
+      await DB.updateTransaction(tradeForm.editId, patch);
+      tradeForm.editId = null;
+    } else {
+      await DB.addTransaction(tx);
+    }
+    tradeForm.type = 'expense';
+    await reloadTrading(scene);                        // re-pull → cells + candles + recent list
+    if (audio.hud) audio.hud();
+    setLink('ok');
+  } catch (err) {
+    if (submit) submit.disabled = false;
+    flashTradeMsg('WRITE FAILED — RETRY');
+    setLink('down');
+  }
+}
+function onDeleteClick(btn, scene) {
+  const id = btn.dataset.del;
+  if (btn.dataset.armed === '1') { clearTimeout(btn._t); onTradeDelete(id, scene); return; }   // 2nd tap → delete
+  btn.dataset.armed = '1'; btn.classList.add('armed'); btn.textContent = 'CONFIRM DELETE';
+  audio.arm(); audio.tick();
+  btn._t = setTimeout(() => { btn.dataset.armed = '0'; btn.classList.remove('armed'); btn.textContent = '🗑'; }, 3000);
+}
+async function onTradeDelete(id, scene) {
+  audio.arm(); audio.tick();
+  let ok = true;
+  try { await DB.deleteTransaction(id); } catch { ok = false; }
+  await reloadTrading(scene);                          // re-pull authoritative state either way
+  setLink(ok ? 'ok' : 'down');
+}
+async function reloadTrading(scene) {
+  try { if (DATA._uid) DATA._trading = await DB.loadTrading(DATA._uid); } catch { /* keep prior _trading */ }
+  rebuildTradingStation();
+  refreshOpenStation('TRADING', scene);
+}
 
 function buildLiveData(loaded, session) {
   const email = (session.user && session.user.email) || 'operator';
@@ -801,7 +1033,8 @@ function buildLiveData(loaded, session) {
     the90info: { demo: false, phase: S.phase, targets: S.targets, todayScores: S.todayScores, todayNote: S.todayNote, todayDate: S.todayDate },
     morning: { list: morningList, date: (loaded.morning && loaded.morning.date) || DB.TODAY },
     // raw domain arrays kept so the writable stations can recompute after a toggle
-    _todos: todosArr, _academics: acad, _japanese: jp,
+    _uid: (session.user && session.user.id) || null,
+    _todos: todosArr, _academics: acad, _japanese: jp, _trading: trading,
     the90, todayIndex: S.todayIndex, avg30: S.avg30, best: S.best,
     viz: { sys30, rise7: morningList.map(i => i && i.d ? 1 : 0), candles: buildLedgerCandles(txns),
       credits: acad.length ? acadDone / acad.length : 0,
