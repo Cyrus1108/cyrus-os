@@ -5,6 +5,7 @@
 // Lenis scroll, and all degradation paths (mobile / reduced-motion / no-WebGL).
 // ============================================================================
 import { createScene } from './scene.js';
+import * as DB from './data.js';
 
 const gsap = window.gsap;
 const Lenis = window.Lenis;
@@ -61,8 +62,14 @@ const MOCK = (() => {
     jp: 1 - 88 / 120,                                            // exam prep progress
   };
 
+  const the90info = {
+    demo: true, phase: 'stabilize', todayScores: {}, todayNote: '',
+    targets: ['RISE', 'MEDITATE', 'AI BUILD', 'TRAIN', 'ENERGY']
+      .map((l, i) => ({ id: ['I', 'II', 'III', 'IV', 'V'][i], label: l })),
+  };
   return {
     version: 'v0.1.0-deck', build: '2026.07.06', user: 'qjun.aom', tz: '+08:00',
+    live: false, the90info,
     the90, todayIndex: TODAY_IDX, avg30, best, viz,
     stations: [
       { id: 'MORNING', label: 'MORNING', glyph: '☉', tag: 'STREAK <b>42d</b> · WAKE <b>05:40</b>',
@@ -110,6 +117,29 @@ const MOCK = (() => {
     ],
   };
 })();
+
+// ════════════════════════════════════════════════════════════════════════════
+// ACTIVE data seam — DATA is MOCK (demo) until a real session + load succeeds,
+// then it's swapped for a live object of the IDENTICAL shape (built in
+// buildLiveData). LIVE flips the footer/boot copy and enables the two writers.
+// ════════════════════════════════════════════════════════════════════════════
+let DATA = MOCK;
+let LIVE = false;
+let lenis = null;                 // hoisted so HUD open/close can pause scroll
+let hudFlew = false;              // true when the current HUD flew the camera (station)
+let hudKind = 'station';          // 'station' | 'the90'
+
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => (
+  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// The 90 per-target display helpers (mirror data.js scoreMet semantics) --------
+function the90IsMet(score, phase) {
+  return phase === 'stabilize' ? (typeof score === 'number' ? score > 0 : !!score) : !!score;
+}
+function the90StateLabel(score, phase) {
+  if (phase === 'stabilize') { const n = typeof score === 'number' ? score : 0; return n > 0 ? String(n) : '—'; }
+  return score ? '✓' : '—';
+}
 
 // ════════════════════════════════════════════════════════════════════════════
 // minimal WebAudio — 3 cues, gesture-gated (no sound until first user gesture)
@@ -206,14 +236,14 @@ function runBoot(onDone) {
   const bootEl = document.getElementById('boot');
   const log = document.getElementById('boot-log');
   const lines = [
-    { t: `CYRUS://NEXT  ${MOCK.version}`, c: 'hd' },
+    { t: `CYRUS://NEXT  ${DATA.version}`, c: 'hd' },
     { t: `[ok] kernel ................. mounted`, c: 'ok' },
     { t: `[ok] tactical-grid .......... online`, c: 'ok' },
-    { t: `[ok] the90.datastore ........ 90d synced`, c: 'ok' },
+    { t: LIVE ? `[ok] the90.datastore ........ 90d synced` : `[--] the90.datastore ........ demo dataset`, c: LIVE ? 'ok' : 'hd' },
     { t: `[ok] modules ................ 6/6 linked`, c: 'ok' },
     { t: `[ok] audio.webaudio ......... armed`, c: 'ok' },
-    { t: `[ok] session ${MOCK.user} .. ${MOCK.build} ${MOCK.tz}`, c: 'ok' },
-    { t: `> deck ready`, c: 'hd' },
+    { t: `[${LIVE ? 'ok' : '--'}] session ${DATA.user} .. ${DATA.build} ${DATA.tz}`, c: LIVE ? 'ok' : 'hd' },
+    { t: LIVE ? `> deck ready` : `> deck ready · OFFLINE (demo)`, c: 'hd' },
   ];
   if (REDUCED) { finish(); return; }               // reduced-motion: skip ceremony
   let i = 0; const timers = [];
@@ -256,8 +286,8 @@ function renderFallback() {
   const b = document.getElementById('boot'); if (b) b.remove();
   document.documentElement.dataset.boot = 'done';
   const el = document.getElementById('fallback'); el.hidden = false;
-  el.innerHTML = `<h1>CYRUS://NEXT</h1><div class="fb-sub">COMMAND DECK · TEXT FALLBACK · ${MOCK.build}</div>
-    <div class="fb-grid">${MOCK.stations.map(s => `<div class="fb-card"><h2>${s.label}</h2>
+  el.innerHTML = `<h1>CYRUS://NEXT</h1><div class="fb-sub">COMMAND DECK · TEXT FALLBACK · ${LIVE ? 'LIVE' : 'DEMO'} · ${DATA.build}</div>
+    <div class="fb-grid">${DATA.stations.map(s => `<div class="fb-card"><h2>${s.label}</h2>
       <ul>${s.hud.cells.map(c => `<li>${c.k}: <b>${c.v}${c.unit ? ' ' + c.unit : ''}</b></li>`).join('')}</ul></div>`).join('')}</div>`;
 }
 
@@ -297,14 +327,15 @@ function svgMeter(frac) {
   return `<div class="mv-meter"><span style="width:${(frac * 100).toFixed(1)}%"></span></div>`;
 }
 function buildViz(id) {
-  const v = MOCK.viz;
+  const v = DATA.viz;
+  const L = (v && v.labels) || {};       // live labels override the demo defaults
   switch (id) {
-    case 'SYSTEM': return { k: 'THE 90 · LAST 30 DAYS', h: svgBars(v.sys30, v.sys30.length - 1) };
-    case 'TRADING': return { k: 'LAST 12 SESSIONS', h: svgCandles(v.candles) };
-    case 'MORNING': return { k: 'WAKE RITUAL · 7 DAYS', h: svgDots(v.rise7, 0.5) };
-    case 'ACADEMICS': return { k: 'CREDITS · 108 / 120', h: svgMeter(v.credits) };
-    case 'JP-N2': return { k: 'EXAM PREP · D-88', h: svgRing(v.jp) };
-    case 'TODOS': return { k: 'CLEARED TODAY · 12 / 19', h: svgMeter(v.todos) };
+    case 'SYSTEM': return { k: L.SYSTEM || 'THE 90 · LAST 30 DAYS', h: svgBars(v.sys30, v.sys30.length - 1) };
+    case 'TRADING': return { k: L.TRADING || 'LAST 12 SESSIONS', h: svgCandles(v.candles) };
+    case 'MORNING': return { k: L.MORNING || 'WAKE RITUAL · 7 DAYS', h: svgDots(v.rise7, 0.5) };
+    case 'ACADEMICS': return { k: L.ACADEMICS || 'CREDITS · 108 / 120', h: svgMeter(v.credits) };
+    case 'JP-N2': return { k: L['JP-N2'] || 'EXAM PREP · D-88', h: svgRing(v.jp) };
+    case 'TODOS': return { k: L.TODOS || 'CLEARED TODAY · 12 / 19', h: svgMeter(v.todos) };
     default: return null;
   }
 }
@@ -319,22 +350,54 @@ function countUp(el) {
 
 const hudEl = document.getElementById('hud');
 let hudOpen = false;
+
+// ── shared HUD body builders ────────────────────────────────────────────────
+function stationCellsHTML(cells) {
+  return cells.map(c =>
+    `<div class="hud-cell${c.wide ? ' wide' : ''}"><div class="hud-k">${esc(c.k)}</div>
+     <div class="hud-v${c.accent === 'cyan' ? ' cyan' : ''}"><span class="num" data-v="${esc(c.v)}">${esc(c.v)}</span>${c.unit ? ` <small>${esc(c.unit)}</small>` : ''}</div></div>`
+  ).join('');
+}
+// toggle rows (The 90 / morning). `attr` is the data-* holding the item id.
+function logRowsHTML(rows, attr, head) {
+  return `<div class="hud-cell wide"><div class="log-head">${esc(head)}</div><div class="log-wrap">` +
+    rows.map(r => `<button class="log-row${r.met ? ' is-on' : ''}" ${attr}="${esc(r.id)}">` +
+      `${r.tag ? `<span class="log-id">${esc(r.tag)}</span>` : ''}` +
+      `<span class="log-lbl">${esc(r.label)}</span><span class="log-state">${esc(r.state)}</span></button>`).join('') +
+    `</div></div>`;
+}
+function renderStationBody(st, scene) {
+  const body = document.getElementById('hud-body');
+  let html = stationCellsHTML(st.hud.cells);
+  if (LIVE && st.writable === 'morning' && Array.isArray(st.hud.rows)) {
+    html += st.hud.rows.length
+      ? logRowsHTML(st.hud.rows, 'data-mid', st.hud.rowsHead || 'TAP TO LOG')
+      : `<div class="hud-cell wide"><div class="hud-note">NO SIGNAL — no rituals logged today.</div></div>`;
+  } else {
+    html += `<div class="hud-cell wide"><div class="hud-note">${st.hud.note}</div></div>`;
+  }
+  body.innerHTML = html;
+  if (LIVE && st.writable === 'morning' && Array.isArray(st.hud.rows)) {
+    body.querySelectorAll('.log-row[data-mid]').forEach(btn =>
+      btn.addEventListener('click', () => onMorningRowClick(btn, scene)));
+  }
+  body.querySelectorAll('.hud-v .num').forEach(countUp);
+}
+
 function openHUD(id, scene) {
-  const st = MOCK.stations.find(s => s.id === id); if (!st) return;
+  const st = DATA.stations.find(s => s.id === id); if (!st) return;
+  hudKind = 'station'; hudFlew = true;                    // reached via camera fly
   document.getElementById('hud-glyph').textContent = st.glyph;
   document.getElementById('hud-kicker').textContent = st.hud.kicker;
   document.getElementById('hud-title').textContent = st.label;
-  document.getElementById('hud-body').innerHTML = st.hud.cells.map(c =>
-    `<div class="hud-cell${c.wide ? ' wide' : ''}"><div class="hud-k">${c.k}</div>
-     <div class="hud-v${c.accent === 'cyan' ? ' cyan' : ''}"><span class="num" data-v="${c.v}">${c.v}</span>${c.unit ? ` <small>${c.unit}</small>` : ''}</div></div>`
-  ).join('') + `<div class="hud-cell wide"><div class="hud-note">${st.hud.note}</div></div>`;
+  renderStationBody(st, scene);
   const viz = buildViz(id);
   const vizEl = document.getElementById('hud-viz');
-  if (viz) { vizEl.hidden = false; vizEl.innerHTML = `<div class="hud-viz-k">${viz.k}</div>${viz.h}`; }
+  if (viz) { vizEl.hidden = false; vizEl.innerHTML = `<div class="hud-viz-k">${esc(viz.k)}</div>${viz.h}`; }
   else { vizEl.hidden = true; vizEl.innerHTML = ''; }
-  document.getElementById('hud-foot').innerHTML = `<span>${id} · LIVE MOCK</span><span>ESC / BACKPLATE ⟵ DECK</span>`;
-  const sysAvg = document.getElementById('sys-avg'); if (sysAvg) sysAvg.textContent = MOCK.avg30 + '%';
-  const sysStreak = document.getElementById('sys-streak'); if (sysStreak) sysStreak.textContent = MOCK.best + 'd';
+  document.getElementById('hud-foot').innerHTML = `<span>${esc(id)} · ${LIVE ? 'LIVE' : 'DEMO'}</span><span>ESC / BACKPLATE ⟵ DECK</span>`;
+  const sysAvg = document.getElementById('sys-avg'); if (sysAvg) sysAvg.textContent = DATA.avg30 + '%';
+  const sysStreak = document.getElementById('sys-streak'); if (sysStreak) sysStreak.textContent = DATA.best + 'd';
   hudEl.hidden = false;
   requestAnimationFrame(() => hudEl.classList.add('is-open'));
   hudOpen = true;
@@ -344,24 +407,340 @@ function openHUD(id, scene) {
       { opacity: 1, y: 0, duration: 0.4, stagger: 0.05, ease: 'power2.out', delay: 0.12, overwrite: true });
     gsap.fromTo('#hud-viz', { opacity: 0 }, { opacity: 1, duration: 0.5, delay: 0.18, overwrite: true });
   }
-  document.querySelectorAll('#hud-body .hud-v .num').forEach(countUp);
   if (scene && scene.pulseBloom) scene.pulseBloom();     // HUD-open bloom pulse
   audio.arm(); audio.hud(); audio.sink();                 // sweep + low-frequency sink
   document.getElementById('readout').textContent = `${id} · FOCUSED`;
 }
+
+// ── THE 90 log HUD — the writable monument overlay (no camera fly) ───────────
+function openThe90HUD(scene) {
+  if (hudOpen) return;
+  const info = DATA.the90info || { demo: true, targets: [], phase: 'stabilize', todayScores: {} };
+  hudKind = 'the90'; hudFlew = false;
+  if (lenis) lenis.stop();
+  document.getElementById('hud-glyph').textContent = '❖';
+  document.getElementById('hud-kicker').textContent = 'THE 90 / 碑阵';
+  document.getElementById('hud-title').textContent = 'THE 90';
+  const vizEl = document.getElementById('hud-viz'); vizEl.hidden = true; vizEl.innerHTML = '';
+  const body = document.getElementById('hud-body');
+  const rows = (info.targets || []).map(t => {
+    const sc = info.todayScores ? info.todayScores[t.id] : undefined;
+    return { id: t.id, tag: t.id, label: t.label, met: the90IsMet(sc, info.phase), state: the90StateLabel(sc, info.phase) };
+  });
+  const head = info.demo ? 'LINK REQUIRED TO LOG · DEMO' : `TAP TO LOG TODAY · ${DB.phaseLabel(info.phase)}`;
+  body.innerHTML = rows.length
+    ? logRowsHTML(rows, 'data-tid', head)
+    : `<div class="hud-cell wide"><div class="hud-note">NO SIGNAL — no targets defined.</div></div>`;
+  body.querySelectorAll('.log-row[data-tid]').forEach(btn =>
+    btn.addEventListener('click', () => info.demo ? promptLink() : onThe90RowClick(btn, scene)));
+  const dnum = (DATA.todayIndex != null ? DATA.todayIndex + 1 : '—');
+  document.getElementById('hud-foot').innerHTML = `<span>THE 90 · ${LIVE ? 'LIVE' : 'DEMO'} · D${dnum}/90</span><span>ESC / BACKPLATE ⟵ DECK</span>`;
+  hudEl.hidden = false;
+  requestAnimationFrame(() => hudEl.classList.add('is-open'));
+  hudOpen = true;
+  if (gsap && !REDUCED) {
+    gsap.fromTo('#hud-body .log-row', { opacity: 0, x: 10 },
+      { opacity: 1, x: 0, duration: 0.35, stagger: 0.04, ease: 'power2.out', delay: 0.12, overwrite: true });
+  }
+  if (scene && scene.pulseBloom) scene.pulseBloom();
+  audio.arm(); audio.hud(); audio.sink();
+  document.getElementById('readout').textContent = 'THE 90 · LOG';
+}
+
+// ── writers: optimistic UI + scene update, persist, revert on failure ────────
+function paintThe90Row(btn, score, phase) {
+  const met = the90IsMet(score, phase);
+  btn.classList.toggle('is-on', met);
+  const s = btn.querySelector('.log-state'); if (s) s.textContent = the90StateLabel(score, phase);
+}
+function applyThe90Ratio(info, scene) {
+  const tgts = info.targets || [];
+  const ratio = tgts.length
+    ? tgts.filter(t => the90IsMet(info.todayScores[t.id], info.phase)).length / tgts.length : 0;
+  if (DATA.the90 && DATA.todayIndex != null && DATA.the90[DATA.todayIndex]) DATA.the90[DATA.todayIndex].score = ratio;
+  if (scene && scene.setTodayScore) scene.setTodayScore(ratio);
+}
+async function onThe90RowClick(btn, scene) {
+  const info = DATA.the90info; const id = btn.dataset.tid;
+  audio.arm(); audio.tick();
+  const prev = { ...(info.todayScores || {}) };
+  const cur = prev[id];
+  const next = info.phase === 'stabilize'
+    ? (cur === undefined ? 3 : cur === 3 ? 2 : cur === 2 ? 1 : cur === 1 ? 0 : 3)
+    : !cur;
+  info.todayScores = { ...prev, [id]: next };              // optimistic
+  paintThe90Row(btn, next, info.phase);
+  applyThe90Ratio(info, scene);
+  try {
+    await DB.toggleThe90Target(id, prev, info.phase, info.todayNote);
+    setLink('ok');
+  } catch (err) {
+    info.todayScores = prev;                               // revert
+    paintThe90Row(btn, prev[id], info.phase);
+    applyThe90Ratio(info, scene);
+    setLink('down');
+  }
+}
+async function onMorningRowClick(btn, scene) {
+  const mid = btn.dataset.mid;
+  audio.arm(); audio.tick();
+  const list = (DATA.morning && DATA.morning.list) || [];
+  const prev = list.map(x => ({ ...x }));
+  const it = list.find(x => x && x.id === mid); if (!it) return;
+  it.d = !it.d;                                            // optimistic (in-place)
+  btn.classList.toggle('is-on', it.d);
+  const s = btn.querySelector('.log-state'); if (s) s.textContent = it.d ? '✓' : '—';
+  try {
+    const nextList = await DB.toggleMorningItem(mid, prev);
+    DATA.morning.list = nextList;
+    rebuildMorningStation();
+    const st = DATA.stations.find(x => x.id === 'MORNING');
+    if (hudOpen && hudKind === 'station' && st) {          // refresh cells + viz
+      renderStationBody(st, scene);
+      const viz = buildViz('MORNING'); const vizEl = document.getElementById('hud-viz');
+      if (viz) { vizEl.hidden = false; vizEl.innerHTML = `<div class="hud-viz-k">${esc(viz.k)}</div>${viz.h}`; }
+    }
+    setLink('ok');
+  } catch (err) {
+    DATA.morning.list = prev; it.d = !it.d;                // revert
+    btn.classList.toggle('is-on', it.d);
+    if (s) s.textContent = it.d ? '✓' : '—';
+    setLink('down');
+  }
+}
+
 function closeHUD(scene) {
   if (!hudOpen) return;
   hudEl.classList.remove('is-open');
   setTimeout(() => { hudEl.hidden = true; }, 500);
   hudOpen = false;
-  scene.returnDeck();
+  if (hudFlew) scene.returnDeck();                          // station HUD → fly back
+  else if (lenis) lenis.start();                            // overlay HUD → resume scroll
   document.getElementById('readout').textContent = 'DECK · IDLE';
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// live data → MOCK-shaped DATA (drop-in for scene + openHUD + buildViz)
+// ════════════════════════════════════════════════════════════════════════════
+const STATION_GLYPH  = { MORNING: '☉', ACADEMICS: '§', 'JP-N2': '⛩', TRADING: '↗', TODOS: '▤', SYSTEM: '◇' };
+const STATION_KICKER = { MORNING: 'RITUAL / 日冕', ACADEMICS: 'SCHOLARSHIP / 书碑', 'JP-N2': 'LANGUAGE / 鳥居',
+  TRADING: 'MARKETS / K線碑', TODOS: 'BACKLOG / 堆叠', SYSTEM: 'CORE / 核心' };
+const MON = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+function fmtMon(iso) { const p = String(iso).slice(0, 10).split('-'); return p.length === 3 ? `${MON[+p[1] - 1]} ${p[2]}` : String(iso); }
+function dLabel(iso) { const s = String(iso).slice(0, 10); const du = DB.daysUntil(s); return du >= 0 ? ('D-' + du) : fmtMon(s); }
+
+function baseStation(id, tag, cells, note) {
+  return { id, label: id, glyph: STATION_GLYPH[id], tag, hud: { kicker: STATION_KICKER[id], cells, note } };
+}
+function morningStation(list) {
+  const done = list.filter(i => i && i.d).length, total = list.length;
+  const remMins = list.filter(i => i && !i.d).reduce((a, i) => a + (+i.mins || 0), 0);
+  const pct = total ? Math.round(done / total * 100) : 0;
+  const nextItem = list.find(i => i && !i.d);
+  const st = baseStation('MORNING', `DONE <b>${done}/${total}</b> · ${remMins}m LEFT`, [
+    { k: 'Done today', v: String(done), unit: '/ ' + total },
+    { k: 'Remaining', v: String(remMins), unit: 'min', accent: 'cyan' },
+    { k: 'Rituals', v: String(total) },
+    { k: 'Complete', v: String(pct), unit: '%', accent: 'cyan' },
+  ], total ? (nextItem ? `Next up: <b>${esc(nextItem.t || '')}</b>.` : 'All rituals cleared today.') : 'No rituals scheduled today.');
+  st.writable = 'morning'; st.hud.rowsHead = 'TAP TO LOG · RITUALS';
+  st.hud.rows = list.map(i => ({ id: i.id, tag: '', label: i.t || '(untitled)', met: !!i.d, state: i.d ? '✓' : '—' }));
+  return st;
+}
+function academicsStation(acad, done) {
+  const open = acad.filter(a => a && !a.done);
+  const dated = open.filter(a => a.date).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  const nx = dated[0];
+  return baseStation('ACADEMICS', `ITEMS <b>${acad.length}</b> · OPEN <b>${open.length}</b>`, [
+    { k: 'Items', v: String(acad.length) },
+    { k: 'Done', v: String(done), accent: 'cyan' },
+    { k: 'Open', v: String(open.length) },
+    { k: 'Next', v: nx ? dLabel(nx.date) : '—', accent: 'cyan' },
+  ], nx ? `Next: <b>${esc(nx.name || nx.sub || 'item')}</b> · ${esc(fmtMon(nx.date))}.` : 'Backlog clear — no open items.');
+}
+function japaneseStation(jp, jpDone, jpTotal) {
+  const streak = (jp && jp.streak) || 0;
+  const last = (jp && jp.last_date) ? fmtMon(jp.last_date) : '—';
+  const pct = jpTotal ? Math.round(jpDone / jpTotal * 100) : 0;
+  return baseStation('JP-N2', `STREAK <b>${streak}d</b> · ${jpDone}/${jpTotal}`, [
+    { k: 'Streak', v: String(streak), unit: 'days' },
+    { k: 'Checklist', v: String(jpDone), unit: '/ ' + jpTotal, accent: 'cyan' },
+    { k: 'Progress', v: String(pct), unit: '%' },
+    { k: 'Last', v: last, accent: 'cyan' },
+  ], (jp && jp.note) ? esc(jp.note) : 'No note logged.');
+}
+function tradingStation(trading, txns) {
+  const accts = trading.accounts || [];
+  const liab = accts.filter(a => a && a.is_liability).length;
+  const lastTx = txns[0];
+  return baseStation('TRADING', `ACCTS <b>${accts.length}</b> · TX <b>${txns.length}</b>`, [
+    { k: 'Accounts', v: String(accts.length) },
+    { k: 'Transactions', v: String(txns.length), accent: 'cyan' },
+    { k: 'Liabilities', v: String(liab) },
+    { k: 'Last entry', v: lastTx ? fmtMon(lastTx.date) : '—', accent: 'cyan' },
+  ], lastTx ? `Latest: <b>${esc(lastTx.type || 'entry')}</b> ${esc(String(lastTx.amount ?? ''))} ${esc(lastTx.currency || '')} · ledger is insert-only.` : 'No transactions on file.');
+}
+function todosStation(open, doneToday, all) {
+  const overdue = (all || []).filter(t => t && !t.done && !t.archived && t.date && String(t.date).slice(0, 10) < DB.TODAY).length;
+  return baseStation('TODOS', `OPEN <b>${open}</b> · DONE <b>${doneToday}</b>`, [
+    { k: 'Open', v: String(open) },
+    { k: 'Done today', v: String(doneToday), accent: 'cyan' },
+    { k: 'Overdue', v: String(overdue) },
+    { k: 'Total', v: String((all || []).length), accent: 'cyan' },
+  ], open ? `${open} open · ${overdue} overdue.` : 'Inbox zero — all clear.');
+}
+function systemStation(S, sys) {
+  const notices = (sys && sys.notices) || [];
+  return baseStation('SYSTEM', `AVG <b>${S.avg30}%</b> · STREAK <b>${S.best}d</b>`, [
+    { k: 'The90 avg', v: String(S.avg30), unit: '% · 30d' },
+    { k: 'Longest', v: String(S.best), unit: 'days', accent: 'cyan' },
+    { k: 'Notices', v: String(notices.length) },
+    { k: 'Day', v: String(S.todayIndex + 1), unit: '/ 90', accent: 'cyan' },
+  ], 'The90 30-day avg <b id="sys-avg"></b> · longest streak <b id="sys-streak"></b>.');
+}
+function buildLedgerCandles(txns) {
+  const amts = (txns || []).slice(0, 12).reverse().map(t => Math.abs(+t.amount || 0));
+  if (amts.length < 2) return (MOCK.viz && MOCK.viz.candles) || [];
+  const max = Math.max(1, ...amts);
+  const norm = amts.map(a => Math.min(1, a / max));
+  const out = [];
+  for (let i = 1; i < norm.length; i++) {
+    const o = norm[i - 1], c = norm[i];
+    out.push({ o, c, hi: Math.min(1, Math.max(o, c) + 0.05), lo: Math.max(0, Math.min(o, c) - 0.05) });
+  }
+  return out;
+}
+function rebuildMorningStation() {
+  const list = (DATA.morning && DATA.morning.list) || [];
+  const idx = DATA.stations.findIndex(s => s.id === 'MORNING');
+  if (idx >= 0) DATA.stations[idx] = morningStation(list);
+  DATA.viz.rise7 = list.map(i => i && i.d ? 1 : 0);
+  const done = list.filter(i => i && i.d).length;
+  DATA.viz.labels.MORNING = `RITUALS TODAY · ${done} / ${list.length}`;
+}
+
+function buildLiveData(loaded, session) {
+  const email = (session.user && session.user.email) || 'operator';
+  const S = DB.the90Summary(loaded.the90 && loaded.the90.meta, loaded.the90 && loaded.the90.daily);
+  const the90 = S.dates.map((date, i) => i > S.todayIndex
+    ? { date, score: null, ghost: true }
+    : { date, score: S.ratios[i] == null ? 0 : S.ratios[i] });
+
+  const sys30 = [];
+  for (let i = Math.max(0, S.todayIndex - 29); i <= S.todayIndex; i++) sys30.push(S.ratios[i] == null ? 0 : S.ratios[i]);
+
+  const morningList = (loaded.morning && loaded.morning.list) || [];
+  const acad = loaded.academics || [];
+  const jp = loaded.japanese || null;
+  const todosArr = loaded.todos || [];
+  const trading = loaded.trading || { accounts: [], transactions: [] };
+  const sys = loaded.system || { settings: null, notices: [] };
+  const txns = trading.transactions || [];
+
+  const mDone = morningList.filter(i => i && i.d).length, mTotal = morningList.length;
+  const acadDone = acad.filter(a => a && a.done).length;
+  const jpList = Array.isArray(jp && jp.list) ? jp.list : [];
+  const jpDone = jpList.filter(x => x && (x.done || x.d || x.checked || x === true)).length;
+  const openTodos = todosArr.filter(t => t && !t.done && !t.archived);
+  const doneToday = todosArr.filter(t => t && t.done && String(t.done_at || '').slice(0, 10) === DB.TODAY);
+  const todosDen = openTodos.length + doneToday.length;
+
+  const labels = {
+    SYSTEM: 'THE 90 · LAST 30 DAYS',
+    TRADING: `LEDGER · ${txns.length} ENTRIES`,
+    MORNING: `RITUALS TODAY · ${mDone} / ${mTotal}`,
+    ACADEMICS: `DONE · ${acadDone} / ${acad.length}`,
+    'JP-N2': `CHECKLIST · ${jpDone} / ${jpList.length}`,
+    TODOS: `CLEARED TODAY · ${doneToday.length} / ${todosDen}`,
+  };
+  const stations = [
+    morningStation(morningList),
+    academicsStation(acad, acadDone),
+    japaneseStation(jp, jpDone, jpList.length),
+    tradingStation(trading, txns),
+    todosStation(openTodos.length, doneToday.length, todosArr),
+    systemStation(S, sys),
+  ];
+  return {
+    version: 'v1.0-live', build: DB.TODAY, user: email, tz: '+08:00', live: true,
+    the90info: { demo: false, phase: S.phase, targets: S.targets, todayScores: S.todayScores, todayNote: S.todayNote, todayDate: S.todayDate },
+    morning: { list: morningList, date: (loaded.morning && loaded.morning.date) || DB.TODAY },
+    the90, todayIndex: S.todayIndex, avg30: S.avg30, best: S.best,
+    viz: { sys30, rise7: morningList.map(i => i && i.d ? 1 : 0), candles: buildLedgerCandles(txns),
+      credits: acad.length ? acadDone / acad.length : 0,
+      todos: todosDen ? doneToday.length / todosDen : 0,
+      jp: jpList.length ? jpDone / jpList.length : 0, labels },
+    stations,
+  };
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// login affordance (demo mode only) — the USER submits; we just build the field
+// ════════════════════════════════════════════════════════════════════════════
+function linkEls() {
+  return {
+    root: document.getElementById('link'), form: document.getElementById('link-form'),
+    email: document.getElementById('link-email'), msg: document.getElementById('link-msg'),
+    toggle: document.getElementById('link-toggle'),
+  };
+}
+function setLink(state) {                // 'ok' | 'demo' | 'down' | 'sent'
+  const { root, msg, toggle } = linkEls(); if (!root) return;
+  if (state === 'ok') { root.hidden = true; return; }
+  root.hidden = false; root.dataset.state = state;
+  if (toggle) toggle.textContent = state === 'down' ? '◗ LINK DOWN — RETRY' : '◗ LINK';
+  if (msg) msg.textContent =
+    state === 'down' ? 'LINK DOWN — retry to reconnect' :
+    state === 'sent' ? 'CHECK EMAIL — magic link sent' :
+    'OFFLINE DECK — link to sync your data';
+}
+function promptLink() {
+  const { root, form, email } = linkEls(); if (!root) return;
+  root.hidden = false; if (form) form.hidden = false; if (email) email.focus();
+  if (audio && audio.tick) audio.tick();
+}
+function wireLink() {
+  const { form, email, toggle, msg } = linkEls();
+  if (toggle) toggle.addEventListener('click', () => {
+    if (linkEls().root.dataset.state === 'down') { location.reload(); return; }
+    if (form) form.hidden = !form.hidden;
+    if (!form.hidden && email) email.focus();
+  });
+  if (form) form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const addr = (email && email.value || '').trim(); if (!addr) return;
+    if (msg) msg.textContent = 'LINKING…';
+    try { const { error } = await DB.signIn(addr); if (error) throw error; setLink('sent'); }
+    catch (err) { if (msg) msg.textContent = 'LINK FAILED — ' + (err && err.message || 'retry'); }
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// bootstrap — resolve session → real DATA, else demo MOCK (never blocks forever)
+// ════════════════════════════════════════════════════════════════════════════
+function withTimeout(p, ms) {
+  return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
+}
+async function bootstrapData() {
+  let session = null;
+  try { session = await withTimeout(DB.getSession(), 6000); } catch { session = null; }
+  if (!session || !session.user) { DATA = MOCK; LIVE = false; setLink('demo'); return; }
+  let loaded = null;
+  try { loaded = await withTimeout(DB.loadAll(session.user.id), 8000); } catch { loaded = null; }
+  if (!loaded || !loaded.the90) { DATA = MOCK; LIVE = false; setLink('down'); return; }
+  try { DATA = buildLiveData(loaded, session); LIVE = true; setLink('ok'); }
+  catch { DATA = MOCK; LIVE = false; setLink('down'); }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
 // boot the app
 // ════════════════════════════════════════════════════════════════════════════
-function main() {
+async function main() {
+  await bootstrapData();
+  wireLink();
+  // when a magic link completes on this page, re-bootstrap into live mode
+  DB.onAuth((event) => { if (event === 'SIGNED_IN' && !LIVE) location.reload(); });
+
   const canvas = document.getElementById('deck');
   if (!webglOK()) { renderFallback(); return; }
 
@@ -372,7 +751,7 @@ function main() {
   if (useReticle) document.documentElement.dataset.reticle = 'on';
 
   const scene = createScene(canvas, {
-    mock: MOCK, reducedMotion: REDUCED, isMobile: IS_MOBILE,
+    mock: DATA, reducedMotion: REDUCED, isMobile: IS_MOBILE,
     labelsEl: document.getElementById('labels'),
     onHover: (id) => {
       scene.highlight(id);
@@ -413,6 +792,7 @@ function main() {
   let dragging = false, moved = 0, lx = 0, ly = 0;
   canvas.addEventListener('pointerdown', (e) => {
     audio.arm(); dragging = true; moved = 0; lx = e.clientX; ly = e.clientY;
+    scene.setPointer(e.clientX, e.clientY);   // fresh ndc so a tap can hit-test pillars (mobile)
     canvas.setPointerCapture?.(e.pointerId);
   });
   window.addEventListener('pointermove', (e) => {
@@ -425,17 +805,25 @@ function main() {
   });
   const endDrag = (e) => {
     if (!dragging) return; dragging = false;
-    if (moved < 6 && scene.mode === 'deck' && scene.hovered) {
+    if (moved >= 6 || scene.mode !== 'deck' || hudOpen) return;
+    if (scene.hovered) {                          // station → camera fly → station HUD
       if (lenis) lenis.stop();
       scene.focusStation(scene.hovered);
+    } else if (scene.pickPillar() != null) {      // monument tap → THE 90 log overlay
+      openThe90HUD(scene);
     }
   };
   window.addEventListener('pointerup', endDrag);
   window.addEventListener('pointercancel', endDrag);
 
-  // reduced-motion: hover via move already renders; click focuses directly
+  // reduced-motion: hover via move already renders; click focuses / logs directly
   if (REDUCED) {
-    canvas.addEventListener('click', () => { if (scene.hovered) scene.focusStation(scene.hovered); });
+    canvas.addEventListener('click', (e) => {
+      if (hudOpen) return;
+      scene.setPointer(e.clientX, e.clientY);
+      if (scene.hovered) scene.focusStation(scene.hovered);
+      else if (scene.pickPillar() != null) openThe90HUD(scene);
+    });
   }
 
   // ── keyboard + backplate return ────────────────────────────────────────────
@@ -444,7 +832,6 @@ function main() {
   hudEl.addEventListener('click', (e) => { if (e.target === hudEl) closeHUD(scene); });
 
   // ── Lenis smooth scroll → camera advance ────────────────────────────────────
-  let lenis = null;
   if (!REDUCED && Lenis) {
     lenis = new Lenis({ lerp: 0.08, wheelMultiplier: 0.9 });
     lenis.on('scroll', ({ scroll, limit }) => { scene.setScroll(limit > 0 ? scroll / limit : 0); });
@@ -474,4 +861,4 @@ function main() {
   }
 }
 
-main();
+main().catch((err) => { try { console.error('[next] boot failed', err); } catch {} });

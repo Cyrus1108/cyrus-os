@@ -32,6 +32,18 @@ const BLOOM_LAYER = 1;
 const P_COLS = 10, P_ROWS = 9, P_SP = 1.55, P_HW = 0.22, GHOST_H = 0.5;
 const pillarX = i => ((i % P_COLS) - (P_COLS - 1) / 2) * P_SP;
 const pillarZ = i => (Math.floor(i / P_COLS) - (P_ROWS - 1) / 2) * P_SP;
+const hOf = s => 0.4 + s * 5.4;                                    // score(0..1) → pillar height
+// shared cube edge/corner layout so buildPillars, buildTodayGlow and the live
+// setTodayScore updater all agree on vertex order (24 line verts / 12 edges).
+const PILLAR_EDGES = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+const PILLAR_FACES = [[0,1,2],[0,2,3],[4,6,5],[4,7,6],[0,1,5],[0,5,4],[1,2,6],[1,6,5],[2,3,7],[2,7,6],[3,0,4],[3,4,7]];
+function pillarCorners(i, h) {
+  const x = pillarX(i), z = pillarZ(i);
+  return [
+    [x - P_HW, 0, z - P_HW], [x + P_HW, 0, z - P_HW], [x + P_HW, 0, z + P_HW], [x - P_HW, 0, z + P_HW],
+    [x - P_HW, h, z - P_HW], [x + P_HW, h, z - P_HW], [x + P_HW, h, z + P_HW], [x - P_HW, h, z + P_HW],
+  ];
+}
 
 // -- station ring layout (angles chosen so none sits dead-center front) -------
 const STATION_ANGLE = { MORNING: -90, ACADEMICS: -30, 'JP-N2': 30, TRADING: 90, TODOS: 150, SYSTEM: -150 };
@@ -233,8 +245,10 @@ export function createScene(canvas, opts) {
   scene.add(pillars.occ);
   scene.add(pillars.mesh);
 
-  const pillarPick = enablePillarHover ? buildPillarPick(mock) : null;
-  if (pillarPick) scene.add(pillarPick);
+  // always built (cheap invisible instanced mesh): per-frame hover stays gated to
+  // desktop, but on-demand pickPillar() lets a mobile tap open the The 90 log.
+  const pillarPick = buildPillarPick(mock);
+  scene.add(pillarPick);
 
   const beacon = buildBeacon(mock, pillars.topY);
   scene.add(beacon.line);
@@ -586,6 +600,23 @@ export function createScene(canvas, opts) {
     }
   }
   function pulseBloom() { cam.bloomPulse = 1; }
+  // on-demand hit test against the pillar array at the current pointer ndc —
+  // returns the day index under the cursor/tap, or null. Used to open THE 90 log
+  // (works on mobile where per-frame pillar hover is disabled).
+  function pickPillar() {
+    if (!pillarPick || cam.mode === 'focus') return null;
+    ray.setFromCamera(ndc, camera);
+    const hit = ray.intersectObject(pillarPick, false)[0];
+    return (hit && hit.instanceId != null) ? hit.instanceId : null;
+  }
+  // optimistic redraw of TODAY's pillar after a The 90 toggle (score = 0..1).
+  function setTodayScore(score) {
+    const h = pillars.setTodayScore(score);
+    if (bloomOn && todayGlow) updateTodayGlowHeight(todayGlow, mock.todayIndex, h);
+    const bpos = beacon.line.geometry.attributes.position;   // lift the beacon base
+    bpos.setY(0, h + 0.15); bpos.needsUpdate = true;
+    if (!running) renderOnce();
+  }
   function resize() {
     camera.aspect = W0() / H0(); camera.updateProjectionMatrix();
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -613,7 +644,9 @@ export function createScene(canvas, opts) {
   return {
     start, stop, renderOnce, reveal, beginIntro, resize, dispose, pulseBloom,
     setScroll, applyDrag, setPointer, highlight, focusStation, returnDeck,
+    pickPillar, setTodayScore,
     get mode() { return cam.mode; }, get hovered() { return hovered; },
+    get pillarHovered() { return pillarHovered; },
     labelFor: id => (labels.find(l => l.st.id === id) || {}).el,
   };
 }
@@ -628,10 +661,9 @@ function buildPillars(mock) {
   const line = [], sc = [], ord = [], tod = [], gh = [];
   const solid = [], sord = [];
   let maxD = 0.0001;
-  const hOf = s => 0.4 + s * 5.4;
   for (let i = 0; i < N; i++) maxD = Math.max(maxD, Math.hypot(pillarX(i), pillarZ(i)));
 
-  const FACES = [[0,1,2],[0,2,3],[4,6,5],[4,7,6],[0,1,5],[0,5,4],[1,2,6],[1,6,5],[2,3,7],[2,7,6],[3,0,4],[3,4,7]];
+  const FACES = PILLAR_FACES;
 
   for (let i = 0; i < N; i++) {
     const d = days[i], ghost = i > TODAY;
@@ -639,12 +671,8 @@ function buildPillars(mock) {
     const h = ghost ? GHOST_H : hOf(score);
     const x = pillarX(i), z = pillarZ(i), order = Math.hypot(x, z) / maxD;
     const isToday = i === TODAY ? 1 : 0;
-    const c = [
-      [x - P_HW, 0, z - P_HW], [x + P_HW, 0, z - P_HW], [x + P_HW, 0, z + P_HW], [x - P_HW, 0, z + P_HW],
-      [x - P_HW, h, z - P_HW], [x + P_HW, h, z - P_HW], [x + P_HW, h, z + P_HW], [x - P_HW, h, z + P_HW],
-    ];
-    const edges = [[0,1],[1,2],[2,3],[3,0], [4,5],[5,6],[6,7],[7,4], [0,4],[1,5],[2,6],[3,7]];
-    for (const [a, b] of edges) for (const k of [a, b]) {
+    const c = pillarCorners(i, h);
+    for (const [a, b] of PILLAR_EDGES) for (const k of [a, b]) {
       line.push(c[k][0], c[k][1], c[k][2]); sc.push(score); ord.push(order); tod.push(isToday); gh.push(ghost ? 1 : 0);
     }
     if (!ghost) for (const f of FACES) for (const k of f) { solid.push(c[k][0], c[k][1], c[k][2]); sord.push(order); }
@@ -717,9 +745,34 @@ function buildPillars(mock) {
   const ticks = [];
   for (let r = 0; r < P_ROWS; r++) ticks.push({ label: `D${(r + 1) * 10}`, x: leftX, z: (r - (P_ROWS - 1) / 2) * P_SP });
 
+  // live optimistic update of TODAY's pillar (line verts + aScore + occluder)
+  // after a The 90 toggle. Today is always a real (non-ghost) pillar, so its
+  // vertex slabs are at fixed offsets: line = TODAY*24, solid = TODAY*36.
+  let todayH = (TODAY >= 0 && TODAY < N && days[TODAY] && typeof days[TODAY].score === 'number')
+    ? hOf(days[TODAY].score) : GHOST_H;
+  function setTodayScore(score) {
+    if (TODAY < 0 || TODAY >= N) return GHOST_H;
+    const s01 = Math.min(1, Math.max(0, +score || 0));
+    const h = hOf(s01); todayH = h;
+    const c = pillarCorners(TODAY, h);
+    const lp = g.attributes.position, ls = g.attributes.aScore;
+    let o = TODAY * 24;
+    for (const [a, b] of PILLAR_EDGES) {
+      lp.setXYZ(o, c[a][0], c[a][1], c[a][2]); ls.setX(o, s01); o++;
+      lp.setXYZ(o, c[b][0], c[b][1], c[b][2]); ls.setX(o, s01); o++;
+    }
+    lp.needsUpdate = true; ls.needsUpdate = true;
+    const sp = og.attributes.position;
+    let so = TODAY * 36;
+    for (const f of FACES) for (const k of f) { sp.setXYZ(so, c[k][0], c[k][1], c[k][2]); so++; }
+    sp.needsUpdate = true;
+    return h;
+  }
+
   return {
-    mesh: new THREE.LineSegments(g, mat), mat, occ, frontZ,
-    topY: i => (i > TODAY ? GHOST_H : hOf(days[i].score)), xOf: pillarX, zOf: pillarZ, ticks,
+    mesh: new THREE.LineSegments(g, mat), mat, occ, frontZ, setTodayScore,
+    topY: i => (i > TODAY ? GHOST_H : (i === TODAY ? todayH : hOf(days[i].score))),
+    xOf: pillarX, zOf: pillarZ, ticks,
   };
 }
 
@@ -754,19 +807,26 @@ function buildBeacon(mock, topY) {
 
 // bloom-only glow outline for today's pillar (layer 1 only) ---------------------
 function buildTodayGlow(mock, pillars) {
-  const i = mock.todayIndex, x = pillars.xOf(i), z = pillars.zOf(i), h = pillars.topY(i);
-  const c = [
-    [x - P_HW, 0, z - P_HW], [x + P_HW, 0, z - P_HW], [x + P_HW, 0, z + P_HW], [x - P_HW, 0, z + P_HW],
-    [x - P_HW, h, z - P_HW], [x + P_HW, h, z - P_HW], [x + P_HW, h, z + P_HW], [x - P_HW, h, z + P_HW],
-  ];
-  const edges = [[0,1],[1,2],[2,3],[3,0], [4,5],[5,6],[6,7],[7,4], [0,4],[1,5],[2,6],[3,7]];
+  const i = mock.todayIndex, h = pillars.topY(i);
+  const c = pillarCorners(i, h);
   const pos = [];
-  for (const [a, b] of edges) { pos.push(...c[a], ...c[b]); }
+  for (const [a, b] of PILLAR_EDGES) { pos.push(...c[a], ...c[b]); }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   const line = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0xefe000, transparent: true, opacity: 0 }));
   line.layers.set(BLOOM_LAYER);        // bloom pass only — real pillar drawn by pillars.mesh
   return line;
+}
+// rewrite the glow outline's verts to a new today height (live optimistic update)
+function updateTodayGlowHeight(glow, i, h) {
+  const c = pillarCorners(i, h);
+  const pos = glow.geometry.attributes.position;
+  let o = 0;
+  for (const [a, b] of PILLAR_EDGES) {
+    pos.setXYZ(o++, c[a][0], c[a][1], c[a][2]);
+    pos.setXYZ(o++, c[b][0], c[b][1], c[b][2]);
+  }
+  pos.needsUpdate = true;
 }
 
 // ============================================================================

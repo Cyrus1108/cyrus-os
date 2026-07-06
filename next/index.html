@@ -15,11 +15,14 @@
     { "imports": { "three": "../vendor/three.module.js" } }
   </script>
 
-  <!-- GSAP + Lenis are UMD globals, loaded classic before the module boots -->
+  <!-- GSAP + Lenis + Supabase are UMD globals, loaded classic before the module
+       boots. supabase.js exposes window.supabase (same vendor build as the main
+       app); data.js reads window.supabase.createClient off it. -->
   <script defer src="../vendor/gsap.min.js"></script>
   <script defer src="../vendor/ScrollTrigger.min.js"></script>
   <script defer src="../vendor/SplitText.min.js"></script>
   <script defer src="../vendor/lenis.min.js"></script>
+  <script defer src="../vendor/supabase.js"></script>
 </head>
 
 <body>
@@ -70,6 +73,16 @@
       <div id="hud-body"></div>
       <footer id="hud-foot"></footer>
     </div>
+  </div>
+
+  <!-- ═══ link affordance (demo / offline only): user-submitted magic link ═══ -->
+  <div id="link" hidden>
+    <button id="link-toggle" type="button">◗ LINK</button>
+    <form id="link-form" hidden autocomplete="on">
+      <input id="link-email" type="email" name="email" placeholder="email to sync" required autocomplete="email" />
+      <button type="submit">SYNC ▸</button>
+      <div id="link-msg"></div>
+    </form>
   </div>
 
   <!-- ═══ no-WebGL / plain fallback ═══ -->

@@ -221,6 +221,43 @@ html[data-boot="done"] #chrome{opacity:1;}
 .mv-ring .rg-p{fill:none;stroke:var(--cyan);stroke-width:2.4;stroke-linecap:round;
   filter:drop-shadow(0 0 3px rgba(56,217,208,.5));}
 
+/* ---- HUD toggle rows (The 90 log / morning rituals) ----------------------- */
+.log-head{font-family:var(--mono);font-size:9px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--mute);padding:2px 0 11px;}
+.log-wrap{display:flex;flex-direction:column;gap:1px;background:var(--hair);
+  border:1px solid var(--hair);}
+.log-row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
+  background:var(--bg-2);border:0;border-left:2px solid transparent;padding:13px 15px;
+  font-family:var(--mono);color:var(--ink);
+  transition:border-color .18s var(--ease-press),background .18s var(--ease-press),color .18s var(--ease-press);}
+.log-row:hover{background:#12140b;}
+.log-row .log-id{font-size:9px;letter-spacing:.1em;color:var(--mute);min-width:24px;}
+.log-row .log-lbl{flex:1;font-size:12px;letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.log-row .log-state{font-family:var(--disp);font-weight:500;font-size:18px;color:var(--yellow-dim);
+  min-width:22px;text-align:right;line-height:1;}
+.log-row.is-on{border-left-color:var(--cyan);color:#fff;}
+.log-row.is-on .log-state{color:var(--cyan);}
+html[data-reticle="on"] .log-row{cursor:none;}
+
+/* ---- link affordance (demo / offline sign-in prompt) ---------------------- */
+#link{position:fixed;left:24px;bottom:52px;z-index:8;font-family:var(--mono);
+  max-width:min(320px,86vw);}
+#link[data-state="down"] #link-toggle{color:var(--danger);border-color:var(--danger);}
+#link-toggle{background:rgba(13,15,8,.86);border:1px solid var(--line);color:var(--yellow);
+  font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  padding:8px 12px;cursor:pointer;transition:color .2s,border-color .2s;}
+#link-toggle:hover{color:#fff;border-color:var(--yellow);}
+#link-form{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+  background:rgba(13,15,8,.92);border:1px solid var(--hair);padding:10px;}
+#link-email{flex:1;min-width:150px;background:var(--bg);border:1px solid var(--line);
+  color:var(--ink);font-family:var(--mono);font-size:11px;letter-spacing:.04em;padding:8px 10px;}
+#link-email:focus{outline:none;border-color:var(--cyan);}
+#link-form button[type="submit"]{background:none;border:1px solid var(--yellow);color:var(--yellow);
+  font-family:var(--mono);font-size:10px;letter-spacing:.12em;padding:8px 11px;cursor:pointer;
+  transition:background .2s,color .2s;}
+#link-form button[type="submit"]:hover{background:var(--yellow);color:var(--bg);}
+#link-msg{flex-basis:100%;font-size:9px;letter-spacing:.1em;color:var(--mute);min-height:11px;}
+
 /* ---- DOM fallback (no WebGL) ---------------------------------------------- */
 #fallback,.fallback{padding:clamp(28px,7vw,90px);font-family:var(--mono);z-index:5;position:relative;}
 #fallback h1{font-family:var(--disp);font-weight:500;font-size:34px;letter-spacing:.1em;
