@@ -115,7 +115,7 @@ const MOCK = (() => {
           { k: 'Overdue', v: '1' },
           { k: 'Focus blocks', v: '4', unit: 'today', accent: 'cyan' },
         ], note: 'Next up: <b>submit visa docs</b> · due today 18:00.' } },
-      { id: 'SYSTEM', label: 'SYSTEM', glyph: '◇', tag: 'LV <b>24</b> · UPTIME <b>312d</b>',
+      { id: 'SYSTEM', label: 'SYSTEM', glyph: '◇', tag: 'LV <b>24</b> · RANK <b>C</b>',
         hud: { kicker: 'CORE / 核心', cells: [
           { k: 'Level', v: '24' },
           { k: 'Uptime', v: '312', unit: 'days', accent: 'cyan' },
@@ -123,6 +123,17 @@ const MOCK = (() => {
           { k: 'Modules', v: '6', unit: '/ 6', accent: 'cyan' },
         ], note: 'The90 30-day avg <b id="sys-avg"></b> · longest streak <b id="sys-streak"></b>.' } },
     ],
+    // demo character sheet — same shape computeRpg returns (drives the SYSTEM
+    // monument: rings=rank, rungs=EXP, shards=achievements, radar=attrs)
+    rpg: {
+      level: 24, rank: 'C', title: '攀登者', totalExp: 3120,
+      expInLevel: 340, expForLevel: 675,
+      attrs: { STR: 52, AGI: 48, INT: 66, WIS: 58, VIT: 44, CRE: 61 },
+      counts: {}, power: 329,
+      achievements: {}, achCount: 14, achExp: 0,
+      challenge: { attr: 'VIT', target: 'V', claimed: false, penalty: false },
+      seenLevel: 24,
+    },
   };
 })();
 
@@ -473,6 +484,7 @@ const WRITE_HANDLERS = {
 function renderStationBody(st, scene) {
   if (st.id === 'FINANCE' && LIVE) { renderFinanceBody(st, scene); return; }        // finance CRUD body
   if (st.id === 'TRADING' && LIVE) { renderTradingDeskBody(st, scene); return; }     // pre-market desk body
+  if (st.id === 'SYSTEM' && st.hud.rpg) { renderSystemBody(st); return; }            // RPG character sheet
   const body = document.getElementById('hud-body');
   let html = stationCellsHTML(st.hud.cells);
   const writable = LIVE && st.writable && WRITE_HANDLERS[st.writable] && Array.isArray(st.hud.rows);
@@ -491,6 +503,66 @@ function renderStationBody(st, scene) {
   }
   body.querySelectorAll('.hud-v .num').forEach(countUp);
 }
+// ── SYSTEM / RPG character sheet — read-only 登升区 panel ────────────────────
+// Level/EXP/attrs/achievements all computed in data.js computeRpg (mirror of
+// rpg.js); NEXT never writes rpg_state — unlocks & challenge rolls stay in the
+// main app. This panel is the monarch's ledger, not its engine.
+function renderSystemBody(st) {
+  const r = st.hud.rpg;
+  const body = document.getElementById('hud-body');
+  let html = stationCellsHTML(st.hud.cells);
+  // EXP bar toward next level
+  const frac = r.expForLevel ? Math.max(0, Math.min(1, r.expInLevel / r.expForLevel)) : 0;
+  html += `<div class="hud-cell wide"><div class="hud-k">EXP · LV ${r.level} → ${r.level + 1}</div>
+    <div class="rpg-xp"><span style="width:${(frac * 100).toFixed(1)}%"></span></div>
+    <div class="rpg-xp-n"><b>${r.expInLevel}</b> / ${r.expForLevel} · TOTAL <b>${r.totalExp}</b></div></div>`;
+  // six attributes — 30-day form bars
+  html += `<div class="hud-cell wide"><div class="log-head">ATTRIBUTES · 30D FORM</div><div class="rpg-attrs">` +
+    DB.RPG_ATTRS.map(a => {
+      const v = Math.max(0, Math.min(100, (r.attrs && r.attrs[a.key]) || 10));
+      return `<div class="rpg-attr"><span class="ra-k">${a.icon} ${a.key} ${esc(a.name)}</span>` +
+        `<span class="ra-bar"><i style="width:${v}%"></i></span><b class="ra-v">${v}</b></div>`;
+    }).join('') + `</div></div>`;
+  // daily challenge (display only — rolled & granted by the main app)
+  const ch = r.challenge;
+  const tName = (tid) => {
+    const t = ((DATA.the90info && DATA.the90info.targets) || []).find(x => x && x.id === tid);
+    return t ? (t.name || t.label || t.id) : (tid || '—');
+  };
+  html += `<div class="hud-cell wide"><div class="log-head">DAILY CHALLENGE · 直面弱点</div>` +
+    (ch
+      ? `<div class="rpg-chal${ch.claimed ? ' is-done' : ''}${ch.penalty ? ' is-pen' : ''}">` +
+        `<span class="rc-attr">${esc(ch.attr || '—')}</span>` +
+        `<span class="rc-t">${ch.target ? esc(tName(ch.target)) : '全部达成 · 无可指派'}</span>` +
+        `<span class="rc-s">${ch.claimed ? '✓ 已完成 +20 EXP' : (ch.penalty ? '惩罚任务 · 前日懈怠' : 'OPEN')}</span></div>`
+      : `<div class="hud-note">今日挑战尚未下达 — 由主系统（CyrusOS）滚动生成。</div>`) + `</div>`;
+  // achievements gallery — 13 categories, unlocked bright, hidden masked
+  const unlocked = r.achievements || {};
+  html += `<div class="hud-cell wide"><div class="log-head">ACHIEVEMENTS · ${r.achCount} / ${DB.RPG_ACH_META.length}</div><div class="rpg-ach">`;
+  for (const cat of DB.RPG_ACH_CATS) {
+    const items = DB.RPG_ACH_META.filter(a => a.cat === cat.key);
+    if (!items.length) continue;
+    const got = items.filter(a => unlocked[a.id]).length;
+    html += `<div class="ra-cat"><div class="ra-cat-h">${esc(cat.label)} <i>${got}/${items.length}</i></div>` +
+      items.map(a => {
+        const on = !!unlocked[a.id];
+        const masked = a.hidden && !on;
+        return `<span class="ra-card${on ? ' is-on' : ''}" title="${esc(masked ? '？？？' : a.desc)}">` +
+          `<span class="ra-tier">${a.tier === 'platinum' ? '◆' : a.tier === 'gold' ? '●' : a.tier === 'silver' ? '◐' : '○'}</span>` +
+          `<span class="ra-n">${esc(masked ? '？？？' : a.name)}</span></span>`;
+      }).join('') + `</div>`;
+  }
+  html += `</div></div>`;
+  body.innerHTML = html;
+  body.querySelectorAll('.hud-v .num').forEach(countUp);
+  if (gsap && !REDUCED) {                          // bars grow in with the panel
+    body.querySelectorAll('.ra-bar i, .rpg-xp span').forEach(el => {
+      const w = el.style.width;
+      gsap.fromTo(el, { width: '0%' }, { width: w, duration: 0.6, ease: 'power2.out', delay: 0.2, overwrite: true });
+    });
+  }
+}
+
 // re-render the currently-open station HUD's body + viz (after a write settles)
 function refreshOpenStation(id, scene) {
   if (!(hudOpen && hudKind === 'station')) return;
@@ -819,14 +891,25 @@ function todosStation(open, doneToday, all) {
   st.hud.rows = rows.map(t => ({ id: t.id, tag: '', label: t.text || '(untitled)', met: !!t.done, state: t.done ? '✓' : '—' }));
   return st;
 }
-function systemStation(S, sys) {
+function systemStation(S, sys, rpg) {
   const notices = (sys && sys.notices) || [];
-  return baseStation('SYSTEM', `AVG <b>${S.avg30}%</b> · STREAK <b>${S.best}d</b>`, [
-    { k: 'The90 avg', v: String(S.avg30), unit: '% · 30d' },
-    { k: 'Longest', v: String(S.best), unit: 'days', accent: 'cyan' },
-    { k: 'Notices', v: String(notices.length) },
-    { k: 'Day', v: String(S.todayIndex + 1), unit: '/ 90', accent: 'cyan' },
-  ], 'The90 30-day avg <b id="sys-avg"></b> · longest streak <b id="sys-streak"></b>.');
+  if (!rpg) {
+    // degraded card (no the90 meta) — the pre-B2 SYSTEM station
+    return baseStation('SYSTEM', `AVG <b>${S.avg30}%</b> · STREAK <b>${S.best}d</b>`, [
+      { k: 'The90 avg', v: String(S.avg30), unit: '% · 30d' },
+      { k: 'Longest', v: String(S.best), unit: 'days', accent: 'cyan' },
+      { k: 'Notices', v: String(notices.length) },
+      { k: 'Day', v: String(S.todayIndex + 1), unit: '/ 90', accent: 'cyan' },
+    ], 'The90 30-day avg <b id="sys-avg"></b> · longest streak <b id="sys-streak"></b>.');
+  }
+  const st = baseStation('SYSTEM', `LV <b>${rpg.level}</b> · RANK <b>${rpg.rank}</b>`, [
+    { k: 'Level', v: String(rpg.level), unit: rpg.title },
+    { k: 'Rank', v: rpg.rank, accent: 'cyan' },
+    { k: '战力 Power', v: String(rpg.power) },
+    { k: 'Achievements', v: String(rpg.achCount), unit: '/ ' + DB.RPG_ACH_META.length, accent: 'cyan' },
+  ], '');
+  st.hud.rpg = rpg;                        // renderSystemBody takes over from here
+  return st;
 }
 function buildLedgerCandles(txns) {
   const amts = (txns || []).slice(0, 12).reverse().map(t => Math.abs(+t.amount || 0));
@@ -1264,6 +1347,10 @@ function buildLiveData(loaded, session) {
   const todosDen = openTodos.length + doneToday.length;
   const deskList = Array.isArray(desk && desk.list) ? desk.list : [];
   const deskDone = deskList.filter(i => i && i.d).length;
+  // RPG character sheet — derived read-only (the90 rows + rpg_state); null-safe:
+  // without the90 meta the SYSTEM station simply degrades to the AVG/STREAK card.
+  let rpg = null;
+  try { rpg = DB.computeRpg(loaded.the90, loaded.rpg); } catch { rpg = null; }
 
   const labels = {
     SYSTEM: 'THE 90 · LAST 30 DAYS',
@@ -1281,7 +1368,7 @@ function buildLiveData(loaded, session) {
     academicsStation(acad, acadDone),
     todosStation(openTodos.length, doneToday.length, todosArr),
     financeStation(trading, txns),
-    systemStation(S, sys),
+    systemStation(S, sys, rpg),
   ];
   return {
     version: 'v1.0-live', build: DB.TODAY, user: email, tz: '+08:00', live: true,
@@ -1290,6 +1377,7 @@ function buildLiveData(loaded, session) {
     // raw domain arrays kept so the writable stations can recompute after a toggle
     _uid: (session.user && session.user.id) || null,
     _todos: todosArr, _academics: acad, _japanese: jp, _trading: trading, _tradingDesk: desk,
+    rpg,
     the90, todayIndex: S.todayIndex, avg30: S.avg30, best: S.best,
     viz: { sys30, rise7: morningList.map(i => i && i.d ? 1 : 0), candles: buildLedgerCandles(txns),
       credits: acad.length ? acadDone / acad.length : 0,

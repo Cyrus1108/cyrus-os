@@ -274,8 +274,8 @@ export async function loadSystem(uid) {
 // Load every domain in parallel; individual failures don't sink the others.
 // the90 === null signals a hard failure (→ caller falls back to demo/LINK DOWN).
 export async function loadAll(uid) {
-  const keys = ['the90', 'morning', 'academics', 'japanese', 'todos', 'trading', 'system', 'tradingDesk'];
-  const fns  = [loadThe90, loadMorning, loadAcademics, loadJapanese, loadTodos, loadTrading, loadSystem, loadTradingDesk];
+  const keys = ['the90', 'morning', 'academics', 'japanese', 'todos', 'trading', 'system', 'tradingDesk', 'rpg'];
+  const fns  = [loadThe90, loadMorning, loadAcademics, loadJapanese, loadTodos, loadTrading, loadSystem, loadTradingDesk, loadRpg];
   const results = await Promise.allSettled(fns.map(fn => fn(uid)));
   const out = { errors: {} };
   results.forEach((r, i) => {
@@ -331,6 +331,189 @@ export function the90Summary(meta, dailyRows) {
     todayScores: (todayRow && todayRow.scores) || {},
     todayNote: (todayRow && todayRow.note) || '',
     ratios, avg30, best,
+  };
+}
+
+// ── RPG (登升区 / ASCENSION) — READ-ONLY mirror of scripts/rpg.js ────────────
+// Everything here is display math. NEXT never writes rpg_state: level-ups,
+// achievement unlocks and the daily challenge roll stay the main app's job
+// (rpg.js ↔ rpg-stats.py are a mirror pair; this is a THIRD copy of the pure
+// formulas only — if you touch the EXP curve / attr matrix there, sync here).
+export const RPG_ATTRS = [
+  { key: 'STR', name: '力量', icon: '⚔︎' },
+  { key: 'AGI', name: '敏捷', icon: '➹︎' },
+  { key: 'INT', name: '智力', icon: '✦︎' },
+  { key: 'WIS', name: '智慧', icon: '☯︎' },
+  { key: 'VIT', name: '体力', icon: '❀︎' },
+  { key: 'CRE', name: '创造', icon: '⚙︎' },
+];
+const RPG_ATTR_ORDER = ['STR', 'AGI', 'INT', 'WIS', 'VIT', 'CRE'];
+// the90 target id → attribute weights (sleep is the foundation → feeds all six)
+const RPG_ACTIVITY_ATTR = {
+  I:   { STR: 1, AGI: 1, INT: 1, WIS: 1, VIT: 1, CRE: 1 },
+  II:  { INT: 1, WIS: 1 },
+  III: { INT: 1, CRE: 1 },
+  IV:  { STR: 1, AGI: 1 },
+  V:   { VIT: 1, WIS: 1, INT: 1 },
+};
+const RPG_TITLES = { E: '觉醒者', D: '挑战者', C: '攀登者', B: '破限者', A: '支配者', S: '君主' };
+export const RPG_TIER_EXP = { bronze: 15, silver: 30, gold: 50, platinum: 100 };
+export const RPG_ACH_CATS = [
+  { key: 'streak', label: '坚持 · STREAK' },
+  { key: 'perfect', label: '圆满 · MASTERY' },
+  { key: 'journey', label: '历程 · JOURNEY' },
+  { key: 'attribute', label: '属性 · ATTRIBUTE' },
+  { key: 'power', label: '战力 · POWER' },
+  { key: 'rank', label: '阶位 · RANK' },
+  { key: 'exp', label: '经验 · EXP' },
+  { key: 'japanese', label: '语学 · JAPANESE' },
+  { key: 'crossdomain', label: '修行 · DISCIPLINE' },
+  { key: 'finance', label: '财富 · FINANCE' },
+  { key: 'fitness', label: '体魄 · FITNESS' },
+  { key: 'ai', label: '自动化 · AUTOMATION' },
+  { key: 'adversity', label: '逆境 · ADVERSITY' },
+];
+// static gallery metadata only — [id, cat, tier, name, desc, hidden] — the
+// unlock TESTS live in rpg.js (they close over main-app state); NEXT displays
+// the persisted unlock set from rpg_state.achievements (append-only jsonb).
+const RPG_ACH_ROWS = [
+  ['streak3', 'streak', 'bronze', '三日不辍', 'The 90 连续达标 3 天', 0],
+  ['streak7', 'streak', 'bronze', '一周如一', '连续达标 7 天', 0],
+  ['streak14', 'streak', 'silver', '意志试炼', '连续达标 14 天', 1],
+  ['streak30', 'streak', 'gold', '而立之恒', '连续达标 30 天', 0],
+  ['streak60', 'streak', 'platinum', '炼狱不熄', '连续达标 60 天', 0],
+  ['comeback', 'streak', 'silver', '浴火重生', '断档之后，重建 7 天连续达标', 1],
+  ['perfect', 'perfect', 'bronze', '圆满一日', '单日五项目标全部达成', 0],
+  ['perfectwk', 'perfect', 'gold', '影之支配', '连续 7 天五项全清', 1],
+  ['perfectmonth', 'perfect', 'platinum', '无瑕之月', '连续 30 天五项全清', 1],
+  ['day30', 'journey', 'bronze', '第一阶段', '抵达 The 90 第 30 天', 0],
+  ['day60', 'journey', 'silver', '第二阶段', '抵达第 60 天', 0],
+  ['day90', 'journey', 'gold', '登顶', '完成 90 天的旅程', 0],
+  ['attr_int35', 'attribute', 'gold', '通明之巅', '智力 INT 达到 35', 0],
+  ['attr_cre35', 'attribute', 'gold', '造物之巅', '创造 CRE 达到 35', 0],
+  ['attr_balanced', 'attribute', 'platinum', '六维调和', '六项属性全部 ≥ 30 · 无短板', 0],
+  ['power150', 'power', 'gold', '破百五十', '战力达到 150', 0],
+  ['power180', 'power', 'platinum', '君临战力', '战力达到 180', 1],
+  ['lv10', 'rank', 'bronze', 'D 级觉醒', '等级达到 10 · 晋升 D 级', 0],
+  ['lv20', 'rank', 'silver', 'C 级猎人', '等级达到 20 · 晋升 C 级', 1],
+  ['rank_b', 'rank', 'gold', '破限者', '晋升至 B 级（等级 35）', 0],
+  ['rank_a', 'rank', 'platinum', '支配者', '晋升至 A 级（等级 55）', 0],
+  ['rank_s', 'rank', 'platinum', '君主', '晋升至 S 级 · 君主加冕', 1],
+  ['exp2000', 'exp', 'silver', '积跬步', '累计经验突破 2000', 0],
+  ['exp5000', 'exp', 'platinum', '至千里', '累计经验突破 5000', 1],
+  ['n2_10', 'japanese', 'bronze', '语之初径', 'N2 连续打卡 10 天', 0],
+  ['n2_30', 'japanese', 'silver', '言之恒心', 'N2 连续打卡 30 天', 0],
+  ['n2_60', 'japanese', 'gold', '言出于恒', 'N2 连续打卡 60 天', 0],
+  ['n2_vol50', 'japanese', 'silver', '百炼之卷', 'N2 累计打卡 50 天', 0],
+  ['ac_alldone', 'crossdomain', 'bronze', '学海无波', '学业待办全部完成', 0],
+  ['ac_volume10', 'crossdomain', 'silver', '课业不辍', '累计完成 10 项学业', 0],
+  ['cleardesk', 'crossdomain', 'bronze', '万事清零', '把待办全部清空', 1],
+  ['td_burst5', 'crossdomain', 'silver', '雷厉风行', '单日完成 5 项待办', 0],
+  ['td_volume50', 'crossdomain', 'gold', '积少成多', '累计完成 50 项待办', 0],
+  ['fin_log_streak7', 'finance', 'silver', '锱铢必录', '连续 7 天记账', 0],
+  ['fin_goal_reached', 'finance', 'gold', '积羽沉舟', '达成一个存钱目标', 0],
+  ['fin_nw_10k', 'finance', 'bronze', '积铢成两', '净资产突破 RM 10,000', 0],
+  ['fin_nw_50k', 'finance', 'silver', '渐入佳境', '净资产突破 RM 50,000', 0],
+  ['fin_nw_100k', 'finance', 'gold', '富甲一方', '净资产突破 RM 100,000', 0],
+  ['fin_nw_250k', 'finance', 'platinum', '富可敌国', '净资产突破 RM 250,000', 1],
+  ['cross1', 'adversity', 'bronze', '初渡', '第一次穿越低谷日', 0],
+  ['cross7', 'adversity', 'gold', '渡厄', '穿越低谷日 7 次', 0],
+  ['cross30', 'adversity', 'platinum', '渡劫', '穿越低谷日 30 次', 1],
+  ['fit_first', 'fitness', 'bronze', '初次启程', '完成第一次训练打卡', 0],
+  ['fit_streak7', 'fitness', 'silver', '七日锻形', '连续训练 7 天', 0],
+  ['fit_streak30', 'fitness', 'gold', '铁律之躯', '连续训练 30 天', 0],
+  ['fit_vol1000', 'fitness', 'silver', '千锤百炼', '累计完成 1000 次', 0],
+  ['fit_plan_week', 'fitness', 'gold', '周而复始', '完成一整周的训练计划', 0],
+  ['fit_body_log', 'fitness', 'bronze', '丈量自身', '首次记录体征数据', 1],
+  ['ai_first', 'ai', 'bronze', '第一次造物', '记录第一条 AI Automation 产出', 0],
+  ['ai_vol10', 'ai', 'bronze', '十件成器', '累计 10 条产出', 0],
+  ['ai_vol50', 'ai', 'silver', '匠人之路', '累计 50 条产出', 0],
+  ['ai_vol200', 'ai', 'platinum', '造物主', '累计 200 条产出', 1],
+  ['ai_streak7', 'ai', 'silver', '七日不辍', '连续 7 天有产出', 0],
+  ['ai_streak30', 'ai', 'gold', '自动化之魂', '连续 30 天有产出', 0],
+  ['ai_ship10', 'ai', 'gold', '交付者', '累计交付 10 件（shipped）', 0],
+];
+export const RPG_ACH_META = RPG_ACH_ROWS.map(r =>
+  ({ id: r[0], cat: r[1], tier: r[2], name: r[3], desc: r[4], hidden: !!r[5] }));
+const RPG_ACH_TIER = {};
+for (const a of RPG_ACH_META) RPG_ACH_TIER[a.id] = a.tier;
+
+export async function loadRpg(uid) {
+  const sb = client(); if (!sb || !uid) return null;
+  const { data, error } = await sb.from('rpg_state').select('*').eq('user_id', uid).maybeSingle();
+  if (error) throw error;
+  return data || null;
+}
+
+// cumulative EXP required to BE at level L (k→k+1 costs 100+(k-1)*25)
+function rpgExpForLevel(L) { let s = 0; for (let k = 1; k < L; k++) s += 100 + (k - 1) * 25; return s; }
+function rpgRankOf(L) { return L >= 80 ? 'S' : L >= 55 ? 'A' : L >= 35 ? 'B' : L >= 20 ? 'C' : L >= 10 ? 'D' : 'E'; }
+
+// The full character sheet, derived from the90 raw rows + the rpg_state row.
+// Level/EXP mirror rpgTotalExp/computeRPG; attributes are the 30-day form.
+export function computeRpg(the90raw, rpgRow) {
+  if (!the90raw) return null;
+  const meta = the90raw.meta, dailyRows = the90raw.daily || [];
+  const start = (meta && meta.start_date) || THE90_START_DEFAULT;
+  const targets = (meta && Array.isArray(meta.targets) && meta.targets.length)
+    ? meta.targets : TARGETS_DEFAULT;
+  const byDate = Object.create(null);
+  for (const r of dailyRows) if (r && r.date) byDate[r.date] = r;
+  const metOn = (ds) => {
+    const row = byDate[ds]; if (!row) return 0;
+    const ph = phaseOf(dayIndex(ds, start));
+    const scores = row.scores || {};
+    return targets.reduce((n, t) => n + (scoreMet(scores[t.id], ph) ? 1 : 0), 0);
+  };
+  // ── total EXP: met*10 per day, perfect-day +25, phase milestones +50 ──
+  let exp = 0;
+  for (const ds in byDate) {
+    if (ds > TODAY) continue;
+    const met = metOn(ds);
+    exp += met * 10;
+    if (targets.length && met === targets.length) exp += 25;
+  }
+  const day = dayIndex(TODAY, start);
+  if (day >= 30) exp += 50;
+  if (day >= 60) exp += 50;
+  if (day >= 90) exp += 50;
+  const ach = (rpgRow && rpgRow.achievements) || {};
+  let achExp = 0;
+  for (const id in ach) achExp += RPG_TIER_EXP[RPG_ACH_TIER[id]] || 0;
+  const totalExp = exp + ((rpgRow && rpgRow.bonus_exp) || 0) + achExp;
+  let level = 1;
+  while (totalExp >= rpgExpForLevel(level + 1)) level++;
+  const rank = rpgRankOf(level);
+  // ── attributes: weighted 30-day met-fraction per feeder activity (10..100) ──
+  const counts = {};
+  for (const t of targets) counts[t.id] = 0;
+  for (let i = 0; i < 30; i++) {
+    const ds = isoMinusDays(TODAY, i);
+    const row = byDate[ds]; if (!row) continue;
+    const ph = phaseOf(dayIndex(ds, start));
+    const scores = row.scores || {};
+    for (const t of targets) if (scoreMet(scores[t.id], ph)) counts[t.id]++;
+  }
+  const attrs = {};
+  for (const k of RPG_ATTR_ORDER) {
+    let wsum = 0, num = 0;
+    for (const tid in RPG_ACTIVITY_ATTR) {
+      const w = RPG_ACTIVITY_ATTR[tid][k]; if (!w) continue;
+      num += w * ((counts[tid] || 0) / 30);
+      wsum += w;
+    }
+    attrs[k] = wsum ? Math.round(10 + 90 * (num / wsum)) : 10;
+  }
+  const power = RPG_ATTR_ORDER.reduce((s, k) => s + attrs[k], 0);
+  // today's challenge is DISPLAYED only when the main app already rolled it
+  const challenge = (rpgRow && rpgRow.daily && rpgRow.daily.date === TODAY) ? rpgRow.daily : null;
+  return {
+    level, rank, title: RPG_TITLES[rank] || '', totalExp,
+    expInLevel: totalExp - rpgExpForLevel(level),
+    expForLevel: rpgExpForLevel(level + 1) - rpgExpForLevel(level),
+    attrs, counts, power,
+    achievements: ach, achCount: Object.keys(ach).length, achExp,
+    challenge, seenLevel: (rpgRow && rpgRow.seen_level) || level,
   };
 }
 

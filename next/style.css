@@ -415,6 +415,34 @@ html[data-reticle="on"] .tx-field textarea,html[data-reticle="on"] .log-row.is-l
 }
 
 /* ---- reduced motion: kill animation, keep legibility ---------------------- */
+/* ---- SYSTEM · RPG character sheet (登升区) -------------------------------- */
+.rpg-xp{height:10px;border:1px solid var(--line);background:var(--bg-2);margin-top:6px;}
+.rpg-xp span{display:block;height:100%;background:var(--yellow);}
+.rpg-xp-n{margin-top:5px;font-size:11px;color:var(--mute);letter-spacing:.04em;}
+.rpg-xp-n b{color:var(--cyan);font-weight:500;}
+.rpg-attrs{display:flex;flex-direction:column;gap:6px;margin-top:6px;}
+.rpg-attr{display:flex;align-items:center;gap:8px;font-size:11px;}
+.ra-k{width:110px;color:var(--mute);letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ra-bar{flex:1;height:6px;border:1px solid var(--line);background:var(--bg-2);}
+.ra-bar i{display:block;height:100%;background:var(--yellow);}
+.ra-v{width:30px;text-align:right;color:var(--cyan);font-weight:500;}
+.rpg-chal{display:flex;align-items:center;gap:10px;margin-top:6px;font-size:12px;
+  border:1px solid var(--line);padding:8px 10px;}
+.rpg-chal .rc-attr{color:var(--yellow);font-weight:600;letter-spacing:.06em;}
+.rpg-chal .rc-t{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.rpg-chal .rc-s{color:var(--mute);white-space:nowrap;}
+.rpg-chal.is-done .rc-s{color:var(--cyan);}
+.rpg-chal.is-pen{border-color:var(--danger);}
+.rpg-chal.is-pen .rc-s{color:var(--danger);}
+.rpg-ach{margin-top:6px;display:flex;flex-direction:column;gap:10px;}
+.ra-cat-h{font-size:10px;letter-spacing:.14em;color:var(--mute);margin-bottom:5px;}
+.ra-cat-h i{font-style:normal;color:var(--cyan);}
+.ra-card{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--hair);
+  padding:3px 8px;margin:0 6px 6px 0;font-size:11px;color:var(--ghost);}
+.ra-card .ra-tier{font-size:10px;color:var(--ghost);}
+.ra-card.is-on{color:var(--ink);border-color:var(--line);}
+.ra-card.is-on .ra-tier{color:var(--yellow);}
+
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;
     transition-duration:.001ms!important;}

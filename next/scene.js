@@ -166,7 +166,8 @@ function prismGeo(len, halfZ, baseY, apexY) {
 }
 
 // per-station silhouettes. Returns { wire:[parts], solid:[parts], labelY, pickR }
-function stationParts(id) {
+// `rpg` (optional) feeds SYSTEM's data-driven monument.
+function stationParts(id, rpg) {
   const B = (w, h, d) => new THREE.BoxGeometry(w, h, d);
   switch (id) {
     case 'MORNING':
@@ -301,24 +302,74 @@ function stationParts(id) {
         labelY: 2.6, pickR: 1.7,
       };
     case 'SYSTEM':
-    default:
+    default: {
       // SYSTEM's group sits elevated (ASCENSION.y); the hex dais is the floating
       // platform under the core, the hairline tethers it from deck level (local
       // y ≈ -2.6, i.e. world 0) up to the dais underside.
+      // B2: the monument is DATA-DRIVEN — a live character sheet in wireframe:
+      //   rank (E..S)      → number of orbit rings around the core
+      //   EXP-in-level     → rungs climbing the tether toward the dais
+      //   unlocked 成就     → shard ring orbiting the core (spins with it)
+      //   six attributes   → radar polygon etched on the dais top
+      const R = rpg || null;
+      const wire = [
+        { geo: new THREE.IcosahedronGeometry(1.35, 0), pos: [0, 1.6, 0] },
+        { geo: new THREE.CylinderGeometry(1.5, 1.7, 0.18, 6), pos: [0, 0, 0] },     // floating hex dais
+        { geo: B(0.03, 2.51, 0.03), pos: [0, -1.345, 0] },                          // hairline tether to deck
+      ];
+      // rank rings — E=1 … S=6, expanding radii, varied tilts
+      const rankIdx = R ? 'EDCBAS'.indexOf(R.rank) + 1 : 2;
+      const RING_TILT = [
+        [24, 0, 0], [90, 0, 32], [62, 0, -20], [38, 0, 64], [78, 0, -52], [12, 0, 88],
+      ];
+      for (let k = 0; k < Math.max(1, Math.min(6, rankIdx)); k++) {
+        const t = RING_TILT[k];
+        wire.push({ geo: new THREE.TorusGeometry(1.7 + k * 0.14, 0.02, 4, 28),
+          pos: [0, 1.6, 0], rot: [t[0] * DEG, t[1] * DEG, t[2] * DEG] });
+      }
+      // EXP ladder — up to 8 rungs climbing the tether (deck → dais underside)
+      const expFrac = R && R.expForLevel ? Math.max(0, Math.min(1, R.expInLevel / R.expForLevel)) : 0.35;
+      const rungs = Math.round(expFrac * 8);
+      for (let k = 0; k < rungs; k++) {
+        wire.push({ geo: B(0.34, 0.028, 0.028), pos: [0, -2.35 + k * 0.27, 0] });
+      }
+      // achievement shards — one small octahedron per unlocked achievement,
+      // spread on an orbit band around the core (whole monument spins → they orbit)
+      const shards = Math.min(60, R ? (R.achCount || 0) : 9);
+      for (let k = 0; k < shards; k++) {
+        const a = (k / Math.max(1, shards)) * Math.PI * 2;
+        const rr = 2.15 + (k % 3) * 0.1;
+        wire.push({ geo: new THREE.OctahedronGeometry(0.07, 0),
+          pos: [Math.cos(a) * rr, 1.6 + Math.sin(k * 2.399) * 0.22, Math.sin(a) * rr] });
+      }
+      // attribute radar — 6 spokes + value polygon etched on the dais top.
+      // raw line-segment positions (not EdgesGeometry) → returned as rawWire.
+      const attrs = R && R.attrs ? R.attrs : { STR: 40, AGI: 40, INT: 40, WIS: 40, VIT: 40, CRE: 40 };
+      const ORDER = ['STR', 'AGI', 'INT', 'WIS', 'VIT', 'CRE'];
+      const radar = [], vtx = [];
+      const RY = 0.115;                                     // just above the dais face
+      for (let k = 0; k < 6; k++) {
+        const a = -Math.PI / 2 + k * Math.PI / 3;
+        const v = Math.max(0, Math.min(100, attrs[ORDER[k]] || 10));
+        const r = 0.35 + 1.1 * (v / 100);
+        vtx.push([Math.cos(a) * r, RY, Math.sin(a) * r]);
+        // spoke: dais centre → full-scale tip (constant, the static "graph paper")
+        radar.push(0, RY, 0, Math.cos(a) * 1.45, RY, Math.sin(a) * 1.45);
+      }
+      for (let k = 0; k < 6; k++) {                         // value polygon loop
+        const p = vtx[k], q = vtx[(k + 1) % 6];
+        radar.push(p[0], p[1], p[2], q[0], q[1], q[2]);
+      }
       return {
-        wire: [
-          { geo: new THREE.IcosahedronGeometry(1.35, 0), pos: [0, 1.6, 0] },
-          { geo: new THREE.TorusGeometry(1.7, 0.02, 4, 28), pos: [0, 1.6, 0], rot: [24 * DEG, 0, 0] },
-          { geo: new THREE.TorusGeometry(1.7, 0.02, 4, 28), pos: [0, 1.6, 0], rot: [90 * DEG, 0, 32 * DEG] },
-          { geo: new THREE.CylinderGeometry(1.5, 1.7, 0.18, 6), pos: [0, 0, 0] },     // floating hex dais
-          { geo: B(0.03, 2.51, 0.03), pos: [0, -1.345, 0] },                          // hairline tether to deck
-        ],
+        wire,
         solid: [
           { geo: new THREE.IcosahedronGeometry(1.32, 0), pos: [0, 1.6, 0] },
           { geo: new THREE.CylinderGeometry(1.5, 1.7, 0.18, 6), pos: [0, 0, 0] },
         ],
-        labelY: 3.4, pickR: 2.0, spin: true,
+        rawWire: new Float32Array(radar),
+        labelY: 3.4, pickR: 2.2, spin: true,
       };
+    }
   }
 }
 
@@ -383,7 +434,7 @@ export function createScene(canvas, opts) {
   const stations = [];
   const pickMeshes = [];
   for (const def of mock.stations) {
-    const s = stationParts(def.id);
+    const s = stationParts(def.id, mock.rpg);
     const line = new THREE.LineSegments(mergeEdges(s.wire),
       new THREE.LineBasicMaterial({ color: 0x6d6a1c, transparent: true, opacity: reducedMotion ? 0.9 : 0 }));
     const group = new THREE.Group();
@@ -412,6 +463,16 @@ export function createScene(canvas, opts) {
       }
       group.add(spinSub);
     }
+    // optional raw line-segment set (e.g. SYSTEM's attribute radar) — positions
+    // authored directly, not via EdgesGeometry; shares the station material and
+    // spins in lockstep with the main silhouette (see the frame loop).
+    let extra = null;
+    if (s.rawWire && s.rawWire.length) {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(s.rawWire, 3));
+      extra = new THREE.LineSegments(g, line.material);
+      group.add(extra);
+    }
     const L = STATION_LAYOUT[def.id] || { x: 0, y: 0, z: 0, districtId: null };
     group.position.set(L.x, L.y || 0, L.z);
     // face the silhouette radially OUTWARD (authored facades look down +z): the
@@ -426,7 +487,7 @@ export function createScene(canvas, opts) {
     group.add(pick); pickMeshes.push(pick);
     const anchor = new THREE.Object3D(); anchor.position.y = s.labelY; group.add(anchor);
     scene.add(group);
-    stations.push({ id: def.id, group, mat: line.material, line, occ, seal, spinSub, spinSpeed: (s.spinPart && s.spinPart.speed) || 0.5, anchor, def, spin: !!s.spin, emph: 0, emphT: 0, districtId: L.districtId || null });
+    stations.push({ id: def.id, group, mat: line.material, line, occ, seal, spinSub, spinSpeed: (s.spinPart && s.spinPart.speed) || 0.5, extra, anchor, def, spin: !!s.spin, emph: 0, emphT: 0, districtId: L.districtId || null });
   }
 
   // districts that actually have a station this batch → the scroll tour's stops.
@@ -670,7 +731,11 @@ export function createScene(canvas, opts) {
     const breathe = 0.5 + 0.5 * Math.sin(t * 2.2);
     beacon.line.material.opacity = pillars.mat.uniforms.uReveal.value * (0.35 + 0.5 * breathe);
     for (const st of stations) {
-      if (st.spin) { st.line.rotation.y += dt * 0.35; if (st.occ) st.occ.rotation.y = st.line.rotation.y; }
+      if (st.spin) {
+        st.line.rotation.y += dt * 0.35;
+        if (st.occ) st.occ.rotation.y = st.line.rotation.y;
+        if (st.extra) st.extra.rotation.y = st.line.rotation.y;
+      }
       if (st.spinSub) st.spinSub.rotation.y += dt * st.spinSpeed;
       st.emph = lerp(st.emph, st.emphT, 1 - Math.pow(0.0001, dt));
       st.mat.color.setRGB(0.42 + st.emph * 0.55, 0.42 + st.emph * 0.55, 0.09 + st.emph * 0.02);
@@ -868,7 +933,7 @@ export function createScene(canvas, opts) {
     beacon.line.geometry.dispose(); beacon.line.material.dispose();
     grid.geometry.dispose(); grid.material.dispose();
     if (dust) { dust.geometry.dispose(); dust.material.dispose(); }
-    for (const st of stations) { st.line.geometry.dispose(); st.mat.dispose(); if (st.occ) st.occ.geometry.dispose(); if (st.seal) { st.seal.geometry.dispose(); st.seal.material.dispose(); } if (st.spinSub) st.spinSub.children.forEach(c => c.geometry.dispose()); }
+    for (const st of stations) { st.line.geometry.dispose(); st.mat.dispose(); if (st.occ) st.occ.geometry.dispose(); if (st.seal) { st.seal.geometry.dispose(); st.seal.material.dispose(); } if (st.spinSub) st.spinSub.children.forEach(c => c.geometry.dispose()); if (st.extra) st.extra.geometry.dispose(); }
     occMat.dispose();
     if (bloomOn) {
       rtBright.dispose(); rtA.dispose(); rtB.dispose();
