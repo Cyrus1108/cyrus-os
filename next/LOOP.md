@@ -40,17 +40,15 @@
 - [x] focus 取景右偏:`focusStation` 里 look-at 沿相机右向量偏移,角度 = hFOV × min(0.16, hudW/W×0.375),hudW 由 main.js 传 `hudWidth:()=>min(560, innerWidth×0.92)`(镜像 #hud-panel 宽,不量隐藏节点)。
 - [x] 验证:MORNING(地面站)+ SYSTEM(高架站)开 HUD,碑体清晰立于左区中央、零虚化;Esc 返回正常。注:返程飞行期间点击被吞是既有设计(mode≠deck 忽略),非回归。
 
-### T3 渲染层氛围大改(用户 spec 适配本仓库)
-> 用户原 spec 按"单文件 + CDN + UnrealBloomPass"写;本仓库是 next/ 多文件 + vendored three +
-> 自写半分辨率选择性 bloom(scene.js 的 bright-pass→高斯→合成)。按**精神**落地,不推翻管线。
-- [ ] 背景:`#0A0B06` → 深蓝黑 `#0A0E14`。同步改:`scene.js BG`、fog 色、`style.css --bg`(+`--bg-2` 配套微调)。**遮挡体自动跟 BG,验证隐藏线无穿帮。**
-- [ ] vignette"房间感":#fx 暗角调成中心稍亮/边缘更暗(可叠一层极淡径向提亮)。
-- [ ] grid floor:透明度提到 5–10%,确认随雾自然淡出(现 shader grid 调 uniform/色值)。
-- [ ] bloom 全息感:自写 bloom 等效 strength 调到 0.6–0.9 档,保持半分辨率;不过曝(核对最亮的 today 柱与 seal 环)。
-- [ ] 体积感:每站叠一层同色半透明面 —— 克隆 solid 几何,`MeshBasicMaterial{color:站色, transparent, opacity:.04–.07, depthWrite:false}`,与 bg 色遮挡体共存(半透明面画在遮挡体之上,叠加顺序验一下)。
-- [ ] 分区配色(信息层级):TRADING/FINANCE `#F5A623` 琥珀 · JP-N2 `#4ECDC4` 青 · ACADEMICS `#9B8CFF` 紫 · MORNING/TODOS `#5FD068` 绿 · SYSTEM/THE90 保黄 `#EFE000`。idle 低饱和低亮、hover/active 提亮(重写 frame 里 `st.mat.color.setRGB(...)` 那段为"站基色 × emph 提亮");DOM 标签 `.lbl-name` 颜色跟随站色(inline style 或 CSS var)。
-- [ ] **调参地图**:`scene.js` 顶部加 `/* == TUNING == */` 注释块,列出:bloom 强度、fog 近远、站色表、半透明面 opacity、grid 透明度的位置与当前值;同一份抄进迭代日志(用户点名要)。
-- [ ] 验证:总览+四区各截图,横向对比"变亮变有深度但不过曝";rAF 帧率抽查。
+### T3 渲染层氛围大改 ✅ v7.3 (b992309)
+- [x] 背景 `#0A0B06`→`#0A0E14`(scene.js BG/BG_V、fog 自动跟、style.css --bg/--bg-2、#hud scrim/vignette 同步蓝移);隐藏线截图验证零穿帮。
+- [x] vignette 房间感:双层径向(中心 rgba(120,150,200,.05) 微亮 + 蓝黑边缘压暗)。
+- [x] grid 提亮:base 0.42→0.56、ring 0.18→0.22。
+- [x] bloom:`BLOOM_STRENGTH=0.75` 常量化(构造+每帧两处);**全部站线常驻 bloom 层**,hover 靠 colHot 提亮自然唤醒辉光(highlight() 不再切层)。
+- [x] 体积面:占用 occ 同几何 `MeshBasicMaterial{站色, opacity FILL_OPACITY=.055, depthWrite:false, DoubleSide}`,dispose 补材质释放。
+- [x] 分区配色:`STATION_HUE` 表(琥珀/青/紫/绿/黄),idle=向灰 lerp30%×0.52、hot=向白 lerp18%,帧循环 `colIdle.lerp(colHot, emph)`;标签 `--sthue` CSS 变量跟色(含 is-hot 光晕)。**决策:HUD 面板 chrome 保持全局终端黄,只有场景浮动标签跟站色**(面板是全局仪表,不该换肤)。
+- [x] TUNING 调参地图:scene.js 顶部注释块(BG/fog/bloom/站色/fill/grid/dust 七项落点)。
+- [x] 验证:总览截图分区配色全亮相、hover 唤醒(TRADING 琥珀提亮)、glErr=0。帧率满帧(动画平滑),留用户实机再感受。
 
 ### T4 银行加厚(用户:上次要的其实是"厚",不是"宽")
 - [ ] FINANCE 从"片状门面"变"有体积的建筑":台阶/楣/山墙 z 深加大(台阶 d 1.7→~3.2 起),山墙后接完整屋体(prismGeo 长体带屋脊)+ 侧墙轮廓线;solid 遮挡体同步;8 柱门面与门保留。
@@ -82,3 +80,4 @@
 | 2026-07-08 | (建档) | 创建本 LOOP 简报 | — | — |
 | 2026-07-08 | v7.1 / 97aead1 | T1:tick 静音、spinParts 多层动效(环进动/碎晶反向公转+浮动)、晨核提速 | glErr=0、7 标签、两帧对比环姿态翻转+碎晶漂移 ✓;音感/晨核速度留用户实机 | 小怪癖:EXP 横档随主自转偶有边缘朝向瞬间变淡(0.028 厚),可接受 |
 | 2026-07-08 | v7.2 / 0084a62 | T2:HUD scrim 左透右暗+去 blur、focus look-at 右偏(hudWidth 动态角度) | MORNING+SYSTEM 双站 HUD 构图落左区、清晰无虚化 ✓ Esc 返回 ✓ | SYSTEM 焦点近景构图极佳,可当宣传帧 |
+| 2026-07-08 | v7.3 / b992309 | T3:蓝黑底+房间感+grid 提亮+常驻 holo-bloom+分区配色+体积面+TUNING 地图 | 总览配色全亮相、hover 琥珀唤醒、隐藏线零穿帮、glErr=0 | bloom 强度/fill opacity 如需微调见 scene.js TUNING 块 |
