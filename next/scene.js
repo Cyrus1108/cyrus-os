@@ -489,6 +489,95 @@ function buildTorii() {
 }
 
 // ---------------------------------------------------------------------------
+// sakura — 2 trees flanking the machiya + 1 by the entrance torii. Trunks are
+// hand-authored line segments; canopies one merged pink Points cloud; falling
+// petals a small GPU-drifted Points volume localized over the JP quarter
+// (same trick as the dust field — uTime drives fall + sway in the vertex
+// shader, zero per-frame CPU cost). Petals build only on desktop + motion.
+// ---------------------------------------------------------------------------
+function buildSakura(withPetals) {
+  // one tree's skeleton (local coords, y-up), scaled/rotated/planted per site
+  const SKEL = [
+    [0, 0, 0, 0.15, 1.1, 0], [0.15, 1.1, 0, -0.5, 1.9, 0.15], [-0.5, 1.9, 0.15, -0.95, 2.35, 0.2],
+    [0.15, 1.1, 0, 0.75, 2.0, -0.12], [0.75, 2.0, -0.12, 1.15, 2.3, -0.2],
+    [0.15, 1.1, 0, 0.1, 2.2, 0.06], [0.1, 2.2, 0.06, -0.3, 2.75, 0.0],
+    [-0.5, 1.9, 0.15, -0.15, 2.45, 0.3], [0.75, 2.0, -0.12, 0.5, 2.6, -0.3],
+  ];
+  const SITES = [
+    { x: -6.9, z: -9.4, s: 1.0, r: 0.6 },     // machiya left
+    { x: -3.4, z: -12.5, s: 0.85, r: 2.4 },   // machiya right
+    { x: 3.15, z: -8.3, s: 1.1, r: 4.2 },     // by the entrance torii
+  ];
+  const linePos = [], canopyPos = [];
+  for (const t of SITES) {
+    const c = Math.cos(t.r), sn = Math.sin(t.r);
+    const px = (x, z) => t.x + (x * c - z * sn) * t.s;
+    const pz = (x, z) => t.z + (x * sn + z * c) * t.s;
+    for (const s of SKEL) {
+      linePos.push(px(s[0], s[2]), s[1] * t.s, pz(s[0], s[2]), px(s[3], s[5]), s[4] * t.s, pz(s[3], s[5]));
+    }
+    for (let i = 0; i < 64; i++) {             // canopy — flattened ellipsoid
+      const th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
+      const rr = Math.cbrt(Math.random());
+      const ex = Math.sin(ph) * Math.cos(th) * 1.35 * rr, ey = Math.cos(ph) * 0.7 * rr,
+        ez = Math.sin(ph) * Math.sin(th) * 1.15 * rr;
+      canopyPos.push(px(0.1 + ex, ez), (2.45 + ey) * t.s, pz(0.1 + ex, ez));
+    }
+  }
+  const lg = new THREE.BufferGeometry();
+  lg.setAttribute('position', new THREE.Float32BufferAttribute(linePos, 3));
+  const lines = new THREE.LineSegments(lg,
+    new THREE.LineBasicMaterial({ color: 0x7a5a63, transparent: true, opacity: 0.7 }));
+  const cg = new THREE.BufferGeometry();
+  cg.setAttribute('position', new THREE.Float32BufferAttribute(canopyPos, 3));
+  const canopy = new THREE.Points(cg, new THREE.PointsMaterial({
+    color: 0xF2A8C6, size: 0.085, transparent: true, opacity: 0.8, sizeAttenuation: true, depthWrite: false }));
+  const group = new THREE.Group();
+  group.add(lines); group.add(canopy);
+  let petals = null;
+  if (withPetals) {
+    const N = 90, H = 3.4;
+    const pos = new Float32Array(N * 3), phase = new Float32Array(N);
+    for (let i = 0; i < N; i++) {
+      pos[i * 3] = -2.6 + (Math.random() * 2 - 1) * 4.6;        // over the JP quarter
+      pos[i * 3 + 1] = Math.random() * H;
+      pos[i * 3 + 2] = -10.2 + (Math.random() * 2 - 1) * 2.6;
+      phase[i] = Math.random();
+    }
+    const pg = new THREE.BufferGeometry();
+    pg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    pg.setAttribute('aPhase', new THREE.BufferAttribute(phase, 1));
+    petals = new THREE.Points(pg, new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false,
+      uniforms: { uTime: { value: 0 } },
+      vertexShader: `
+        attribute float aPhase; uniform float uTime; varying float vA;
+        void main(){
+          vec3 p = position;
+          float h = 3.4;
+          p.y = mod(position.y - uTime * (0.24 + aPhase * 0.18), h);
+          p.x += sin(uTime * 0.8 + aPhase * 6.2831) * 0.4;
+          p.z += cos(uTime * 0.6 + aPhase * 6.2831) * 0.28;
+          vA = smoothstep(0.0, 0.35, p.y) * (0.35 + 0.45 * aPhase);
+          vec4 mv = modelViewMatrix * vec4(p, 1.0);
+          gl_PointSize = 5.2 * (12.0 / max(1.0, -mv.z));
+          gl_Position = projectionMatrix * mv;
+        }`,
+      fragmentShader: `
+        varying float vA;
+        void main(){
+          vec2 q = gl_PointCoord - 0.5;
+          float d = smoothstep(0.5, 0.12, length(q));
+          gl_FragColor = vec4(0.97, 0.74, 0.83, d * vA);
+        }`,
+    }));
+    petals.frustumCulled = false;
+    group.add(petals);
+  }
+  return { group, lines, canopy, petals };
+}
+
+// ---------------------------------------------------------------------------
 // TRADING chart — dynamic candle buffers. While the station is selected
 // (hover-lock or HUD focus → st.emph ≈ 1) the tape WALKS: the newest candle
 // grows from its open toward a rolled target, then the tape slides left and
@@ -602,6 +691,10 @@ export function createScene(canvas, opts) {
   // ===== entrance torii (deck gate on the approach axis) =====================
   const torii = buildTorii();
   scene.add(torii.group);
+
+  // ===== sakura — trees by the machiya/gate + falling petals (desktop) =======
+  const sakura = buildSakura(!isMobile && !reducedMotion);
+  scene.add(sakura.group);
 
   // ===== atmospheric dust motes (desktop, motion-on only) ====================
   // GPU-drifted THREE.Points volume; excluded from the bloom pass (layer 0),
@@ -966,6 +1059,7 @@ export function createScene(canvas, opts) {
 
     pillars.mat.uniforms.uTime.value = t;
     if (dust) dust.material.uniforms.uTime.value = t;
+    if (sakura.petals) sakura.petals.material.uniforms.uTime.value = t;
     const breathe = 0.5 + 0.5 * Math.sin(t * 2.2);
     beacon.line.material.opacity = pillars.mat.uniforms.uReveal.value * (0.35 + 0.5 * breathe);
     for (const st of stations) {
@@ -1174,6 +1268,9 @@ export function createScene(canvas, opts) {
     beacon.line.geometry.dispose(); beacon.line.material.dispose();
     grid.geometry.dispose(); grid.material.dispose();
     torii.line.geometry.dispose(); torii.line.material.dispose(); torii.occ.geometry.dispose(); torii.occ.material.dispose();
+    sakura.lines.geometry.dispose(); sakura.lines.material.dispose();
+    sakura.canopy.geometry.dispose(); sakura.canopy.material.dispose();
+    if (sakura.petals) { sakura.petals.geometry.dispose(); sakura.petals.material.dispose(); }
     if (dust) { dust.geometry.dispose(); dust.material.dispose(); }
     for (const st of stations) { st.line.geometry.dispose(); st.mat.dispose(); if (st.occ) st.occ.geometry.dispose(); if (st.seal) { st.seal.geometry.dispose(); st.seal.material.dispose(); } if (st.spinSubs) st.spinSubs.forEach(sp => sp.sub.children.forEach(c => c.geometry.dispose())); if (st.extra) st.extra.geometry.dispose(); if (st.chart) { st.chart.line.geometry.dispose(); st.chart.occ.geometry.dispose(); } st.group.children.forEach(c => { if (c.userData && c.userData.isFill) c.material.dispose(); }); }
     occMat.dispose();
