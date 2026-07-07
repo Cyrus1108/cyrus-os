@@ -82,14 +82,14 @@
 > 线框降为勾边)。终端色板/分区配色=信息层级保留;数据层/交互契约零改动;
 > 不引外部资产、不换后处理管线(自写 bloom 保留)。分两期,每期独立上线可回退。
 
-### P1 光影地基(零外部依赖)✳ 当前
-- [ ] renderer:shadowMap(PCFSoft)+ ACESFilmicToneMapping + SRGBColorSpace;移动端关阴影。
-- [ ] 灯光:冷月色 DirectionalLight(投影 2048 ortho±24)+ HemisphereLight;`buildEnvironment()` 自写微型发光房间 → PMREMGenerator.fromScene → scene.environment(PBR 反射,不下载 HDRI)。
-- [ ] 实体化:站体 occluder → 每站 MeshStandardMaterial(hue×0.32、metalness .35、微 emissive、polygonOffset 保留防线面 z-fight)+ 投/受影;碑阵柱体同理(暗黄+微自发光);MORNING 太阳=强 emissive 发光体;鸟居=朱红实体;地面加实心圆盘(shader 网格叠其上);5% 幽灵填充面退役。
-- [ ] 入场兼容:实体透明度跟 uReveal 淡入,reveal 完成后转不透明(否则碑体先于扫描线蹦出)。
-- [ ] 验证:阴影落地、反射有层次、不过曝/不死黑、glErr=0、入场不穿帮、帧率。
-### P2 材质细分收尾
-- [ ] 逐站调质感(金属/玻璃/木/石感由 roughness/metalness 分档)、柱阵按分数 emissive 梯度、dust/petals 亮度适配新曝光、线框勾边透明度再平衡、TUNING 地图更新。
+### P1 光影地基 ✅ v9→v9.0.3 (31fef81/0a5710c/2dcd555/8dc7fd8)
+- [x] renderer:PCFSoft 阴影 + ACES + sRGB(移动端关阴影 shadowsOn=!isMobile);曝光三轮调定:env 面板 0.85/0.30/0.22 档、主光 0xcfe0ff×1.25、半球 0.5、exposure 0.95(初版 4.5/2.3/1.12 = 正午蓝灾难,记取)。
+- [x] 灯光/反射:buildEnvironment() 自写发光房间→PMREM(零外部 HDRI);实心甲板圆盘 0x0e131c。
+- [x] 实体化:站体=hue×0.15 PBR(flat facet 法线来自 mergeSolid computeVertexNormals)、碑阵=暗金+微自发光且 **onBeforeCompile 注入 revEase 共享 uReveal**(入场升起零破坏)、鸟居=暗朱红、晨间太阳=emissive 1.5 发光体、chart occ 每帧重算法线;幽灵填充面/occluderMaterial 调用全退役。
+- [x] 锋利度:全部装饰 LineBasicMaterial/樱花 PointsMaterial `toneMapped:false`(ACES 曾把勾边压糊)。
+- [x] 验证:定妆帧夜间沙盘成立、勾边锋利、入场柱体随扫描升起、glErr=0、**121fps**。
+### P2 材质细分收尾(待用户先实机看一轮再做)
+- [ ] 阴影可见度确认/补强(当前角度难辨,或提主光侧向性)、逐站质感分档(木/石/金属)、柱阵按分数 emissive 梯度、dust 亮度适配、HUD focus 近景光效核查、TUNING 参数最终定稿。
 （L3 的 SSAO 后处理链与 GLB 真模型资产=远期搁置,不在本 backlog。）
 
 ## 迭代日志(追加式,每迭代一行起)
