@@ -247,40 +247,47 @@ function stationParts(id, rpg) {
         ],
         labelY: 3.5, pickR: 2.0,
       };
-    case 'FINANCE': {                    // neoclassical bank facade (hidden-line)
-      const wire = [], solid = [];
-      // 3 stacked stylobate steps (each wider than the one above)
+    case 'FINANCE': {                    // neoclassical bank — a real BUILDING,
+      const wire = [], solid = [];       // not a flat facade (owner: 厚实、有深度)
+      // 3 stylobate steps, deep — they run back under the whole hall
       const STEPS = [
-        { w: 4.3, d: 1.7, y: 0.08 },
-        { w: 3.95, d: 1.5, y: 0.24 },
-        { w: 3.6, d: 1.32, y: 0.40 },
+        { w: 4.3, d: 3.6, y: 0.08 },
+        { w: 3.95, d: 3.3, y: 0.24 },
+        { w: 3.6, d: 3.0, y: 0.40 },
       ];
       for (const s of STEPS) {
-        const g = B(s.w, 0.16, s.d), p = [0, s.y, 0];
+        const g = B(s.w, 0.16, s.d), p = [0, s.y, -0.55];   // front edge ≈ z+1.25
         wire.push({ geo: g.clone(), pos: p }); solid.push({ geo: g, pos: p });
       }
       const topStep = 0.48;                        // top face of the 3rd step
-      // 8 hexagonal columns evenly spaced across ~3.3 width, standing on the step
+      const FZ = 0.45;                             // facade plane (columns/pediment)
+      // 8 hexagonal columns across the portico front
       const nCol = 8, span = 3.3, colH = 1.55, colY = topStep + colH / 2;
       for (let i = 0; i < nCol; i++) {
         const x = -span / 2 + span * (i / (nCol - 1));
-        wire.push({ geo: new THREE.CylinderGeometry(0.09, 0.09, colH, 6), pos: [x, colY, 0] });
+        wire.push({ geo: new THREE.CylinderGeometry(0.09, 0.09, colH, 6), pos: [x, colY, FZ] });
       }
       const colTop = topStep + colH;               // 2.03
       // entablature across the column tops
       const entY = colTop + 0.11;
-      const entG = () => B(3.8, 0.22, 0.55);
-      wire.push({ geo: entG(), pos: [0, entY, 0] }); solid.push({ geo: entG(), pos: [0, entY, 0] });
-      // triangular pediment gable sitting on the entablature
+      const entG = () => B(3.8, 0.22, 0.6);
+      wire.push({ geo: entG(), pos: [0, entY, FZ] }); solid.push({ geo: entG(), pos: [0, entY, FZ] });
+      // FRONT-facing pediment: prismGeo extrudes along X → rotate 90° about Y so
+      // the triangle reads from the street (ridge runs front-to-back, thin slab)
       const pedBase = colTop + 0.22, pedApex = pedBase + 0.9;
-      wire.push({ geo: prismGeo(3.8, 0.27, pedBase, pedApex) });
-      solid.push({ geo: prismGeo(3.8, 0.27, pedBase, pedApex) });
+      wire.push({ geo: prismGeo(0.6, 1.9, pedBase, pedApex), rot: [0, 90 * DEG, 0], pos: [0, 0, FZ] });
+      solid.push({ geo: prismGeo(0.6, 1.9, pedBase, pedApex), rot: [0, 90 * DEG, 0], pos: [0, 0, FZ] });
+      // the HALL — full body behind the portico (side walls read from any angle)
+      const bodyG = () => B(3.5, 1.55, 2.4);
+      wire.push({ geo: bodyG(), pos: [0, topStep + 0.775, -0.85] });
+      solid.push({ geo: bodyG(), pos: [0, topStep + 0.775, -0.85] });
+      // hall roof — long gable, ridge front-to-back, kept BELOW the pediment apex
+      wire.push({ geo: prismGeo(2.4, 1.78, colTop, colTop + 0.55), rot: [0, 90 * DEG, 0], pos: [0, 0, -0.85] });
+      solid.push({ geo: prismGeo(2.4, 1.78, colTop, colTop + 0.55), rot: [0, 90 * DEG, 0], pos: [0, 0, -0.85] });
       // recessed dark door centred behind the middle columns (wire + solid)
       const doorG = () => B(0.85, 1.05, 0.12);
-      wire.push({ geo: doorG(), pos: [0, topStep + 0.52, -0.15] });
-      solid.push({ geo: doorG(), pos: [0, topStep + 0.52, -0.15] });
-      // single slab behind the colonnade → the columns read with depth occlusion
-      solid.push({ geo: B(3.35, 1.62, 0.12), pos: [0, 1.28, -0.34] });
+      wire.push({ geo: doorG(), pos: [0, topStep + 0.52, 0.30] });
+      solid.push({ geo: doorG(), pos: [0, topStep + 0.52, 0.30] });
       return { wire, solid, labelY: 3.9, pickR: 2.4 };
     }
     case 'TRADING': {                    // K線 — holographic price-chart monument
