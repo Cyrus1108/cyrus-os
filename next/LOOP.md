@@ -88,8 +88,14 @@
 - [x] 实体化:站体=hue×0.15 PBR(flat facet 法线来自 mergeSolid computeVertexNormals)、碑阵=暗金+微自发光且 **onBeforeCompile 注入 revEase 共享 uReveal**(入场升起零破坏)、鸟居=暗朱红、晨间太阳=emissive 1.5 发光体、chart occ 每帧重算法线;幽灵填充面/occluderMaterial 调用全退役。
 - [x] 锋利度:全部装饰 LineBasicMaterial/樱花 PointsMaterial `toneMapped:false`(ACES 曾把勾边压糊)。
 - [x] 验证:定妆帧夜间沙盘成立、勾边锋利、入场柱体随扫描升起、glErr=0、**121fps**。
-### P2 材质细分收尾(待用户先实机看一轮再做)
-- [ ] 阴影可见度确认/补强(当前角度难辨,或提主光侧向性)、逐站质感分档(木/石/金属)、柱阵按分数 emissive 梯度、dust 亮度适配、HUD focus 近景光效核查、TUNING 参数最终定稿。
+### P2a 光的动机化 ✅ v9.1 (c02c39d)
+- [x] 町屋活了:灯笼盒/双层窗棂/门缝 emissive 暖光(glowSolid/glowColor 站级机制)+ 灯笼 PointLight(26cd/9m)落地光池;鸟居檐下灯(22cd/10m);场景物勾边回收(站线 idle 0.36、鸟居 0.16,hover 唤醒到 0.91);阴影 radius=3 软化。实机:窗光/光池/夜感成立。
+### P2b 几何与质感 ✅ v9.2 (e8fcb30)
+- [x] `CB(w,h,d,c)` 倒角盒生成器(6 主面+12 棱斜面+8 角三角,132 顶点,DoubleSide 容错绕序,node 单测通过);应用:银行台阶/楣/殿身/门、町屋两层+披檐+门(S2 助手)、TODOS 四板、书壳。棱吃光确认。
+- [x] `weather(mat, amt, key)` 世界坐标 value-noise 注入 MeshStandardMaterial(albedo×色斑+roughness 抖动,免 UV;customProgramCacheKey 防程序缓存串号;可与 revEase 补丁链式共存);应用:站体 0.16/碑阵 0.12/鸟居 0.22/地板 0.10。
+- [x] `deckTexture()` Canvas 程序化甲板贴图(512² 面板缝+9000 噪点,RepeatWrapping×10,SRGB);CircleGeometry 有 UV 故地板走真贴图。
+- [x] 实机:斑驳/棱光/面板缝全部成立、glErr=0。
+### P3 后处理(SSAO/真阈值 bloom,vendor three 附件)· P4 GLB 真模型 —— 均待用户点头再开。
 （L3 的 SSAO 后处理链与 GLB 真模型资产=远期搁置,不在本 backlog。）
 
 ## 迭代日志(追加式,每迭代一行起)
