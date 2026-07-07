@@ -9,8 +9,10 @@ files and they ship as-is.
 
 ## Golden rules (do not break)
 
-- **Finance is insert-only.** Write new rows into `fin_transactions`; never edit
-  or delete existing transactions. Corrections are new offsetting rows.
+- **Finance is full CRUD.** `fin_transactions` may be inserted, edited, and
+  deleted (owner-confirmed 2026-07-06 — supersedes the former insert-only rule;
+  the main app already ships `finUpdateTx`/`finDeleteTx`). Keep writes RLS-scoped
+  and currency derived from the account (below).
 - **Currency is an account property, not a per-transaction one.** Do not
   reintroduce a per-transaction currency picker.
 - **Never commit or paste secrets.** Repo is **public** (GitHub Pages). The
