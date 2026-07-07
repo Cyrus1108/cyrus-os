@@ -58,9 +58,11 @@
 - [x] 每本书=书壳(占 solid 遮挡)+ 内缩页块(w94%/h56%/d86%,沿前口探出 5%,偏移随本体 ry 旋转);5 本厚薄 0.20–0.34 错落 + x/z 平移错位;顶上摊开书放大(0.85 宽双叶 + 0.72 抬高扇页对,带 18° yaw)。
 - [x] 线量:每本 2 box(24 边)×5 + 4 叶 ≈ 稳稳在预算内;隐藏线遮挡正常(zoom 验证页块线被上层书壳正确遮挡)。
 
-### T6 TRADING K线行情动画(选中时"行情在走")
-- [ ] 蜡烛部分从主 wire 拆成独立 LineSegments(参考 sealWire 路径),position buffer CPU 增量更新:focus/hover-lock 时蜡烛队列整体左移,右端按 升→跌→升 的节奏生长新蜡烛(伪随机走势;candles≤12,buffer 极小)。
-- [ ] idle 时静止(或极慢呼吸);reduced-motion 完全静止;封盘环共存不冲突;axis 框架不动。
+### T6 TRADING K线行情动画 ⚠️ v7.6 (28b56ca) — 代码完成+node 仿真验证,**浏览器验证待补(下轮第一件事)**
+- [x] 蜡烛拆动态双 buffer(wire 12 边+2 影线/根、occluder 12 tri/根,DynamicDrawUsage,frustumCulled=false),`{o,c,hi,lo}` 行情模型;选中(st.emph>0.6,hover 锁定与 HUD 聚焦均命中)时当前烛 smoothstep 生长+微抖,完成后 slide 0.5→0 左移换带,升→跌→升 节奏 legIdx 轮转,幅度 0.35–0.9 抖动,range 钳 [0.38,3.3]。
+- [x] idle 冻结(emph<0.6 early-return)/reduced-motion 帧循环不跑=静止;封盘环/axis 不受影响;chart line 共站材质(琥珀+hover 提亮+bloom)。
+- [x] node 桩仿真 600 帧:无 NaN、烛数恒 6、影线不倒挂、界内、idle 冻结 ✓。
+- [ ] **浏览器补验**:hover TRADING 两帧对比行情走动、glErr=0、封盘环共存。(扩展断连,Chrome 关闭中)
 
 ### T7 鸟居 + 日式生活街区(最大项,按子步多迭代)
 - [ ] 7a 鸟居精修:双柱微内倾(~2°)、笠木+岛木双横梁(笠木两端上翘)、中央额束、柱脚基石;**移到甲板入口**(总览相机进场方向、纪律区外缘)作为入口牌坊;JP-N2 站位原地换 7b。
@@ -83,3 +85,4 @@
 | 2026-07-08 | v7.3 / b992309 | T3:蓝黑底+房间感+grid 提亮+常驻 holo-bloom+分区配色+体积面+TUNING 地图 | 总览配色全亮相、hover 琥珀唤醒、隐藏线零穿帮、glErr=0 | bloom 强度/fill opacity 如需微调见 scene.js TUNING 块 |
 | 2026-07-08 | v7.4 / 2cf8b65 | T4:银行成建筑(深台阶/殿身/殿顶/山墙转90°朝街) | 正面+背3/4 双角度读得出体量、glErr=0 | — |
 | 2026-07-08 | v7.5 / 812b3b0 | T5:书壳+页块+错位错落+大摊开书扇页 | zoom 验证页块线/遮挡正确、glErr=0;console 12 错误均为 Chrome 扩展自身(context invalidated),与 app 无关 | 入场 reveal 早期帧勿误判为"柱阵丢失" |
+| 2026-07-08 | v7.6 / 28b56ca | T6:K線行情走带(动态双 buffer/升跌升/左移滑动/idle 冻结) | node 仿真 600 帧全绿;**浏览器验证待补**(扩展断连) | 下轮开工先补验 T6 再取 T7 |
