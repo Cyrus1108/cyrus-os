@@ -25,14 +25,19 @@ const lerp = (a, b, t) => a + (b - a) * t;
 const lerpAngle = (a, b, t) => { let d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return a + d * t; };
 
 /* == TUNING ==================================================================
-   BG / fog colour ....... const BG below — MUST equal style.css --bg (hidden-line
-                           occluders paint this colour; mismatch breaks the trick)
+   BG / fog colour ....... const BG below — MUST equal style.css --bg
    fog range ............. createScene: `scene.fog = new THREE.Fog(BG, 26, 66)`
+   exposure .............. createScene `renderer.toneMappingExposure` (ACES)
+   key light ............. createScene `sunLight` (colour/intensity/position/
+                           shadow ortho bounds); fill = HemisphereLight line
+   PBR reflections ....... buildEnvironment() panel colours/intensities
+   station body material . build loop `bodyMat` (colour ×0.30 / rough / metal /
+                           emissiveIntensity)
+   floor ................. createScene `floor` MeshStandardMaterial
    bloom strength ........ const BLOOM_STRENGTH below (baseline; hover/seal pulse
                            adds `+ cam.bloomPulse * 1.7` in renderScene)
    station hues .......... const STATION_HUE below (idle = dimmed/desaturated,
                            hover = brightened — mixed per frame in the loop)
-   station fill opacity .. const FILL_OPACITY below (translucent volume faces)
    grid brightness ....... buildGrid fragment shader `float base = ...` line
    dust opacity .......... const DUST_OPACITY below
    ========================================================================== */
@@ -56,8 +61,6 @@ const STATION_HUE = {
   MORNING: 0x5FD068, TODOS: 0x5FD068,           // daily ops — green
   SYSTEM: 0xEFE000,                             // the monarch keeps the yellow
 };
-const FILL_OPACITY = 0.055;      // translucent volume faces over the occluders
-
 // atmospheric dust field target opacity (additive; faded in on reveal) -----------
 const DUST_OPACITY = 0.5;
 
@@ -164,6 +167,7 @@ function mergeSolid(parts) {
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(out, 3));
+  g.computeVertexNormals();            // non-indexed → flat facet normals (L2 lit look)
   return g;
 }
 
@@ -223,7 +227,7 @@ function stationParts(id, ctx) {
         spinParts: [{
           wire: sunWire,
           solid: [{ geo: new THREE.IcosahedronGeometry(0.37, 0), pos: [0, 0, 0] }],
-          pivot: [0, sunY, 0], speed: 0.7,
+          pivot: [0, sunY, 0], speed: 0.7, glow: 0xFFD75E,      // the sun is self-luminous
         }],
         labelY: 3.4, pickR: 2.1,
       };
@@ -468,6 +472,32 @@ function stationParts(id, ctx) {
 }
 
 // ---------------------------------------------------------------------------
+// PBR environment — a tiny hand-built "room" of emissive panels (cool ceiling,
+// faint yellow console wall, cyan accent, dark floor bounce) captured once by
+// PMREMGenerator. Gives MeshStandardMaterial believable reflections without
+// shipping an HDRI file.
+// ---------------------------------------------------------------------------
+function buildEnvironment(renderer) {
+  const s = new THREE.Scene();
+  const geo = new THREE.BoxGeometry(1, 1, 1);
+  const mats = [];
+  const add = (color, intensity, x, y, z, sx, sy, sz) => {
+    const m = new THREE.MeshBasicMaterial({ color });
+    m.color.multiplyScalar(intensity); mats.push(m);
+    const mesh = new THREE.Mesh(geo, m);
+    mesh.position.set(x, y, z); mesh.scale.set(sx, sy, sz); s.add(mesh);
+  };
+  add(0x8fb8ff, 4.5, 0, 9, 0, 14, 0.4, 14);      // cool ceiling (the moonlight)
+  add(0xEFE000, 1.1, -9, 3.2, 0, 0.4, 4, 7);     // faint console-yellow wall
+  add(0x38D9D0, 0.8, 9, 2.6, 4, 0.4, 3, 5);      // cyan accent panel
+  add(0x141a26, 1.0, 0, -2.5, 0, 16, 0.4, 16);   // dark floor bounce
+  const pm = new THREE.PMREMGenerator(renderer);
+  const rt = pm.fromScene(s, 0.08);
+  pm.dispose(); geo.dispose(); mats.forEach(m => m.dispose());
+  return rt.texture;
+}
+
+// ---------------------------------------------------------------------------
 // entrance torii — the deck's gate, planted on the approach axis so the boot
 // camera descends THROUGH it toward the monument. Pure scenery: no label, no
 // pick sphere; solids paint BG so the gate occludes what stands behind it.
@@ -492,7 +522,10 @@ function buildTorii() {
   const solid = wire.map(p => ({ geo: p.geo.clone(), pos: p.pos, rot: p.rot }));
   const line = new THREE.LineSegments(mergeEdges(wire),
     new THREE.LineBasicMaterial({ color: 0x2f7d78, transparent: true, opacity: 0.62 }));
-  const occ = new THREE.Mesh(mergeSolid(solid), occluderMaterial());
+  const occ = new THREE.Mesh(mergeSolid(solid), new THREE.MeshStandardMaterial({
+    color: 0x8f2f23, roughness: 0.62, metalness: 0.08, side: THREE.DoubleSide,   // 朱红 vermilion
+    polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
+  }));
   const g = new THREE.Group();
   g.add(occ); g.add(line);
   // approach axis, BETWEEN the morning station and the monument — the south
@@ -721,6 +754,7 @@ function chartWrite(ch) {
   }
   ch.line.geometry.attributes.position.needsUpdate = true;
   ch.occ.geometry.attributes.position.needsUpdate = true;
+  ch.occ.geometry.computeVertexNormals();             // lit body needs fresh normals
 }
 function chartUpdate(st, dt) {
   const ch = st.chart;
@@ -755,13 +789,43 @@ export function createScene(canvas, opts) {
   const enablePillarHover = !isMobile;
   const bloomOn = !isMobile && !reducedMotion;
 
+  const shadowsOn = !isMobile;
+
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: !isMobile, alpha: false, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.setSize(W0(), H0());
   renderer.setClearColor(BG, 1);
+  // L2 solid-diorama pipeline: real light + shadow + filmic tone mapping.
+  renderer.shadowMap.enabled = shadowsOn;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.12;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   const scene = new THREE.Scene();
   scene.fog = new THREE.Fog(BG, 26, 66);
+
+  // cool "moon" key light (casts the deck's shadows) + soft sky/ground fill;
+  // PBR reflections come from a hand-built emissive room captured via PMREM —
+  // no external HDRI (the site ships no third-party assets).
+  const sunLight = new THREE.DirectionalLight(0xbfd6ff, 2.3);
+  sunLight.position.set(16, 24, -12);
+  if (shadowsOn) {
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.set(2048, 2048);
+    const sc = sunLight.shadow.camera;
+    sc.left = -24; sc.right = 24; sc.top = 24; sc.bottom = -24; sc.near = 4; sc.far = 64;
+    sunLight.shadow.bias = -0.0004; sunLight.shadow.normalBias = 0.02;
+  }
+  scene.add(sunLight);
+  scene.add(new THREE.HemisphereLight(0x27354d, 0x0b0e14, 0.8));
+  scene.environment = buildEnvironment(renderer);
+  // solid deck disc under the shader grid — everything now STANDS on something
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(46, 64),
+    new THREE.MeshStandardMaterial({ color: 0x121722, roughness: 0.9, metalness: 0.2 }));
+  floor.rotation.x = -Math.PI / 2; floor.position.y = -0.02;
+  floor.receiveShadow = shadowsOn;
+  scene.add(floor);
 
   const camera = new THREE.PerspectiveCamera(42, W0() / H0(), 0.1, 200);
   const target = new THREE.Vector3(0, 1.6, 0);
@@ -800,6 +864,8 @@ export function createScene(canvas, opts) {
 
   // ===== entrance torii (deck gate on the approach axis) =====================
   const torii = buildTorii();
+  torii.occ.castShadow = torii.occ.receiveShadow = shadowsOn;
+  pillars.occ.castShadow = pillars.occ.receiveShadow = shadowsOn;
   scene.add(torii.group);
 
   // ===== sakura — trees by the machiya/gate + falling petals (desktop) =======
@@ -817,7 +883,6 @@ export function createScene(canvas, opts) {
   if (dust) scene.add(dust);
 
   // ===== district stations ===================================================
-  const occMat = occluderMaterial();
   const stations = [];
   const pickMeshes = [];
   for (const def of mock.stations) {
@@ -826,24 +891,25 @@ export function createScene(canvas, opts) {
       new THREE.LineBasicMaterial({ color: 0x6d6a1c, transparent: true, opacity: reducedMotion ? 0.9 : 0 }));
     if (bloomOn) line.layers.enable(BLOOM_LAYER);   // every station feeds a soft holo-glow;
     const group = new THREE.Group();                 // hover brightens the colour → glow wakes up
-    let occ = null;
-    if (s.solid && s.solid.length) { occ = new THREE.Mesh(mergeSolid(s.solid), occMat); group.add(occ); }
-    group.add(line);
     // station hue → idle (dimmed, slightly desaturated) / hot (brightened) pair
     const hue = new THREE.Color(STATION_HUE[def.id] || 0xEFE000);
     const lum = hue.r * 0.299 + hue.g * 0.587 + hue.b * 0.114;
     const colIdle = hue.clone().lerp(new THREE.Color(lum, lum, lum), 0.30).multiplyScalar(0.52);
     const colHot = hue.clone().lerp(new THREE.Color(1, 1, 1), 0.18);
-    // translucent volume face over the occluder — the silhouette reads as a BODY,
-    // not just edges (shares the occluder geometry; disposed once via occ)
-    if (occ) {
-      const fill = new THREE.Mesh(occ.geometry, new THREE.MeshBasicMaterial({
-        color: hue, transparent: true, opacity: FILL_OPACITY,
-        depthWrite: false, side: THREE.DoubleSide,
-      }));
-      fill.userData.isFill = true;
-      group.add(fill);
+    // L2: the former BG-coloured occluder is now the station's lit BODY —
+    // hue-tinted PBR solid (flat facet normals), wireframe stays as edge accent.
+    const bodyMat = new THREE.MeshStandardMaterial({
+      color: hue.clone().multiplyScalar(0.30), roughness: 0.5, metalness: 0.35,
+      emissive: hue, emissiveIntensity: 0.05, side: THREE.DoubleSide,
+      polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
+    });
+    let occ = null;
+    if (s.solid && s.solid.length) {
+      occ = new THREE.Mesh(mergeSolid(s.solid), bodyMat);
+      occ.castShadow = occ.receiveShadow = shadowsOn;
+      group.add(occ);
     }
+    group.add(line);
     // optional toggleable sub-mesh (e.g. TRADING's wax seal): separate line, own
     // material, hidden until a flag turns it on. Same family, slightly brighter.
     let seal = null;
@@ -863,7 +929,18 @@ export function createScene(canvas, opts) {
       spinSubs = s.spinParts.map(sp => {
         const sub = new THREE.Group();
         sub.add(new THREE.LineSegments(mergeEdges(sp.wire), line.material));
-        if (sp.solid && sp.solid.length) sub.add(new THREE.Mesh(mergeSolid(sp.solid), occMat));
+        if (sp.solid && sp.solid.length) {
+          // `glow` marks self-luminous cores (the MORNING sun) — strong emissive
+          const m = sp.glow
+            ? new THREE.MeshStandardMaterial({ color: 0x201a06, roughness: 1, metalness: 0,
+                emissive: sp.glow, emissiveIntensity: 1.5 })
+            : bodyMat;
+          const solidMesh = new THREE.Mesh(mergeSolid(sp.solid), m);
+          solidMesh.castShadow = shadowsOn && !sp.glow;
+          if (sp.glow && bloomOn) solidMesh.layers.enable(BLOOM_LAYER);
+          if (sp.glow) solidMesh.userData.isGlow = true;
+          sub.add(solidMesh);
+        }
         const pv = sp.pivot || [0, 0, 0];
         sub.position.set(pv[0], pv[1], pv[2]);
         group.add(sub);
@@ -897,7 +974,7 @@ export function createScene(canvas, opts) {
       sgeo.setAttribute('position',
         new THREE.BufferAttribute(new Float32Array(nSlots * 36 * 3), 3).setUsage(THREE.DynamicDrawUsage));
       chart = { ...s.chart, slide: 0, forming: false,
-        line: new THREE.LineSegments(wgeo, line.material), occ: new THREE.Mesh(sgeo, occMat) };
+        line: new THREE.LineSegments(wgeo, line.material), occ: new THREE.Mesh(sgeo, bodyMat) };
       chart.line.frustumCulled = chart.occ.frustumCulled = false;   // buffer grows past first-frame bounds
       if (bloomOn) chart.line.layers.enable(BLOOM_LAYER);
       group.add(chart.occ); group.add(chart.line);
@@ -917,7 +994,7 @@ export function createScene(canvas, opts) {
     group.add(pick); pickMeshes.push(pick);
     const anchor = new THREE.Object3D(); anchor.position.y = s.labelY; group.add(anchor);
     scene.add(group);
-    stations.push({ id: def.id, group, mat: line.material, line, occ, seal, spinSubs, extra, chart, anchor, def, spin: !!s.spin, emph: 0, emphT: 0, colIdle, colHot, hueHex: '#' + hue.getHexString(), districtId: L.districtId || null });
+    stations.push({ id: def.id, group, mat: line.material, line, occ, bodyMat, seal, spinSubs, extra, chart, anchor, def, spin: !!s.spin, emph: 0, emphT: 0, colIdle, colHot, hueHex: '#' + hue.getHexString(), districtId: L.districtId || null });
   }
 
   // districts that actually have a station this batch → the scroll tour's stops.
@@ -1400,8 +1477,9 @@ export function createScene(canvas, opts) {
     walkers.path.geometry.dispose(); walkers.path.material.dispose();
     walkers.folk.geometry.dispose(); walkers.folk.material.dispose();
     if (dust) { dust.geometry.dispose(); dust.material.dispose(); }
-    for (const st of stations) { st.line.geometry.dispose(); st.mat.dispose(); if (st.occ) st.occ.geometry.dispose(); if (st.seal) { st.seal.geometry.dispose(); st.seal.material.dispose(); } if (st.spinSubs) st.spinSubs.forEach(sp => sp.sub.children.forEach(c => c.geometry.dispose())); if (st.extra) st.extra.geometry.dispose(); if (st.chart) { st.chart.line.geometry.dispose(); st.chart.occ.geometry.dispose(); } st.group.children.forEach(c => { if (c.userData && c.userData.isFill) c.material.dispose(); }); }
-    occMat.dispose();
+    for (const st of stations) { st.line.geometry.dispose(); st.mat.dispose(); if (st.bodyMat) st.bodyMat.dispose(); if (st.occ) st.occ.geometry.dispose(); if (st.seal) { st.seal.geometry.dispose(); st.seal.material.dispose(); } if (st.spinSubs) st.spinSubs.forEach(sp => sp.sub.children.forEach(c => { c.geometry.dispose(); if (c.userData && c.userData.isGlow) c.material.dispose(); })); if (st.extra) st.extra.geometry.dispose(); if (st.chart) { st.chart.line.geometry.dispose(); st.chart.occ.geometry.dispose(); } }
+    floor.geometry.dispose(); floor.material.dispose();
+    if (scene.environment) scene.environment.dispose();
     if (bloomOn) {
       rtBright.dispose(); rtA.dispose(); rtB.dispose();
       blurMat.dispose(); compMat.dispose(); quadMesh.geometry.dispose();
@@ -1505,19 +1583,22 @@ function buildPillars(mock) {
   const og = new THREE.BufferGeometry();
   og.setAttribute('position', new THREE.Float32BufferAttribute(solid, 3));
   og.setAttribute('aOrder', new THREE.Float32BufferAttribute(sord, 1));
-  const oMat = new THREE.ShaderMaterial({
-    uniforms: { uReveal },
+  og.computeVertexNormals();
+  // L2: the monument body is a LIT solid (dark gold, faint self-glow). It still
+  // rises with the entrance scan — the reveal transform is injected into the
+  // standard material and shares the SAME uReveal uniform object as the lines.
+  const oMat = new THREE.MeshStandardMaterial({
+    color: 0x2a2712, roughness: 0.55, metalness: 0.3,
+    emissive: 0xEFE000, emissiveIntensity: 0.05,
     polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
     side: THREE.DoubleSide,
-    vertexShader: /* glsl */`
-      attribute float aOrder; uniform float uReveal;
-      ${REVEAL}
-      void main(){ vec3 p = position; p.y = position.y * revEase(aOrder);
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(p,1.0); }`,
-    fragmentShader: /* glsl */`
-      precision mediump float;
-      void main(){ gl_FragColor = vec4(${BG_V[0].toFixed(4)},${BG_V[1].toFixed(4)},${BG_V[2].toFixed(4)},1.0); }`,
   });
+  oMat.onBeforeCompile = (sh) => {
+    sh.uniforms.uReveal = uReveal;
+    sh.vertexShader = 'attribute float aOrder;\nuniform float uReveal;\n' + REVEAL + '\n' + sh.vertexShader;
+    sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>',
+      '#include <begin_vertex>\n\ttransformed.y *= revEase(aOrder);');
+  };
   const occ = new THREE.Mesh(og, oMat);
   occ.renderOrder = -1;
 

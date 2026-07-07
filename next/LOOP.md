@@ -76,6 +76,22 @@
 - [x] 实现:地平线横杆+双柱、半圆拱(Torus 半弧)、地面六角环、太阳=自转 icosahedron+8 道光芒(spinParts pivot 即数据点,y=0.95+frac×1.45);`setMorningSun(frac)` 场景 API,main.js `syncMorningSun` 接 MORNING 打勾成功+revert 两路;stationParts 全面 ctx 化(ctx.rpg/ctx.morningFrac);MOCK.morningFrac=5/6、LIVE=mDone/mTotal。
 - [x] 验证:LIVE DONE 0/6 → 太阳半埋地平线(frac 0 正确);glErr=0;拱门/光芒/六角环构图可读。
 
+## BACKLOG II · L2 实体沙盘转向(用户 2026-07-08 拍板;曾短暂选 L3 后改定 L2)
+
+> 渲染哲学从"隐藏线蓝图"转向"实体沙盘"(Monument Valley 式:实体+真光影+阴影,
+> 线框降为勾边)。终端色板/分区配色=信息层级保留;数据层/交互契约零改动;
+> 不引外部资产、不换后处理管线(自写 bloom 保留)。分两期,每期独立上线可回退。
+
+### P1 光影地基(零外部依赖)✳ 当前
+- [ ] renderer:shadowMap(PCFSoft)+ ACESFilmicToneMapping + SRGBColorSpace;移动端关阴影。
+- [ ] 灯光:冷月色 DirectionalLight(投影 2048 ortho±24)+ HemisphereLight;`buildEnvironment()` 自写微型发光房间 → PMREMGenerator.fromScene → scene.environment(PBR 反射,不下载 HDRI)。
+- [ ] 实体化:站体 occluder → 每站 MeshStandardMaterial(hue×0.32、metalness .35、微 emissive、polygonOffset 保留防线面 z-fight)+ 投/受影;碑阵柱体同理(暗黄+微自发光);MORNING 太阳=强 emissive 发光体;鸟居=朱红实体;地面加实心圆盘(shader 网格叠其上);5% 幽灵填充面退役。
+- [ ] 入场兼容:实体透明度跟 uReveal 淡入,reveal 完成后转不透明(否则碑体先于扫描线蹦出)。
+- [ ] 验证:阴影落地、反射有层次、不过曝/不死黑、glErr=0、入场不穿帮、帧率。
+### P2 材质细分收尾
+- [ ] 逐站调质感(金属/玻璃/木/石感由 roughness/metalness 分档)、柱阵按分数 emissive 梯度、dust/petals 亮度适配新曝光、线框勾边透明度再平衡、TUNING 地图更新。
+（L3 的 SSAO 后处理链与 GLB 真模型资产=远期搁置,不在本 backlog。）
+
 ## 迭代日志(追加式,每迭代一行起)
 
 | 日期 | 版本/commit | 做了什么 | 验证 | 遗留 |
