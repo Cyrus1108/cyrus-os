@@ -193,25 +193,41 @@ function prismGeo(len, halfZ, baseY, apexY) {
 }
 
 // per-station silhouettes. Returns { wire:[parts], solid:[parts], labelY, pickR }
-// `rpg` (optional) feeds SYSTEM's data-driven monument.
-function stationParts(id, rpg) {
+// `ctx` (the mock/DATA object) feeds the data-driven monuments:
+//   ctx.rpg → SYSTEM (rings/rungs/shards/radar) · ctx.morningFrac → MORNING sun
+function stationParts(id, ctx) {
   const B = (w, h, d) => new THREE.BoxGeometry(w, h, d);
   switch (id) {
-    case 'MORNING':
+    case 'MORNING': {                    // 破晓拱门 — the dawn arch. The spinning
+      // sun's HEIGHT is today's morning completion: frac 0 → half-buried at the
+      // horizon, frac 1 → at the arch apex. Live toggles move it (setMorningSun).
+      const frac = Math.max(0, Math.min(1, (ctx && ctx.morningFrac) || 0));
+      const HORIZON = 0.95, RISE = 1.45;
+      const sunY = HORIZON + frac * RISE;
+      const wire = [
+        { geo: new THREE.TorusGeometry(1.9, 0.03, 4, 6), pos: [0, 0.03, 0], rot: [90 * DEG, 0, 0] },  // ground hex
+        { geo: B(3.6, 0.05, 0.05), pos: [0, HORIZON, 0] },                          // horizon bar
+        { geo: B(0.06, HORIZON, 0.06), pos: [-1.75, HORIZON / 2, 0] },              // posts
+        { geo: B(0.06, HORIZON, 0.06), pos: [1.75, HORIZON / 2, 0] },
+        { geo: new THREE.TorusGeometry(1.7, 0.035, 4, 26, Math.PI), pos: [0, HORIZON, 0] },  // the arch
+      ];
+      // sun rays — a fixed burr on the sun itself (reads at any height)
+      const sunWire = [{ geo: new THREE.IcosahedronGeometry(0.38, 0), pos: [0, 0, 0] }];
+      for (let k = 0; k < 8; k++) {
+        const a = k * Math.PI / 4;
+        sunWire.push({ geo: B(0.16, 0.022, 0.022), pos: [Math.cos(a) * 0.56, Math.sin(a) * 0.56, 0], rot: [0, 0, a] });
+      }
       return {
-        wire: [
-          { geo: new THREE.TorusGeometry(1.45, 0.05, 4, 30), pos: [0, 1.7, 0] },
-          { geo: new THREE.TorusGeometry(1.9, 0.03, 4, 6), pos: [0, 1.7, 0] },
-        ],
+        wire,
         solid: [],
-        // the sunrise core spins on its own (sub-group, not the whole ring)
         spinParts: [{
-          wire: [{ geo: new THREE.IcosahedronGeometry(0.45, 0), pos: [0, 1.7, 0] }],
-          solid: [{ geo: new THREE.IcosahedronGeometry(0.44, 0), pos: [0, 1.7, 0] }],
-          speed: 0.7,
+          wire: sunWire,
+          solid: [{ geo: new THREE.IcosahedronGeometry(0.37, 0), pos: [0, 0, 0] }],
+          pivot: [0, sunY, 0], speed: 0.7,
         }],
-        labelY: 3.7, pickR: 2.1,
+        labelY: 3.4, pickR: 2.1,
       };
+    }
     case 'ACADEMICS': {                  // 书堆 — cover shells + inset page blocks,
       // varied thickness, staggered offsets, a BIG fanned open book on the summit
       const BOOKS = [
@@ -373,7 +389,7 @@ function stationParts(id, rpg) {
       //   EXP-in-level     → rungs climbing the tether toward the dais
       //   unlocked 成就     → shard ring orbiting the core (spins with it)
       //   six attributes   → radar polygon etched on the dais top
-      const R = rpg || null;
+      const R = (ctx && ctx.rpg) || null;
       const wire = [
         { geo: new THREE.IcosahedronGeometry(1.35, 0), pos: [0, 1.6, 0] },
         { geo: new THREE.CylinderGeometry(1.5, 1.7, 0.18, 6), pos: [0, 0, 0] },     // floating hex dais
@@ -421,7 +437,7 @@ function stationParts(id, rpg) {
       }
       // attribute radar — 6 spokes + value polygon etched on the dais top.
       // raw line-segment positions (not EdgesGeometry) → returned as rawWire.
-      const attrs = R && R.attrs ? R.attrs : { STR: 40, AGI: 40, INT: 40, WIS: 40, VIT: 40, CRE: 40 };
+      const attrs = (R && R.attrs) || { STR: 40, AGI: 40, INT: 40, WIS: 40, VIT: 40, CRE: 40 };
       const ORDER = ['STR', 'AGI', 'INT', 'WIS', 'VIT', 'CRE'];
       const radar = [], vtx = [];
       const RY = 0.115;                                     // just above the dais face
@@ -802,7 +818,7 @@ export function createScene(canvas, opts) {
   const stations = [];
   const pickMeshes = [];
   for (const def of mock.stations) {
-    const s = stationParts(def.id, mock.rpg);
+    const s = stationParts(def.id, mock);
     const line = new THREE.LineSegments(mergeEdges(s.wire),
       new THREE.LineBasicMaterial({ color: 0x6d6a1c, transparent: true, opacity: reducedMotion ? 0.9 : 0 }));
     if (bloomOn) line.layers.enable(BLOOM_LAYER);   // every station feeds a soft holo-glow;
@@ -1321,6 +1337,17 @@ export function createScene(canvas, opts) {
         onComplete: () => { seal.visible = false; } });
     }
   }
+  // MORNING dawn arch: move the sun to today's completion fraction. The sun is
+  // the station's (only) spinParts sub-group, so repositioning its pivot is all
+  // it takes — the spin/bob machinery keeps running around the new baseY.
+  function setMorningSun(frac) {
+    const st = stations.find(s => s.id === 'MORNING');
+    if (!st || !st.spinSubs || !st.spinSubs.length) return;
+    const sp = st.spinSubs[0];
+    sp.baseY = 0.95 + Math.max(0, Math.min(1, frac)) * 1.45;
+    sp.sub.position.y = sp.baseY;
+    if (!running) renderOnce();
+  }
   // magnetic-snap helpers for the Lenis tour (main.js owns Lenis): the nearest
   // tour stop as a 0..1 scroll fraction, and its id (for district annunciation).
   function nearestStop() {
@@ -1384,7 +1411,7 @@ export function createScene(canvas, opts) {
     start, stop, renderOnce, reveal, beginIntro, resize, dispose, pulseBloom,
     setScroll, applyDrag, setPointer, highlight, focusStation, returnDeck,
     frameDistrict, clearDistrict, pickPillar, setTodayScore,
-    setTradingSealed, nearestStop, nearestStopId,
+    setTradingSealed, setMorningSun, nearestStop, nearestStopId,
     get mode() { return cam.mode; }, get hovered() { return hovered; },
     get pillarHovered() { return pillarHovered; },
     get districts() { return TOUR.slice(1); },

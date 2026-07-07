@@ -123,6 +123,8 @@ const MOCK = (() => {
           { k: 'Modules', v: '6', unit: '/ 6', accent: 'cyan' },
         ], note: 'The90 30-day avg <b id="sys-avg"></b> · longest streak <b id="sys-streak"></b>.' } },
     ],
+    // demo morning completion — drives the MORNING dawn-arch sun height
+    morningFrac: 5 / 6,
     // demo character sheet — same shape computeRpg returns (drives the SYSTEM
     // monument: rings=rank, rungs=EXP, shards=achievements, radar=attrs)
     rpg: {
@@ -691,12 +693,22 @@ async function onMorningRowClick(btn, scene) {
     DATA.morning.list = nextList;                          // first toggle seeds today's row
     rebuildMorningStation();
     refreshOpenStation('MORNING', scene);
+    syncMorningSun(scene);                                 // dawn-arch sun climbs/sinks
     setLink('ok');
   } catch (err) {
     DATA.morning.list = prev; it.d = !it.d;                // revert
     paintDoneRow(btn, it.d);
+    syncMorningSun(scene);                                 // reflect the true state
     setLink('down');
   }
+}
+// mirror today's morning completion onto the dawn-arch monument (sun height)
+function syncMorningSun(scene) {
+  if (!scene || !scene.setMorningSun) return;
+  const list = (DATA.morning && DATA.morning.list) || [];
+  const done = list.filter(i => i && i.d).length;
+  DATA.morningFrac = list.length ? done / list.length : 0;
+  scene.setMorningSun(DATA.morningFrac);
 }
 async function onTodoRowClick(btn, scene) {
   const id = btn.dataset.rid;
@@ -1378,6 +1390,7 @@ function buildLiveData(loaded, session) {
     _uid: (session.user && session.user.id) || null,
     _todos: todosArr, _academics: acad, _japanese: jp, _trading: trading, _tradingDesk: desk,
     rpg,
+    morningFrac: mTotal ? mDone / mTotal : 0,
     the90, todayIndex: S.todayIndex, avg30: S.avg30, best: S.best,
     viz: { sys30, rise7: morningList.map(i => i && i.d ? 1 : 0), candles: buildLedgerCandles(txns),
       credits: acad.length ? acadDone / acad.length : 0,
