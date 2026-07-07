@@ -202,9 +202,14 @@ html[data-boot="done"] #fx{opacity:1;}
 
 /* ---- HUD overlay (slant panel) -------------------------------------------- */
 #hud{position:fixed;inset:0;z-index:12;display:flex;align-items:stretch;justify-content:flex-end;
-  background:rgba(6,7,3,0);transition:background .5s var(--ease-press);
   pointer-events:none;}   /* 关着时绝不吃点击——否则整个甲板点不动(v1 首个真机 bug) */
-#hud.is-open{background:rgba(6,7,3,.42);backdrop-filter:blur(2px);pointer-events:auto;}
+/* scrim: 左侧完全透明(被选碑体清晰立在场景里,不压暗不虚化——owner 2026-07-08),
+   只在贴近面板处渐暗保证面板外缘可读。渐变没法 transition → 用 ::before 淡入。 */
+#hud::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(90deg,rgba(6,7,3,0) 46%,rgba(6,7,3,.5) 82%,rgba(6,7,3,.62) 100%);
+  opacity:0;transition:opacity .5s var(--ease-press);}
+#hud.is-open{pointer-events:auto;}
+#hud.is-open::before{opacity:1;}
 #hud-panel{
   position:relative;width:min(560px,92vw);height:100%;
   background:linear-gradient(180deg,rgba(13,15,8,.97),rgba(10,11,6,.99));

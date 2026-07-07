@@ -693,6 +693,20 @@ export function createScene(canvas, opts) {
     fp.t0.set(target.x, target.y, target.z);
     fp.p1.set(sp.x + outward.x * 5.2, 4.6 + sp.y * 0.9, sp.z + outward.z * 5.2);   // respect station elevation
     fp.t1.set(sp.x, 1.5 + sp.y, sp.z);
+    // HUD-aware framing: the panel claims the right ~560px, so nudge the
+    // look-at toward camera-RIGHT — the monument then reads centered in the
+    // remaining LEFT viewport instead of hiding behind the panel (owner
+    // 2026-07-08 green-box spec). Angle derived from panel/viewport ratio.
+    const hudW = opts.hudWidth ? opts.hudWidth() : 0;
+    if (hudW > 0) {
+      const W = renderer.domElement.clientWidth || window.innerWidth || 1;
+      const frac = Math.min(0.16, (hudW / W) * 0.375);          // fraction of hFOV to shift
+      const hFov = 2 * Math.atan(Math.tan(camera.fov * 0.5 * DEG) * camera.aspect);
+      const dir = new THREE.Vector3().subVectors(fp.t1, fp.p1);
+      const dist = dir.length(); dir.normalize();
+      const right = new THREE.Vector3().crossVectors(dir, camera.up).normalize();
+      fp.t1.addScaledVector(right, Math.tan(hFov * frac) * dist);
+    }
     fp.c.copy(fp.p0).add(fp.p1).multiplyScalar(0.5);
     fp.c.y += 3.2;
     fp.c.addScaledVector(outward, 2.4);                // bulge outward → banked arc

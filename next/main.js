@@ -1474,6 +1474,9 @@ async function main() {
   const scene = createScene(canvas, {
     mock: DATA, reducedMotion: REDUCED, isMobile: IS_MOBILE,
     labelsEl: document.getElementById('labels'),
+    // focus framing offset: how much horizontal viewport the HUD panel claims
+    // (mirrors #hud-panel width:min(560px,92vw) — don't measure the hidden node)
+    hudWidth: () => Math.min(560, window.innerWidth * 0.92),
     onHover: (id) => {
       scene.highlight(id);
       if (id) {
