@@ -171,6 +171,86 @@ function mergeSolid(parts) {
   return g;
 }
 
+// chamfered box — a box whose 12 edges are 45° bevels, so grazing light draws
+// a bright line along every edge (the single strongest "not a math box" cue).
+// 6 inset faces + 12 edge quads + 8 corner tris; winding is relaxed (all body
+// materials are DoubleSide and three flips backface normals when lighting).
+function CB(w, h, d, c) {
+  const hx = w / 2, hy = h / 2, hz = d / 2;
+  c = Math.min(c, hx * 0.45, hy * 0.45, hz * 0.45);
+  const P = (sx, sy, sz) => ({
+    x: [sx * hx, sy * (hy - c), sz * (hz - c)],
+    y: [sx * (hx - c), sy * hy, sz * (hz - c)],
+    z: [sx * (hx - c), sy * (hy - c), sz * hz],
+  });
+  const v = [];
+  const quad = (a, b, cc, dd) => { v.push(...a, ...b, ...cc, ...a, ...cc, ...dd); };
+  quad(P(1, 1, 1).x, P(1, -1, 1).x, P(1, -1, -1).x, P(1, 1, -1).x);
+  quad(P(-1, 1, 1).x, P(-1, 1, -1).x, P(-1, -1, -1).x, P(-1, -1, 1).x);
+  quad(P(1, 1, 1).y, P(1, 1, -1).y, P(-1, 1, -1).y, P(-1, 1, 1).y);
+  quad(P(1, -1, 1).y, P(-1, -1, 1).y, P(-1, -1, -1).y, P(1, -1, -1).y);
+  quad(P(1, 1, 1).z, P(-1, 1, 1).z, P(-1, -1, 1).z, P(1, -1, 1).z);
+  quad(P(1, 1, -1).z, P(1, -1, -1).z, P(-1, -1, -1).z, P(-1, 1, -1).z);
+  for (const sy of [1, -1]) for (const sz of [1, -1])
+    quad(P(1, sy, sz).y, P(-1, sy, sz).y, P(-1, sy, sz).z, P(1, sy, sz).z);
+  for (const sx of [1, -1]) for (const sz of [1, -1])
+    quad(P(sx, 1, sz).x, P(sx, 1, sz).z, P(sx, -1, sz).z, P(sx, -1, sz).x);
+  for (const sx of [1, -1]) for (const sy of [1, -1])
+    quad(P(sx, sy, 1).x, P(sx, sy, 1).y, P(sx, sy, -1).y, P(sx, sy, -1).x);
+  for (const sx of [1, -1]) for (const sy of [1, -1]) for (const sz of [1, -1])
+    v.push(...P(sx, sy, sz).x, ...P(sx, sy, sz).y, ...P(sx, sy, sz).z);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
+  return g;   // mergeSolid computes the flat normals
+}
+
+// world-space material weathering — value-noise jitter on albedo + roughness,
+// injected into MeshStandardMaterial. Needs no UVs (merged geometry has none);
+// breaks the "one flat colour per object" uniformity that reads as fake.
+function weather(mat, amt = 0.16, key = 'w') {
+  const prev = mat.onBeforeCompile;
+  mat.onBeforeCompile = (sh) => {
+    if (prev) prev(sh);
+    sh.vertexShader = ('varying vec3 vWp;\n' + sh.vertexShader).replace('#include <fog_vertex>',
+      '#include <fog_vertex>\n\tvWp = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    sh.fragmentShader = ('varying vec3 vWp;\n' +
+      'float wn(vec3 p){vec3 i=floor(p);vec3 f=fract(p);f=f*f*(3.0-2.0*f);' +
+      'float n=dot(i,vec3(1.0,57.0,113.0));' +
+      'float a=fract(sin(n)*43758.5453),b=fract(sin(n+1.0)*43758.5453),c=fract(sin(n+57.0)*43758.5453),d=fract(sin(n+58.0)*43758.5453);' +
+      'float e=fract(sin(n+113.0)*43758.5453),g=fract(sin(n+114.0)*43758.5453),h=fract(sin(n+170.0)*43758.5453),k=fract(sin(n+171.0)*43758.5453);' +
+      'return mix(mix(mix(a,b,f.x),mix(c,d,f.x),f.y),mix(mix(e,g,f.x),mix(h,k,f.x),f.y),f.z);}\n' +
+      sh.fragmentShader)
+      .replace('#include <color_fragment>',
+        `#include <color_fragment>\n\t{ float w = wn(vWp*2.3)*0.6 + wn(vWp*9.0)*0.4; diffuseColor.rgb *= ${(1 - amt * 0.5).toFixed(3)} + w * ${amt.toFixed(3)}; }`)
+      .replace('#include <roughnessmap_fragment>',
+        '#include <roughnessmap_fragment>\n\troughnessFactor = clamp(roughnessFactor + (wn(vWp*6.0)-0.5)*0.22, 0.05, 1.0);');
+  };
+  mat.customProgramCacheKey = () => key + amt;   // distinct programs per variant
+  return mat;
+}
+
+// procedural deck plate — panel seams + speckle, generated on a canvas at boot
+// (CircleGeometry has UVs, so the floor is the one place a real map works).
+function deckTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 512;
+  const x = c.getContext('2d');
+  x.fillStyle = '#0e131c'; x.fillRect(0, 0, 512, 512);
+  x.strokeStyle = 'rgba(130,150,185,0.055)'; x.lineWidth = 2;
+  for (let i = 0; i <= 8; i++) {
+    x.beginPath(); x.moveTo(i * 64, 0); x.lineTo(i * 64, 512); x.stroke();
+    x.beginPath(); x.moveTo(0, i * 64); x.lineTo(512, i * 64); x.stroke();
+  }
+  for (let i = 0; i < 9000; i++) {
+    const v = Math.random() * 20;
+    x.fillStyle = `rgba(${140 + v},${160 + v},${195 + v},${0.02 + Math.random() * 0.03})`;
+    x.fillRect(Math.random() * 512, Math.random() * 512, 1.5, 1.5);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(10, 10);
+  t.anisotropy = 4; t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 function occluderMaterial() {
   return new THREE.MeshBasicMaterial({
     color: BG, side: THREE.DoubleSide,
@@ -244,9 +324,9 @@ function stationParts(id, ctx) {
       const wire = [], solid = [];
       for (const b of BOOKS) {
         const r = [0, b.ry * DEG, 0];
-        // cover shell (also the occluder)
+        // cover shell (also the occluder) — bevelled so edges catch the light
         wire.push({ geo: B(b.w, b.h, b.d), pos: [b.x, b.y, b.z], rot: r });
-        solid.push({ geo: B(b.w, b.h, b.d), pos: [b.x, b.y, b.z], rot: r });
+        solid.push({ geo: CB(b.w, b.h, b.d, 0.03), pos: [b.x, b.y, b.z], rot: r });
         // page block — inset, peeking toward the fore-edge (offset rotated with
         // the book so pages stay on the right side of the spine)
         const fore = 0.05 * b.w;
@@ -271,10 +351,15 @@ function stationParts(id, ctx) {
       // (the deck's grand torii moved to the entrance axis — see buildTorii)
       const wire = [], solid = [];
       const S = (geo, pos, rot) => { wire.push({ geo: geo.clone(), pos, rot }); solid.push({ geo, pos, rot }); };
+      // chamfered pair: crisp box for the wire accents, bevelled box for the body
+      const S2 = (w, h, d, pos, c) => {
+        wire.push({ geo: B(w, h, d), pos });
+        solid.push({ geo: CB(w, h, d, c), pos });
+      };
       // house — ground floor, skirt roof (披檐), inset upper floor, gable roof
-      S(B(2.2, 1.0, 1.5), [0, 0.5, 0]);
-      S(B(2.55, 0.06, 1.78), [0, 1.06, 0.06]);                       // 披檐 (slight front overhang)
-      S(B(2.0, 0.9, 1.35), [0, 1.52, 0]);
+      S2(2.2, 1.0, 1.5, [0, 0.5, 0], 0.05);
+      S2(2.55, 0.06, 1.78, [0, 1.06, 0.06], 0.02);                   // 披檐 (slight front overhang)
+      S2(2.0, 0.9, 1.35, [0, 1.52, 0], 0.05);
       S(prismGeo(2.45, 0.92, 1.97, 2.5), [0, 0, 0]);                 // gable roof, side gables
       // 格子窗 — ground floor (framed, 4 bars) + upper floor (5 bars)
       wire.push({ geo: B(0.95, 0.5, 0.04), pos: [-0.5, 0.62, 0.76] });
@@ -282,7 +367,7 @@ function stationParts(id, ctx) {
       wire.push({ geo: B(1.5, 0.42, 0.04), pos: [0, 1.56, 0.69] });
       for (let i = 0; i < 5; i++) wire.push({ geo: B(0.028, 0.42, 0.028), pos: [-0.6 + i * 0.3, 1.56, 0.70] });
       // door + balcony railing
-      S(B(0.5, 0.78, 0.08), [0.62, 0.39, 0.76]);
+      S2(0.5, 0.78, 0.08, [0.62, 0.39, 0.76], 0.02);
       wire.push({ geo: B(1.9, 0.04, 0.04), pos: [0, 2.06, 0.74] });
       for (let i = 0; i < 5; i++) wire.push({ geo: B(0.03, 0.24, 0.03), pos: [-0.8 + i * 0.4, 1.95, 0.74] });
       // 石灯笼 — base / post / GLOWING light box / pyramid cap
@@ -317,8 +402,9 @@ function stationParts(id, ctx) {
         { w: 3.6, d: 3.0, y: 0.40 },
       ];
       for (const s of STEPS) {
-        const g = B(s.w, 0.16, s.d), p = [0, s.y, -0.55];   // front edge ≈ z+1.25
-        wire.push({ geo: g.clone(), pos: p }); solid.push({ geo: g, pos: p });
+        const p = [0, s.y, -0.55];                          // front edge ≈ z+1.25
+        wire.push({ geo: B(s.w, 0.16, s.d), pos: p });
+        solid.push({ geo: CB(s.w, 0.16, s.d, 0.03), pos: p });
       }
       const topStep = 0.48;                        // top face of the 3rd step
       const FZ = 0.45;                             // facade plane (columns/pediment)
@@ -331,24 +417,22 @@ function stationParts(id, ctx) {
       const colTop = topStep + colH;               // 2.03
       // entablature across the column tops
       const entY = colTop + 0.11;
-      const entG = () => B(3.8, 0.22, 0.6);
-      wire.push({ geo: entG(), pos: [0, entY, FZ] }); solid.push({ geo: entG(), pos: [0, entY, FZ] });
+      wire.push({ geo: B(3.8, 0.22, 0.6), pos: [0, entY, FZ] });
+      solid.push({ geo: CB(3.8, 0.22, 0.6, 0.035), pos: [0, entY, FZ] });
       // FRONT-facing pediment: prismGeo extrudes along X → rotate 90° about Y so
       // the triangle reads from the street (ridge runs front-to-back, thin slab)
       const pedBase = colTop + 0.22, pedApex = pedBase + 0.9;
       wire.push({ geo: prismGeo(0.6, 1.9, pedBase, pedApex), rot: [0, 90 * DEG, 0], pos: [0, 0, FZ] });
       solid.push({ geo: prismGeo(0.6, 1.9, pedBase, pedApex), rot: [0, 90 * DEG, 0], pos: [0, 0, FZ] });
       // the HALL — full body behind the portico (side walls read from any angle)
-      const bodyG = () => B(3.5, 1.55, 2.4);
-      wire.push({ geo: bodyG(), pos: [0, topStep + 0.775, -0.85] });
-      solid.push({ geo: bodyG(), pos: [0, topStep + 0.775, -0.85] });
+      wire.push({ geo: B(3.5, 1.55, 2.4), pos: [0, topStep + 0.775, -0.85] });
+      solid.push({ geo: CB(3.5, 1.55, 2.4, 0.06), pos: [0, topStep + 0.775, -0.85] });
       // hall roof — long gable, ridge front-to-back, kept BELOW the pediment apex
       wire.push({ geo: prismGeo(2.4, 1.78, colTop, colTop + 0.55), rot: [0, 90 * DEG, 0], pos: [0, 0, -0.85] });
       solid.push({ geo: prismGeo(2.4, 1.78, colTop, colTop + 0.55), rot: [0, 90 * DEG, 0], pos: [0, 0, -0.85] });
       // recessed dark door centred behind the middle columns (wire + solid)
-      const doorG = () => B(0.85, 1.05, 0.12);
-      wire.push({ geo: doorG(), pos: [0, topStep + 0.52, 0.30] });
-      solid.push({ geo: doorG(), pos: [0, topStep + 0.52, 0.30] });
+      wire.push({ geo: B(0.85, 1.05, 0.12), pos: [0, topStep + 0.52, 0.30] });
+      solid.push({ geo: CB(0.85, 1.05, 0.12, 0.02), pos: [0, topStep + 0.52, 0.30] });
       return { wire, solid, labelY: 3.9, pickR: 2.4 };
     }
     case 'TRADING': {                    // K線 — holographic price-chart monument
@@ -388,10 +472,10 @@ function stationParts(id, ctx) {
           { geo: B(0.7, 0.4, 0.7), pos: [0.1, 1.6, 0], rot: [0, 20 * DEG, 0] },
         ],
         solid: [
-          { geo: B(1.6, 0.4, 1.6), pos: [0, 0.25, 0] },
-          { geo: B(1.3, 0.4, 1.3), pos: [0.25, 0.75, -0.1], rot: [0, 12 * DEG, 0] },
-          { geo: B(1.0, 0.4, 1.0), pos: [-0.15, 1.2, 0.2], rot: [0, -10 * DEG, 0] },
-          { geo: B(0.7, 0.4, 0.7), pos: [0.1, 1.6, 0], rot: [0, 20 * DEG, 0] },
+          { geo: CB(1.6, 0.4, 1.6, 0.04), pos: [0, 0.25, 0] },
+          { geo: CB(1.3, 0.4, 1.3, 0.04), pos: [0.25, 0.75, -0.1], rot: [0, 12 * DEG, 0] },
+          { geo: CB(1.0, 0.4, 1.0, 0.04), pos: [-0.15, 1.2, 0.2], rot: [0, -10 * DEG, 0] },
+          { geo: CB(0.7, 0.4, 0.7, 0.04), pos: [0.1, 1.6, 0], rot: [0, 20 * DEG, 0] },
         ],
         labelY: 2.6, pickR: 1.7,
       };
@@ -534,10 +618,10 @@ function buildTorii() {
   const solid = wire.map(p => ({ geo: p.geo.clone(), pos: p.pos, rot: p.rot }));
   const line = new THREE.LineSegments(mergeEdges(wire),
     new THREE.LineBasicMaterial({ color: 0x2f7d78, transparent: true, opacity: 0.16, toneMapped: false }));
-  const occ = new THREE.Mesh(mergeSolid(solid), new THREE.MeshStandardMaterial({
+  const occ = new THREE.Mesh(mergeSolid(solid), weather(new THREE.MeshStandardMaterial({
     color: 0x64201a, roughness: 0.62, metalness: 0.08, side: THREE.DoubleSide,   // 朱红 vermilion(暗夜档)
     polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
-  }));
+  }), 0.22, 'torii'));
   // warm gate light under the lintel — the entrance is TENDED, not abandoned
   const lamp = new THREE.PointLight(0xffa54d, 22, 10, 2);
   lamp.position.set(0, 3.1, 0.3);
@@ -838,7 +922,9 @@ export function createScene(canvas, opts) {
   scene.environment = buildEnvironment(renderer);
   // solid deck disc under the shader grid — everything now STANDS on something
   const floor = new THREE.Mesh(new THREE.CircleGeometry(46, 64),
-    new THREE.MeshStandardMaterial({ color: 0x0e131c, roughness: 0.9, metalness: 0.2 }));
+    weather(new THREE.MeshStandardMaterial({
+      map: deckTexture(), color: 0xffffff, roughness: 0.9, metalness: 0.2,
+    }), 0.10, 'floor'));
   floor.rotation.x = -Math.PI / 2; floor.position.y = -0.02;
   floor.receiveShadow = shadowsOn;
   scene.add(floor);
@@ -914,11 +1000,11 @@ export function createScene(canvas, opts) {
     const colHot = hue.clone().lerp(new THREE.Color(1, 1, 1), 0.18);
     // L2: the former BG-coloured occluder is now the station's lit BODY —
     // hue-tinted PBR solid (flat facet normals), wireframe stays as edge accent.
-    const bodyMat = new THREE.MeshStandardMaterial({
+    const bodyMat = weather(new THREE.MeshStandardMaterial({
       color: hue.clone().multiplyScalar(0.15), roughness: 0.5, metalness: 0.3,
       emissive: hue, emissiveIntensity: 0.035, side: THREE.DoubleSide,
       polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
-    });
+    }), 0.16, 'body');
     let occ = null;
     if (s.solid && s.solid.length) {
       occ = new THREE.Mesh(mergeSolid(s.solid), bodyMat);
@@ -1631,6 +1717,7 @@ function buildPillars(mock) {
     sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>',
       '#include <begin_vertex>\n\ttransformed.y *= revEase(aOrder);');
   };
+  weather(oMat, 0.12, 'pillar');                 // chains after the reveal patch
   const occ = new THREE.Mesh(og, oMat);
   occ.renderOrder = -1;
 
