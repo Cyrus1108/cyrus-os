@@ -439,6 +439,38 @@ function stationParts(id, rpg) {
 }
 
 // ---------------------------------------------------------------------------
+// entrance torii — the deck's gate, planted on the approach axis so the boot
+// camera descends THROUGH it toward the monument. Pure scenery: no label, no
+// pick sphere; solids paint BG so the gate occludes what stands behind it.
+// Refined anatomy: inward-leaning pillars (2°), kasagi with upturned ends,
+// shimaki below it, gakuzuka centre strut, protruding nuki tie, base stones.
+// ---------------------------------------------------------------------------
+function buildTorii() {
+  const B = (w, h, d) => new THREE.BoxGeometry(w, h, d);
+  const LEAN = 2 * DEG;
+  const wire = [
+    { geo: new THREE.CylinderGeometry(0.13, 0.16, 4.1, 6), pos: [-1.85, 2.05, 0], rot: [0, 0, -LEAN] },
+    { geo: new THREE.CylinderGeometry(0.13, 0.16, 4.1, 6), pos: [1.85, 2.05, 0], rot: [0, 0, LEAN] },
+    { geo: B(4.6, 0.24, 0.3), pos: [0, 4.32, 0] },                                  // 笠木 center
+    { geo: B(0.62, 0.22, 0.3), pos: [-2.55, 4.42, 0], rot: [0, 0, 10 * DEG] },      // 笠木 upturned ends
+    { geo: B(0.62, 0.22, 0.3), pos: [2.55, 4.42, 0], rot: [0, 0, -10 * DEG] },
+    { geo: B(4.15, 0.17, 0.24), pos: [0, 4.05, 0] },                                // 島木
+    { geo: B(0.2, 0.55, 0.16), pos: [0, 3.66, 0] },                                 // 額束
+    { geo: B(4.0, 0.15, 0.2), pos: [0, 3.28, 0] },                                  // 貫 (protrudes)
+    { geo: B(0.46, 0.24, 0.46), pos: [-1.88, 0.12, 0] },                            // base stones
+    { geo: B(0.46, 0.24, 0.46), pos: [1.88, 0.12, 0] },
+  ];
+  const solid = wire.map(p => ({ geo: p.geo.clone(), pos: p.pos, rot: p.rot }));
+  const line = new THREE.LineSegments(mergeEdges(wire),
+    new THREE.LineBasicMaterial({ color: 0x2f7d78, transparent: true, opacity: 0.62 }));
+  const occ = new THREE.Mesh(mergeSolid(solid), occluderMaterial());
+  const g = new THREE.Group();
+  g.add(occ); g.add(line);
+  g.position.set(0, 0, -16.5);                     // approach axis, south of DISCIPLINE
+  return { group: g, line, occ };
+}
+
+// ---------------------------------------------------------------------------
 // TRADING chart — dynamic candle buffers. While the station is selected
 // (hover-lock or HUD focus → st.emph ≈ 1) the tape WALKS: the newest candle
 // grows from its open toward a rolled target, then the tape slides left and
@@ -548,6 +580,10 @@ export function createScene(canvas, opts) {
   // ===== grid floor ==========================================================
   const grid = buildGrid();
   scene.add(grid);
+
+  // ===== entrance torii (deck gate on the approach axis) =====================
+  const torii = buildTorii();
+  scene.add(torii.group);
 
   // ===== atmospheric dust motes (desktop, motion-on only) ====================
   // GPU-drifted THREE.Points volume; excluded from the bloom pass (layer 0),
@@ -1119,6 +1155,7 @@ export function createScene(canvas, opts) {
     if (pillarPick) { pillarPick.geometry.dispose(); pillarPick.material.dispose(); }
     beacon.line.geometry.dispose(); beacon.line.material.dispose();
     grid.geometry.dispose(); grid.material.dispose();
+    torii.line.geometry.dispose(); torii.line.material.dispose(); torii.occ.geometry.dispose(); torii.occ.material.dispose();
     if (dust) { dust.geometry.dispose(); dust.material.dispose(); }
     for (const st of stations) { st.line.geometry.dispose(); st.mat.dispose(); if (st.occ) st.occ.geometry.dispose(); if (st.seal) { st.seal.geometry.dispose(); st.seal.material.dispose(); } if (st.spinSubs) st.spinSubs.forEach(sp => sp.sub.children.forEach(c => c.geometry.dispose())); if (st.extra) st.extra.geometry.dispose(); if (st.chart) { st.chart.line.geometry.dispose(); st.chart.occ.geometry.dispose(); } st.group.children.forEach(c => { if (c.userData && c.userData.isFill) c.material.dispose(); }); }
     occMat.dispose();
