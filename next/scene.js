@@ -174,23 +174,35 @@ function stationParts(id) {
         wire: [
           { geo: new THREE.TorusGeometry(1.45, 0.05, 4, 30), pos: [0, 1.7, 0] },
           { geo: new THREE.TorusGeometry(1.9, 0.03, 4, 6), pos: [0, 1.7, 0] },
-          { geo: new THREE.IcosahedronGeometry(0.45, 0), pos: [0, 1.7, 0] },
         ],
-        solid: [{ geo: new THREE.IcosahedronGeometry(0.45, 0), pos: [0, 1.7, 0] }],
+        solid: [],
+        // the sunrise core spins on its own (sub-group, not the whole ring)
+        spinPart: {
+          wire: [{ geo: new THREE.IcosahedronGeometry(0.45, 0), pos: [0, 1.7, 0] }],
+          solid: [{ geo: new THREE.IcosahedronGeometry(0.44, 0), pos: [0, 1.7, 0] }],
+          speed: 0.55,
+        },
         labelY: 3.7, pickR: 2.1,
       };
-    case 'ACADEMICS':
-      return {
-        wire: [
-          { geo: prismGeo(1.7, 0.55, 1.0, 1.7) },
-          { geo: B(1.7, 1.0, 0.6), pos: [0, 0.5, 0] },
-        ],
-        solid: [
-          { geo: prismGeo(1.7, 0.55, 1.0, 1.7) },
-          { geo: B(1.7, 1.0, 0.6), pos: [0, 0.5, 0] },
-        ],
-        labelY: 3.0, pickR: 1.9,
-      };
+    case 'ACADEMICS': {                  // 书堆 — stacked tomes + an open book on top
+      const BOOKS = [
+        { w: 1.75, h: 0.24, d: 1.20, y: 0.12, ry: 0 },
+        { w: 1.55, h: 0.20, d: 1.05, y: 0.34, ry: 15 },
+        { w: 1.85, h: 0.26, d: 1.25, y: 0.57, ry: -9 },
+        { w: 1.45, h: 0.18, d: 0.95, y: 0.79, ry: 24 },
+        { w: 1.30, h: 0.16, d: 0.85, y: 0.96, ry: -18 },
+      ];
+      const wire = [], solid = [];
+      for (const b of BOOKS) {
+        const p = [0, b.y, 0], r = [0, b.ry * DEG, 0];
+        wire.push({ geo: B(b.w, b.h, b.d), pos: p, rot: r });
+        solid.push({ geo: B(b.w, b.h, b.d), pos: p, rot: r });
+      }
+      // open book on the summit — two thin leaves meeting at the spine
+      wire.push({ geo: B(0.58, 0.04, 0.82), pos: [-0.26, 1.16, 0], rot: [0, 0, 22 * DEG] });
+      wire.push({ geo: B(0.58, 0.04, 0.82), pos: [0.26, 1.16, 0], rot: [0, 0, -22 * DEG] });
+      return { wire, solid, labelY: 2.7, pickR: 1.8 };
+    }
     case 'JP-N2':
       return {
         wire: [
@@ -211,17 +223,17 @@ function stationParts(id) {
       const wire = [], solid = [];
       // 3 stacked stylobate steps (each wider than the one above)
       const STEPS = [
-        { w: 3.2, d: 1.5, y: 0.08 },
-        { w: 2.9, d: 1.32, y: 0.24 },
-        { w: 2.6, d: 1.15, y: 0.40 },
+        { w: 4.3, d: 1.7, y: 0.08 },
+        { w: 3.95, d: 1.5, y: 0.24 },
+        { w: 3.6, d: 1.32, y: 0.40 },
       ];
       for (const s of STEPS) {
         const g = B(s.w, 0.16, s.d), p = [0, s.y, 0];
         wire.push({ geo: g.clone(), pos: p }); solid.push({ geo: g, pos: p });
       }
       const topStep = 0.48;                        // top face of the 3rd step
-      // 6 hexagonal columns evenly spaced across ~2.3 width, standing on the step
-      const nCol = 6, span = 2.3, colH = 1.55, colY = topStep + colH / 2;
+      // 8 hexagonal columns evenly spaced across ~3.3 width, standing on the step
+      const nCol = 8, span = 3.3, colH = 1.55, colY = topStep + colH / 2;
       for (let i = 0; i < nCol; i++) {
         const x = -span / 2 + span * (i / (nCol - 1));
         wire.push({ geo: new THREE.CylinderGeometry(0.09, 0.09, colH, 6), pos: [x, colY, 0] });
@@ -229,19 +241,19 @@ function stationParts(id) {
       const colTop = topStep + colH;               // 2.03
       // entablature across the column tops
       const entY = colTop + 0.11;
-      const entG = () => B(2.7, 0.22, 0.5);
+      const entG = () => B(3.8, 0.22, 0.55);
       wire.push({ geo: entG(), pos: [0, entY, 0] }); solid.push({ geo: entG(), pos: [0, entY, 0] });
       // triangular pediment gable sitting on the entablature
-      const pedBase = colTop + 0.22, pedApex = pedBase + 0.82;
-      wire.push({ geo: prismGeo(2.7, 0.25, pedBase, pedApex) });
-      solid.push({ geo: prismGeo(2.7, 0.25, pedBase, pedApex) });
+      const pedBase = colTop + 0.22, pedApex = pedBase + 0.9;
+      wire.push({ geo: prismGeo(3.8, 0.27, pedBase, pedApex) });
+      solid.push({ geo: prismGeo(3.8, 0.27, pedBase, pedApex) });
       // recessed dark door centred behind the middle columns (wire + solid)
-      const doorG = () => B(0.7, 1.05, 0.12);
+      const doorG = () => B(0.85, 1.05, 0.12);
       wire.push({ geo: doorG(), pos: [0, topStep + 0.52, -0.15] });
       solid.push({ geo: doorG(), pos: [0, topStep + 0.52, -0.15] });
       // single slab behind the colonnade → the columns read with depth occlusion
-      solid.push({ geo: B(2.35, 1.62, 0.12), pos: [0, 1.28, -0.34] });
-      return { wire, solid, labelY: 3.8, pickR: 2.0 };
+      solid.push({ geo: B(3.35, 1.62, 0.12), pos: [0, 1.28, -0.34] });
+      return { wire, solid, labelY: 3.9, pickR: 2.4 };
     }
     case 'TRADING': {                    // K線 — holographic price-chart monument
       const C = [
@@ -388,6 +400,18 @@ export function createScene(canvas, opts) {
       if (bloomOn) seal.layers.enable(BLOOM_LAYER);      // glows while shown
       group.add(seal);
     }
+    // optional self-spinning sub-part (e.g. MORNING's sunrise core): its own
+    // group so it rotates independently of the silhouette; shares the station's
+    // line material so hover emphasis / opacity drive both.
+    let spinSub = null;
+    if (s.spinPart) {
+      spinSub = new THREE.Group();
+      spinSub.add(new THREE.LineSegments(mergeEdges(s.spinPart.wire), line.material));
+      if (s.spinPart.solid && s.spinPart.solid.length) {
+        spinSub.add(new THREE.Mesh(mergeSolid(s.spinPart.solid), occMat));
+      }
+      group.add(spinSub);
+    }
     const L = STATION_LAYOUT[def.id] || { x: 0, y: 0, z: 0, districtId: null };
     group.position.set(L.x, L.y || 0, L.z);
     // face the silhouette radially OUTWARD (authored facades look down +z): the
@@ -402,7 +426,7 @@ export function createScene(canvas, opts) {
     group.add(pick); pickMeshes.push(pick);
     const anchor = new THREE.Object3D(); anchor.position.y = s.labelY; group.add(anchor);
     scene.add(group);
-    stations.push({ id: def.id, group, mat: line.material, line, occ, seal, anchor, def, spin: !!s.spin, emph: 0, emphT: 0, districtId: L.districtId || null });
+    stations.push({ id: def.id, group, mat: line.material, line, occ, seal, spinSub, spinSpeed: (s.spinPart && s.spinPart.speed) || 0.5, anchor, def, spin: !!s.spin, emph: 0, emphT: 0, districtId: L.districtId || null });
   }
 
   // districts that actually have a station this batch → the scroll tour's stops.
@@ -647,6 +671,7 @@ export function createScene(canvas, opts) {
     beacon.line.material.opacity = pillars.mat.uniforms.uReveal.value * (0.35 + 0.5 * breathe);
     for (const st of stations) {
       if (st.spin) { st.line.rotation.y += dt * 0.35; if (st.occ) st.occ.rotation.y = st.line.rotation.y; }
+      if (st.spinSub) st.spinSub.rotation.y += dt * st.spinSpeed;
       st.emph = lerp(st.emph, st.emphT, 1 - Math.pow(0.0001, dt));
       st.mat.color.setRGB(0.42 + st.emph * 0.55, 0.42 + st.emph * 0.55, 0.09 + st.emph * 0.02);
       st.mat.opacity = 0.55 + st.emph * 0.4;
@@ -843,7 +868,7 @@ export function createScene(canvas, opts) {
     beacon.line.geometry.dispose(); beacon.line.material.dispose();
     grid.geometry.dispose(); grid.material.dispose();
     if (dust) { dust.geometry.dispose(); dust.material.dispose(); }
-    for (const st of stations) { st.line.geometry.dispose(); st.mat.dispose(); if (st.occ) st.occ.geometry.dispose(); if (st.seal) { st.seal.geometry.dispose(); st.seal.material.dispose(); } }
+    for (const st of stations) { st.line.geometry.dispose(); st.mat.dispose(); if (st.occ) st.occ.geometry.dispose(); if (st.seal) { st.seal.geometry.dispose(); st.seal.material.dispose(); } if (st.spinSub) st.spinSub.children.forEach(c => c.geometry.dispose()); }
     occMat.dispose();
     if (bloomOn) {
       rtBright.dispose(); rtA.dispose(); rtB.dispose();
