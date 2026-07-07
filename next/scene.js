@@ -24,12 +24,39 @@ const lerp = (a, b, t) => a + (b - a) * t;
 // spinning the long way round when azimuths cross the ±180° seam.
 const lerpAngle = (a, b, t) => { let d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return a + d * t; };
 
+/* == TUNING ==================================================================
+   BG / fog colour ....... const BG below — MUST equal style.css --bg (hidden-line
+                           occluders paint this colour; mismatch breaks the trick)
+   fog range ............. createScene: `scene.fog = new THREE.Fog(BG, 26, 66)`
+   bloom strength ........ const BLOOM_STRENGTH below (baseline; hover/seal pulse
+                           adds `+ cam.bloomPulse * 1.7` in renderScene)
+   station hues .......... const STATION_HUE below (idle = dimmed/desaturated,
+                           hover = brightened — mixed per frame in the loop)
+   station fill opacity .. const FILL_OPACITY below (translucent volume faces)
+   grid brightness ....... buildGrid fragment shader `float base = ...` line
+   dust opacity .......... const DUST_OPACITY below
+   ========================================================================== */
+
 // bg / fog colour — occluders paint this so they read as "solid, unlit" ---------
-const BG = 0x0a0b06;
-const BG_V = [0x0a / 255, 0x0b / 255, 0x06 / 255];
+// deep blue-black (owner 2026-07-08: pure near-black read too flat/empty)
+const BG = 0x0a0e14;
+const BG_V = [0x0a / 255, 0x0e / 255, 0x14 / 255];
 
 // bloom layer — objects on layer 1 (in addition to 0) feed the bright pass -------
 const BLOOM_LAYER = 1;
+const BLOOM_STRENGTH = 0.75;     // holographic glow baseline (0.6–0.9 sane range)
+
+// per-station hue map — colour as information hierarchy. idle is dimmed +
+// slightly desaturated; hover/active lerps toward the bright hue (and the
+// brighter line feeds the bloom pass harder → the glow "wakes up").
+const STATION_HUE = {
+  TRADING: 0xF5A623, FINANCE: 0xF5A623,        // capital — amber
+  'JP-N2': 0x4ECDC4,                            // language — teal
+  ACADEMICS: 0x9B8CFF,                          // study — violet
+  MORNING: 0x5FD068, TODOS: 0x5FD068,           // daily ops — green
+  SYSTEM: 0xEFE000,                             // the monarch keeps the yellow
+};
+const FILL_OPACITY = 0.055;      // translucent volume faces over the occluders
 
 // atmospheric dust field target opacity (additive; faded in on reveal) -----------
 const DUST_OPACITY = 0.5;
@@ -453,10 +480,26 @@ export function createScene(canvas, opts) {
     const s = stationParts(def.id, mock.rpg);
     const line = new THREE.LineSegments(mergeEdges(s.wire),
       new THREE.LineBasicMaterial({ color: 0x6d6a1c, transparent: true, opacity: reducedMotion ? 0.9 : 0 }));
-    const group = new THREE.Group();
+    if (bloomOn) line.layers.enable(BLOOM_LAYER);   // every station feeds a soft holo-glow;
+    const group = new THREE.Group();                 // hover brightens the colour → glow wakes up
     let occ = null;
     if (s.solid && s.solid.length) { occ = new THREE.Mesh(mergeSolid(s.solid), occMat); group.add(occ); }
     group.add(line);
+    // station hue → idle (dimmed, slightly desaturated) / hot (brightened) pair
+    const hue = new THREE.Color(STATION_HUE[def.id] || 0xEFE000);
+    const lum = hue.r * 0.299 + hue.g * 0.587 + hue.b * 0.114;
+    const colIdle = hue.clone().lerp(new THREE.Color(lum, lum, lum), 0.30).multiplyScalar(0.52);
+    const colHot = hue.clone().lerp(new THREE.Color(1, 1, 1), 0.18);
+    // translucent volume face over the occluder — the silhouette reads as a BODY,
+    // not just edges (shares the occluder geometry; disposed once via occ)
+    if (occ) {
+      const fill = new THREE.Mesh(occ.geometry, new THREE.MeshBasicMaterial({
+        color: hue, transparent: true, opacity: FILL_OPACITY,
+        depthWrite: false, side: THREE.DoubleSide,
+      }));
+      fill.userData.isFill = true;
+      group.add(fill);
+    }
     // optional toggleable sub-mesh (e.g. TRADING's wax seal): separate line, own
     // material, hidden until a flag turns it on. Same family, slightly brighter.
     let seal = null;
@@ -512,7 +555,7 @@ export function createScene(canvas, opts) {
     group.add(pick); pickMeshes.push(pick);
     const anchor = new THREE.Object3D(); anchor.position.y = s.labelY; group.add(anchor);
     scene.add(group);
-    stations.push({ id: def.id, group, mat: line.material, line, occ, seal, spinSubs, extra, anchor, def, spin: !!s.spin, emph: 0, emphT: 0, districtId: L.districtId || null });
+    stations.push({ id: def.id, group, mat: line.material, line, occ, seal, spinSubs, extra, anchor, def, spin: !!s.spin, emph: 0, emphT: 0, colIdle, colHot, hueHex: '#' + hue.getHexString(), districtId: L.districtId || null });
   }
 
   // districts that actually have a station this batch → the scroll tour's stops.
@@ -565,7 +608,7 @@ export function createScene(canvas, opts) {
       depthTest: false, depthWrite: false,
     });
     compMat = new THREE.ShaderMaterial({
-      uniforms: { tBloom: { value: null }, uStrength: { value: 0.85 } },
+      uniforms: { tBloom: { value: null }, uStrength: { value: BLOOM_STRENGTH } },
       vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position,1.0); }`,
       fragmentShader: `
         precision mediump float;
@@ -588,6 +631,7 @@ export function createScene(canvas, opts) {
   const labels = stations.map(st => {
     const el = document.createElement('div');
     el.className = 'lbl';
+    el.style.setProperty('--sthue', (st.hueHex || '#EFE000'));   // label follows station hue
     el.innerHTML = `<div class="lbl-name">${st.def.label}</div><div class="lbl-stat">${st.def.tag || ''}</div>`;
     labelsEl.appendChild(el);
     return { st, el };
@@ -780,7 +824,7 @@ export function createScene(canvas, opts) {
         if (sp.bob) sp.sub.position.y = sp.baseY + Math.sin(t * 1.3 + sp.phase) * sp.bob;
       }
       st.emph = lerp(st.emph, st.emphT, 1 - Math.pow(0.0001, dt));
-      st.mat.color.setRGB(0.42 + st.emph * 0.55, 0.42 + st.emph * 0.55, 0.09 + st.emph * 0.02);
+      st.mat.color.copy(st.colIdle).lerp(st.colHot, st.emph);   // hue = information layer
       st.mat.opacity = 0.55 + st.emph * 0.4;
     }
     pick();
@@ -813,7 +857,7 @@ export function createScene(canvas, opts) {
     // (5) additive composite of the blurred bloom over the main image
     quadMesh.material = compMat;
     compMat.uniforms.tBloom.value = rtB.texture;
-    compMat.uniforms.uStrength.value = 0.85 + cam.bloomPulse * 1.7;
+    compMat.uniforms.uStrength.value = BLOOM_STRENGTH + cam.bloomPulse * 1.7;
     const ac = renderer.autoClear; renderer.autoClear = false;
     renderer.render(quadScene, quadCam);
     renderer.autoClear = ac;
@@ -904,10 +948,9 @@ export function createScene(canvas, opts) {
   }
   function setPointer(x, y) { ndc.set((x / W0()) * 2 - 1, -(y / H0()) * 2 + 1); noteInput(); }
   function highlight(id) {
-    for (const st of stations) {
-      st.emphT = st.id === id ? 1 : 0;
-      if (bloomOn) { if (st.id === id) st.line.layers.enable(BLOOM_LAYER); else st.line.layers.disable(BLOOM_LAYER); }
-    }
+    // all lines live on the bloom layer permanently — the hover distinction now
+    // comes from colour brightness (colHot feeds the bright pass harder)
+    for (const st of stations) st.emphT = st.id === id ? 1 : 0;
   }
   function pulseBloom() { cam.bloomPulse = 1; }
   // TRADING wax-seal: materialize / dissolve the seal sub-mesh on the monument.
@@ -975,7 +1018,7 @@ export function createScene(canvas, opts) {
     beacon.line.geometry.dispose(); beacon.line.material.dispose();
     grid.geometry.dispose(); grid.material.dispose();
     if (dust) { dust.geometry.dispose(); dust.material.dispose(); }
-    for (const st of stations) { st.line.geometry.dispose(); st.mat.dispose(); if (st.occ) st.occ.geometry.dispose(); if (st.seal) { st.seal.geometry.dispose(); st.seal.material.dispose(); } if (st.spinSubs) st.spinSubs.forEach(sp => sp.sub.children.forEach(c => c.geometry.dispose())); if (st.extra) st.extra.geometry.dispose(); }
+    for (const st of stations) { st.line.geometry.dispose(); st.mat.dispose(); if (st.occ) st.occ.geometry.dispose(); if (st.seal) { st.seal.geometry.dispose(); st.seal.material.dispose(); } if (st.spinSubs) st.spinSubs.forEach(sp => sp.sub.children.forEach(c => c.geometry.dispose())); if (st.extra) st.extra.geometry.dispose(); st.group.children.forEach(c => { if (c.userData && c.userData.isFill) c.material.dispose(); }); }
     occMat.dispose();
     if (bloomOn) {
       rtBright.dispose(); rtA.dispose(); rtB.dispose();
@@ -1229,7 +1272,7 @@ function buildGrid() {
         float built = 1.0 - smoothstep(front, front + 2.6, d);
         float edge = smoothstep(2.4, 0.0, abs(d - front)) * step(0.001, uScan) * (1.0 - step(1.0, uScan));
         vec3 col = mix(uColor, uHot, clamp(xhair*0.6 + edge, 0.0, 1.0));
-        float base = 0.42 + nearBoost*0.22 + xhair*0.40 + ring*0.18;
+        float base = 0.56 + nearBoost*0.24 + xhair*0.40 + ring*0.22;
         float a = base * distFade * built * uReveal + edge * 0.5 * uReveal;
         gl_FragColor = vec4(col, clamp(a, 0.0, 1.0));
       }`,

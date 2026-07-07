@@ -13,8 +13,10 @@
   unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
 
 :root{
-  --bg:#0A0B06;
-  --bg-2:#0d0f08;
+  /* deep blue-black deck (2026-07-08) — MUST equal scene.js `const BG` (hidden-line
+     occluders paint this colour; a mismatch breaks the wireframe illusion) */
+  --bg:#0A0E14;
+  --bg-2:#0D1119;
   --yellow:#EFE000;
   --yellow-2:#C9C90E;
   --yellow-dim:#6d6a1c;
@@ -62,16 +64,16 @@ html[data-reticle="on"], html[data-reticle="on"] *{cursor:none;}
 }
 .lbl-name{
   font-family:var(--disp);font-weight:500;font-size:13px;letter-spacing:.22em;
-  text-transform:uppercase;color:var(--yellow);
-  padding-left:9px;border-left:1.5px solid var(--yellow);line-height:1.1;
+  text-transform:uppercase;color:var(--sthue,var(--yellow));
+  padding-left:9px;border-left:1.5px solid var(--sthue,var(--yellow));line-height:1.1;
 }
 .lbl-stat{
   font-family:var(--mono);font-size:9px;letter-spacing:.09em;color:var(--mute);
   padding-left:9px;margin-top:2px;
 }
 .lbl-stat b{color:var(--cyan);font-weight:500;}
-.lbl.is-hot .lbl-name{color:#fff;border-left-color:var(--yellow);
-  text-shadow:0 0 12px rgba(239,224,0,.55);}
+.lbl.is-hot .lbl-name{color:#fff;border-left-color:var(--sthue,var(--yellow));
+  text-shadow:0 0 12px var(--sthue,rgba(239,224,0,.55));}
 .lbl.is-dim{opacity:.28;}
 
 /* ---- the90 array readability suite (nameplate / today beacon / ticks) ------ */
@@ -161,8 +163,10 @@ html[data-boot="done"] #chrome{opacity:1;}
   opacity:0;transition:opacity .8s var(--ease-press) .2s;}
 html[data-boot="done"] #fx{opacity:1;}
 .fx-vignette{position:absolute;inset:0;
-  background:radial-gradient(125% 125% at 50% 46%,
-    transparent 50%,rgba(4,5,2,.30) 78%,rgba(1,2,0,.64) 100%);}
+  background:
+    radial-gradient(80% 70% at 50% 44%, rgba(120,150,200,.05) 0%, transparent 55%),
+    radial-gradient(125% 125% at 50% 46%,
+      transparent 50%,rgba(3,5,9,.32) 78%,rgba(1,2,5,.66) 100%);}   /* 中心微亮 → "房间感" */
 .fx-scanlines{position:absolute;inset:0;opacity:.5;mix-blend-mode:multiply;
   background:repeating-linear-gradient(to bottom,
     rgba(0,0,0,0) 0,rgba(0,0,0,0) 2px,rgba(0,0,0,.16) 3px,rgba(0,0,0,0) 4px);}
@@ -206,7 +210,7 @@ html[data-boot="done"] #fx{opacity:1;}
 /* scrim: 左侧完全透明(被选碑体清晰立在场景里,不压暗不虚化——owner 2026-07-08),
    只在贴近面板处渐暗保证面板外缘可读。渐变没法 transition → 用 ::before 淡入。 */
 #hud::before{content:"";position:absolute;inset:0;pointer-events:none;
-  background:linear-gradient(90deg,rgba(6,7,3,0) 46%,rgba(6,7,3,.5) 82%,rgba(6,7,3,.62) 100%);
+  background:linear-gradient(90deg,rgba(6,8,12,0) 46%,rgba(6,8,12,.5) 82%,rgba(6,8,12,.62) 100%);
   opacity:0;transition:opacity .5s var(--ease-press);}
 #hud.is-open{pointer-events:auto;}
 #hud.is-open::before{opacity:1;}
