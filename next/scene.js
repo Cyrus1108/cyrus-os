@@ -523,7 +523,7 @@ function buildTorii() {
   const line = new THREE.LineSegments(mergeEdges(wire),
     new THREE.LineBasicMaterial({ color: 0x2f7d78, transparent: true, opacity: 0.62 }));
   const occ = new THREE.Mesh(mergeSolid(solid), new THREE.MeshStandardMaterial({
-    color: 0x8f2f23, roughness: 0.62, metalness: 0.08, side: THREE.DoubleSide,   // 朱红 vermilion
+    color: 0x64201a, roughness: 0.62, metalness: 0.08, side: THREE.DoubleSide,   // 朱红 vermilion(暗夜档)
     polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
   }));
   const g = new THREE.Group();
@@ -808,7 +808,7 @@ export function createScene(canvas, opts) {
   // cool "moon" key light (casts the deck's shadows) + soft sky/ground fill;
   // PBR reflections come from a hand-built emissive room captured via PMREM —
   // no external HDRI (the site ships no third-party assets).
-  const sunLight = new THREE.DirectionalLight(0xbfd6ff, 1.7);
+  const sunLight = new THREE.DirectionalLight(0xcfe0ff, 1.25);
   sunLight.position.set(16, 24, -12);
   if (shadowsOn) {
     sunLight.castShadow = true;
@@ -818,11 +818,11 @@ export function createScene(canvas, opts) {
     sunLight.shadow.bias = -0.0004; sunLight.shadow.normalBias = 0.02;
   }
   scene.add(sunLight);
-  scene.add(new THREE.HemisphereLight(0x27354d, 0x0b0e14, 0.8));
+  scene.add(new THREE.HemisphereLight(0x27354d, 0x0b0e14, 0.5));
   scene.environment = buildEnvironment(renderer);
   // solid deck disc under the shader grid — everything now STANDS on something
   const floor = new THREE.Mesh(new THREE.CircleGeometry(46, 64),
-    new THREE.MeshStandardMaterial({ color: 0x121722, roughness: 0.9, metalness: 0.2 }));
+    new THREE.MeshStandardMaterial({ color: 0x0e131c, roughness: 0.9, metalness: 0.2 }));
   floor.rotation.x = -Math.PI / 2; floor.position.y = -0.02;
   floor.receiveShadow = shadowsOn;
   scene.add(floor);
@@ -899,8 +899,8 @@ export function createScene(canvas, opts) {
     // L2: the former BG-coloured occluder is now the station's lit BODY —
     // hue-tinted PBR solid (flat facet normals), wireframe stays as edge accent.
     const bodyMat = new THREE.MeshStandardMaterial({
-      color: hue.clone().multiplyScalar(0.30), roughness: 0.5, metalness: 0.35,
-      emissive: hue, emissiveIntensity: 0.05, side: THREE.DoubleSide,
+      color: hue.clone().multiplyScalar(0.15), roughness: 0.5, metalness: 0.3,
+      emissive: hue, emissiveIntensity: 0.035, side: THREE.DoubleSide,
       polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
     });
     let occ = null;
@@ -1588,8 +1588,8 @@ function buildPillars(mock) {
   // rises with the entrance scan — the reveal transform is injected into the
   // standard material and shares the SAME uReveal uniform object as the lines.
   const oMat = new THREE.MeshStandardMaterial({
-    color: 0x2a2712, roughness: 0.55, metalness: 0.3,
-    emissive: 0xEFE000, emissiveIntensity: 0.05,
+    color: 0x1b190c, roughness: 0.55, metalness: 0.3,
+    emissive: 0xEFE000, emissiveIntensity: 0.04,
     polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
     side: THREE.DoubleSide,
   });
