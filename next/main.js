@@ -1479,7 +1479,7 @@ async function main() {
       if (id) {
         reticle.classList.add('is-locked'); retTag.textContent = 'LOCK · ' + id;
         readout.textContent = id + ' · TARGET';
-        audio.tick();
+        // hover tick sound removed (owner 2026-07-08: too noisy on every lock)
         pingReticle();                                   // lock ping (presentational)
         const lbl = scene.labelFor(id);                  // decode-in the station label
         if (lbl) { const nm = lbl.querySelector('.lbl-name'); if (nm) scramble(nm, nm.dataset.full || nm.textContent, 360); }
