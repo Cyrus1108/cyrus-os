@@ -388,6 +388,11 @@ export function createScene(canvas, opts) {
     }
     const L = STATION_LAYOUT[def.id] || { x: 0, y: 0, z: 0, districtId: null };
     group.position.set(L.x, L.y || 0, L.z);
+    // face the silhouette radially OUTWARD (authored facades look down +z): the
+    // district camera sits beyond the ring looking inward, so the centered slot
+    // reads frontal and edge slots read as 3/4 views. Directional monuments
+    // (e.g. the FINANCE bank facade) are illegible edge-on without this.
+    if (L.az != null) group.rotation.y = (90 - L.az) * DEG;
     const pick = new THREE.Mesh(new THREE.SphereGeometry(s.pickR, 8, 6),
       new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
     pick.position.y = s.labelY * 0.5;
