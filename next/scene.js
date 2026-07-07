@@ -578,6 +578,97 @@ function buildSakura(withPetals) {
 }
 
 // ---------------------------------------------------------------------------
+// street life — stone-slab paths + three stick-figure pedestrians walking
+// them. Each walker is 6 line segments (spine/head/2 legs/2 arms) written
+// into one tiny dynamic buffer per frame; legs and arms counter-swing along
+// the walk direction, with a slight bob. Paths: gate→monument, gate→machiya
+// (ping-pong), and a slow stroll around the JP quarter.
+// ---------------------------------------------------------------------------
+function buildWalkers() {
+  // -- stone slabs (static): laid along the two paths, varied yaw ------------
+  const slabs = [];
+  const lay = (ax, az, bx, bz, n) => {
+    for (let i = 0; i < n; i++) {
+      const u = (i + 0.5) / n, x = ax + (bx - ax) * u, z = az + (bz - az) * u;
+      const yaw = Math.atan2(bz - az, bx - ax) + (Math.random() - 0.5) * 0.5;
+      const c = Math.cos(yaw), s = Math.sin(yaw), hw = 0.3, hd = 0.21;
+      const p = [[-hw, -hd], [hw, -hd], [hw, hd], [-hw, hd]];
+      for (let k = 0; k < 4; k++) {
+        const a = p[k], b = p[(k + 1) % 4];
+        slabs.push(x + a[0] * c - a[1] * s, 0.02, z + a[0] * s + a[1] * c,
+          x + b[0] * c - b[1] * s, 0.02, z + b[0] * s + b[1] * c);
+      }
+    }
+  };
+  lay(0, -8.5, 0, -6.6, 4);            // gate → monument edge
+  lay(-0.6, -9.2, -4.2, -10.4, 6);     // gate → machiya door
+  const sg = new THREE.BufferGeometry();
+  sg.setAttribute('position', new THREE.Float32BufferAttribute(slabs, 3));
+  const path = new THREE.LineSegments(sg,
+    new THREE.LineBasicMaterial({ color: 0x5a6360, transparent: true, opacity: 0.5 }));
+  // -- pedestrians (dynamic) -------------------------------------------------
+  const WALKERS = [
+    { pts: [[-3, -8.2], [3, -8.2], [4.2, -10.6], [0, -11.7], [-4.2, -10.6]], loop: true, speed: 0.55, stride: 5.2, u: 0.1 },
+    { pts: [[0.3, -8.9], [-4.2, -10.4]], loop: false, speed: 0.42, stride: 5.8, u: 0.6 },
+    { pts: [[-6.6, -8.5], [-2.4, -12.9]], loop: false, speed: 0.3, stride: 4.6, u: 0.35 },
+  ];
+  for (const w of WALKERS) {
+    w.lens = []; w.total = 0;
+    const n = w.pts.length, m = w.loop ? n : n - 1;
+    for (let i = 0; i < m; i++) {
+      const a = w.pts[i], b = w.pts[(i + 1) % n];
+      const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      w.lens.push(L); w.total += L;
+    }
+  }
+  const wg = new THREE.BufferGeometry();
+  const warr = new Float32Array(WALKERS.length * 6 * 2 * 3);
+  wg.setAttribute('position', new THREE.BufferAttribute(warr, 3).setUsage(THREE.DynamicDrawUsage));
+  const folk = new THREE.LineSegments(wg,
+    new THREE.LineBasicMaterial({ color: 0x9aa08a, transparent: true, opacity: 0.85 }));
+  folk.frustumCulled = false;
+  function sample(w, u) {
+    // u∈[0,1) along the (looped or ping-pong) polyline → {x, z, dx, dz}
+    let d = w.loop ? u * w.total : (u < 0.5 ? u * 2 : (1 - u) * 2) * w.total;
+    const flip = !w.loop && u >= 0.5 ? -1 : 1;
+    for (let i = 0; i < w.lens.length; i++) {
+      if (d <= w.lens[i] || i === w.lens.length - 1) {
+        const a = w.pts[i], b = w.pts[(i + 1) % w.pts.length];
+        const k = Math.max(0, Math.min(1, d / w.lens[i]));
+        const dx = (b[0] - a[0]) / w.lens[i], dz = (b[1] - a[1]) / w.lens[i];
+        return { x: a[0] + (b[0] - a[0]) * k, z: a[1] + (b[1] - a[1]) * k, dx: dx * flip, dz: dz * flip };
+      }
+      d -= w.lens[i];
+    }
+    return { x: w.pts[0][0], z: w.pts[0][1], dx: 1, dz: 0 };
+  }
+  function update(t, dt) {
+    let o = 0;
+    for (const w of WALKERS) {
+      w.u = (w.u + dt * w.speed / w.total) % 1;
+      const p = sample(w, w.u);
+      const ph = t * w.stride, sw = Math.sin(ph) * 0.2, swa = Math.sin(ph) * 0.15;
+      const bob = Math.abs(Math.sin(ph)) * 0.025;
+      const hx = p.x, hz = p.z, hipY = 0.44 + bob, shY = 0.88 + bob, hdY = 1.05 + bob;
+      const seg = (x1, y1, z1, x2, y2, z2) => {
+        warr[o++] = x1; warr[o++] = y1; warr[o++] = z1; warr[o++] = x2; warr[o++] = y2; warr[o++] = z2;
+      };
+      seg(hx, hipY, hz, hx, shY, hz);                                             // spine
+      seg(hx, shY, hz, hx, hdY, hz);                                              // head
+      seg(hx, hipY, hz, hx + p.dx * sw, 0, hz + p.dz * sw);                       // legs
+      seg(hx, hipY, hz, hx - p.dx * sw, 0, hz - p.dz * sw);
+      seg(hx, shY, hz, hx - p.dx * swa, 0.56 + bob, hz - p.dz * swa);             // arms
+      seg(hx, shY, hz, hx + p.dx * swa, 0.56 + bob, hz + p.dz * swa);
+    }
+    wg.attributes.position.needsUpdate = true;
+  }
+  update(0, 0);                        // initial pose (reduced-motion keeps this)
+  const group = new THREE.Group();
+  group.add(path); group.add(folk);
+  return { group, path, folk, update };
+}
+
+// ---------------------------------------------------------------------------
 // TRADING chart — dynamic candle buffers. While the station is selected
 // (hover-lock or HUD focus → st.emph ≈ 1) the tape WALKS: the newest candle
 // grows from its open toward a rolled target, then the tape slides left and
@@ -695,6 +786,10 @@ export function createScene(canvas, opts) {
   // ===== sakura — trees by the machiya/gate + falling petals (desktop) =======
   const sakura = buildSakura(!isMobile && !reducedMotion);
   scene.add(sakura.group);
+
+  // ===== street life — slab paths + walking pedestrians ======================
+  const walkers = buildWalkers();
+  scene.add(walkers.group);
 
   // ===== atmospheric dust motes (desktop, motion-on only) ====================
   // GPU-drifted THREE.Points volume; excluded from the bloom pass (layer 0),
@@ -1060,6 +1155,7 @@ export function createScene(canvas, opts) {
     pillars.mat.uniforms.uTime.value = t;
     if (dust) dust.material.uniforms.uTime.value = t;
     if (sakura.petals) sakura.petals.material.uniforms.uTime.value = t;
+    walkers.update(t, dt);
     const breathe = 0.5 + 0.5 * Math.sin(t * 2.2);
     beacon.line.material.opacity = pillars.mat.uniforms.uReveal.value * (0.35 + 0.5 * breathe);
     for (const st of stations) {
@@ -1271,6 +1367,8 @@ export function createScene(canvas, opts) {
     sakura.lines.geometry.dispose(); sakura.lines.material.dispose();
     sakura.canopy.geometry.dispose(); sakura.canopy.material.dispose();
     if (sakura.petals) { sakura.petals.geometry.dispose(); sakura.petals.material.dispose(); }
+    walkers.path.geometry.dispose(); walkers.path.material.dispose();
+    walkers.folk.geometry.dispose(); walkers.folk.material.dispose();
     if (dust) { dust.geometry.dispose(); dust.material.dispose(); }
     for (const st of stations) { st.line.geometry.dispose(); st.mat.dispose(); if (st.occ) st.occ.geometry.dispose(); if (st.seal) { st.seal.geometry.dispose(); st.seal.material.dispose(); } if (st.spinSubs) st.spinSubs.forEach(sp => sp.sub.children.forEach(c => c.geometry.dispose())); if (st.extra) st.extra.geometry.dispose(); if (st.chart) { st.chart.line.geometry.dispose(); st.chart.occ.geometry.dispose(); } st.group.children.forEach(c => { if (c.userData && c.userData.isFill) c.material.dispose(); }); }
     occMat.dispose();
