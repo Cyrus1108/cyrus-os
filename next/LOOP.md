@@ -35,10 +35,10 @@
 - [x] SYSTEM 动效:`spinPart` 升级为 `spinParts[]` 多层机制(每层自带 pivot/axis/speed/bob,共站材质);每道阶位环独立轴进动(交替正反向,速度 0.22+k·0.07),碎晶层 −0.16 反向公转 + 0.09 y 浮动。
 - [x] MORNING 核心 0.55→0.7。
 
-### T2 HUD 打开时主物体前置(用户给了绿框示意:物体应立在左侧空区中央)
-- [ ] 找到 HUD 打开时压暗/虚化画布的来源(查 `style.css` 的 `#hud`/`.is-open` backdrop、`#fx`、canvas filter),把对场景的 blur/dim 去掉或降到轻微。
-- [ ] focus 取景右移:HUD 占右侧 ~420px,被选碑体应落在剩余视口中央 → `focusStation` 的 `fp.t1`(look-at)沿相机右向量偏移,或 `camera.setViewOffset`(记得 HUD 关闭/resize 时还原)。两法选一,验证所有 7 站。
-- [ ] 验证:逐站开 HUD,碑体清晰、无虚化、构图落在左区;Esc 返回正常。
+### T2 HUD 打开时主物体前置 ✅ v7.2 (0084a62)
+- [x] 元凶=`#hud.is-open` 的全屏 rgba(.42) 压暗 + backdrop-blur(2px) → 改为 `#hud::before` 横向渐变 scrim(左 46% 全透、贴面板处渐暗),opacity 淡入(渐变无法 transition)。
+- [x] focus 取景右偏:`focusStation` 里 look-at 沿相机右向量偏移,角度 = hFOV × min(0.16, hudW/W×0.375),hudW 由 main.js 传 `hudWidth:()=>min(560, innerWidth×0.92)`(镜像 #hud-panel 宽,不量隐藏节点)。
+- [x] 验证:MORNING(地面站)+ SYSTEM(高架站)开 HUD,碑体清晰立于左区中央、零虚化;Esc 返回正常。注:返程飞行期间点击被吞是既有设计(mode≠deck 忽略),非回归。
 
 ### T3 渲染层氛围大改(用户 spec 适配本仓库)
 > 用户原 spec 按"单文件 + CDN + UnrealBloomPass"写;本仓库是 next/ 多文件 + vendored three +
@@ -81,3 +81,4 @@
 |---|---|---|---|---|
 | 2026-07-08 | (建档) | 创建本 LOOP 简报 | — | — |
 | 2026-07-08 | v7.1 / 97aead1 | T1:tick 静音、spinParts 多层动效(环进动/碎晶反向公转+浮动)、晨核提速 | glErr=0、7 标签、两帧对比环姿态翻转+碎晶漂移 ✓;音感/晨核速度留用户实机 | 小怪癖:EXP 横档随主自转偶有边缘朝向瞬间变淡(0.028 厚),可接受 |
+| 2026-07-08 | v7.2 / 0084a62 | T2:HUD scrim 左透右暗+去 blur、focus look-at 右偏(hudWidth 动态角度) | MORNING+SYSTEM 双站 HUD 构图落左区、清晰无虚化 ✓ Esc 返回 ✓ | SYSTEM 焦点近景构图极佳,可当宣传帧 |
