@@ -307,24 +307,23 @@ function stationParts(id, rpg) {
       return { wire, solid, labelY: 3.9, pickR: 2.4 };
     }
     case 'TRADING': {                    // K線 — holographic price-chart monument
-      const C = [
-        { x: -1.0, bLo: 0.6, bHi: 1.6, wLo: 0.3, wHi: 1.9 },
-        { x: -0.5, bLo: 1.6, bHi: 2.4, wLo: 1.3, wHi: 2.8 },
-        { x: 0.0, bLo: 1.4, bHi: 2.0, wLo: 1.0, wHi: 2.3 },
-        { x: 0.5, bLo: 2.0, bHi: 3.0, wLo: 1.7, wHi: 3.3 },
-        { x: 1.0, bLo: 1.5, bHi: 2.2, wLo: 1.2, wHi: 2.6 },
-      ];
       const wire = [], solid = [];
-      for (const c of C) {
-        const bh = c.bHi - c.bLo, by = (c.bHi + c.bLo) / 2;
-        wire.push({ geo: B(0.32, bh, 0.32), pos: [c.x, by, 0] });
-        wire.push({ geo: B(0.05, c.wHi - c.bHi, 0.05), pos: [c.x, (c.wHi + c.bHi) / 2, 0] });
-        wire.push({ geo: B(0.05, c.bLo - c.wLo, 0.05), pos: [c.x, (c.bLo + c.wLo) / 2, 0] });
-        solid.push({ geo: B(0.32, bh, 0.32), pos: [c.x, by, 0] });
-      }
+      // candles live in a DYNAMIC buffer (st.chart) so the tape can "walk" while
+      // the station is selected — see buildChart/updateChart. Seed series 升跌升:
+      const chart = {
+        slots: [-1.25, -0.75, -0.25, 0.25, 0.75, 1.25],
+        candles: [
+          { o: 0.6, c: 1.6, hi: 1.9, lo: 0.3 },
+          { o: 1.6, c: 2.4, hi: 2.8, lo: 1.3 },
+          { o: 2.4, c: 1.4, hi: 2.5, lo: 1.0 },
+          { o: 1.4, c: 3.0, hi: 3.3, lo: 1.2 },
+          { o: 3.0, c: 1.9, hi: 3.1, lo: 1.6 },
+          { o: 1.9, c: 2.5, hi: 2.8, lo: 1.7 },
+        ],
+      };
       // minimal axis frame → the candles read as a chart, not random posts
-      wire.push({ geo: B(2.7, 0.05, 0.05), pos: [0, 0.32, 0] });        // baseline rail
-      wire.push({ geo: B(0.05, 3.0, 0.05), pos: [-1.35, 1.82, 0] });    // left value axis
+      wire.push({ geo: B(2.9, 0.05, 0.05), pos: [0, 0.32, 0] });        // baseline rail
+      wire.push({ geo: B(0.05, 3.0, 0.05), pos: [-1.5, 1.82, 0] });     // left value axis
       // 盘前封条 — wax-seal ring that MATERIALIZES on the monument when sealed.
       // Built into a separate LineSegments (st.seal) by the station loop below,
       // toggled by setTradingSealed(). Floats over/in-front-of the chart.
@@ -333,7 +332,7 @@ function stationParts(id, rpg) {
         { geo: B(0.06, 0.9, 0.06), pos: [-0.32, 1.5, 0.45], rot: [0, 0, 32 * DEG] },   // ribbon strokes
         { geo: B(0.06, 0.9, 0.06), pos: [0.32, 1.5, 0.45], rot: [0, 0, -32 * DEG] },
       ];
-      return { wire, solid, sealWire, labelY: 3.9, pickR: 1.9 };
+      return { wire, solid, sealWire, chart, labelY: 3.9, pickR: 1.9 };
     }
     case 'TODOS':
       return {
@@ -437,6 +436,67 @@ function stationParts(id, rpg) {
       };
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// TRADING chart — dynamic candle buffers. While the station is selected
+// (hover-lock or HUD focus → st.emph ≈ 1) the tape WALKS: the newest candle
+// grows from its open toward a rolled target, then the tape slides left and
+// the next leg begins — 升 → 跌 → 升 rhythm with jittered magnitudes.
+// Wire = 12 box edges + 2 wicks per candle; occluder = 12 tris per body, both
+// rewritten into preallocated DynamicDrawUsage buffers (6 candles → tiny).
+// ---------------------------------------------------------------------------
+const CHART_HW = 0.16;
+function chartWrite(ch) {
+  const wp = ch.line.geometry.attributes.position.array;
+  const sp = ch.occ.geometry.attributes.position.array;
+  let wi = 0, si = 0;
+  for (let n = 0; n < ch.candles.length; n++) {
+    const cd = ch.candles[n];
+    const x = ch.slots[n] + (ch.slide || 0);
+    let yLo = Math.min(cd.o, cd.c), yHi = Math.max(cd.o, cd.c);
+    if (yHi - yLo < 0.02) { yLo -= 0.01; yHi += 0.01; }          // doji still reads
+    const c8 = [
+      [x - CHART_HW, yLo, -CHART_HW], [x + CHART_HW, yLo, -CHART_HW],
+      [x + CHART_HW, yLo, CHART_HW], [x - CHART_HW, yLo, CHART_HW],
+      [x - CHART_HW, yHi, -CHART_HW], [x + CHART_HW, yHi, -CHART_HW],
+      [x + CHART_HW, yHi, CHART_HW], [x - CHART_HW, yHi, CHART_HW],
+    ];
+    for (const e of PILLAR_EDGES) {
+      const a = c8[e[0]], b = c8[e[1]];
+      wp[wi++] = a[0]; wp[wi++] = a[1]; wp[wi++] = a[2];
+      wp[wi++] = b[0]; wp[wi++] = b[1]; wp[wi++] = b[2];
+    }
+    wp[wi++] = x; wp[wi++] = yHi; wp[wi++] = 0; wp[wi++] = x; wp[wi++] = cd.hi; wp[wi++] = 0;
+    wp[wi++] = x; wp[wi++] = yLo; wp[wi++] = 0; wp[wi++] = x; wp[wi++] = cd.lo; wp[wi++] = 0;
+    for (const f of PILLAR_FACES) {
+      for (const vi of f) { const v = c8[vi]; sp[si++] = v[0]; sp[si++] = v[1]; sp[si++] = v[2]; }
+    }
+  }
+  ch.line.geometry.attributes.position.needsUpdate = true;
+  ch.occ.geometry.attributes.position.needsUpdate = true;
+}
+function chartUpdate(st, dt) {
+  const ch = st.chart;
+  if (ch.slide > 0) { ch.slide = Math.max(0, ch.slide - dt * 2.2); chartWrite(ch); }
+  if (st.emph < 0.6) { ch.forming = false; return; }   // tape walks only while selected
+  if (!ch.forming) {
+    ch.legIdx = ((ch.legIdx ?? -1) + 1) % 3;           // 升 → 跌 → 升
+    const dir = [1, -1, 1][ch.legIdx];
+    const o = ch.candles[ch.candles.length - 1].c;
+    ch.target = Math.min(3.1, Math.max(0.7, o + dir * (0.35 + Math.random() * 0.55)));
+    ch.candles.push({ o, c: o, hi: o + 0.03, lo: o - 0.03 });
+    if (ch.candles.length > ch.slots.length) { ch.candles.shift(); ch.slide = 0.5; }
+    ch.t = 0; ch.forming = true;
+  }
+  ch.t += dt / 1.15;
+  const cur = ch.candles[ch.candles.length - 1];
+  const k = Math.min(1, ch.t), e = k * k * (3 - 2 * k);
+  cur.c = cur.o + (ch.target - cur.o) * e + Math.sin(k * 16) * 0.045 * (1 - k);
+  cur.hi = Math.min(3.3, Math.max(cur.hi, Math.max(cur.o, cur.c) + 0.05));
+  cur.lo = Math.max(0.38, Math.min(cur.lo, Math.min(cur.o, cur.c) - 0.05));
+  chartWrite(ch);
+  if (k >= 1) ch.forming = false;
 }
 
 // ---------------------------------------------------------------------------
@@ -564,6 +624,24 @@ export function createScene(canvas, opts) {
       extra = new THREE.LineSegments(g, line.material);
       group.add(extra);
     }
+    // optional dynamic candle chart (TRADING) — preallocated buffers, tape
+    // walks in chartUpdate while the station is selected
+    let chart = null;
+    if (s.chart) {
+      const nSlots = s.chart.slots.length;
+      const wgeo = new THREE.BufferGeometry();
+      wgeo.setAttribute('position',
+        new THREE.BufferAttribute(new Float32Array(nSlots * 28 * 3), 3).setUsage(THREE.DynamicDrawUsage));
+      const sgeo = new THREE.BufferGeometry();
+      sgeo.setAttribute('position',
+        new THREE.BufferAttribute(new Float32Array(nSlots * 36 * 3), 3).setUsage(THREE.DynamicDrawUsage));
+      chart = { ...s.chart, slide: 0, forming: false,
+        line: new THREE.LineSegments(wgeo, line.material), occ: new THREE.Mesh(sgeo, occMat) };
+      chart.line.frustumCulled = chart.occ.frustumCulled = false;   // buffer grows past first-frame bounds
+      if (bloomOn) chart.line.layers.enable(BLOOM_LAYER);
+      group.add(chart.occ); group.add(chart.line);
+      chartWrite(chart);
+    }
     const L = STATION_LAYOUT[def.id] || { x: 0, y: 0, z: 0, districtId: null };
     group.position.set(L.x, L.y || 0, L.z);
     // face the silhouette radially OUTWARD (authored facades look down +z): the
@@ -578,7 +656,7 @@ export function createScene(canvas, opts) {
     group.add(pick); pickMeshes.push(pick);
     const anchor = new THREE.Object3D(); anchor.position.y = s.labelY; group.add(anchor);
     scene.add(group);
-    stations.push({ id: def.id, group, mat: line.material, line, occ, seal, spinSubs, extra, anchor, def, spin: !!s.spin, emph: 0, emphT: 0, colIdle, colHot, hueHex: '#' + hue.getHexString(), districtId: L.districtId || null });
+    stations.push({ id: def.id, group, mat: line.material, line, occ, seal, spinSubs, extra, chart, anchor, def, spin: !!s.spin, emph: 0, emphT: 0, colIdle, colHot, hueHex: '#' + hue.getHexString(), districtId: L.districtId || null });
   }
 
   // districts that actually have a station this batch → the scroll tour's stops.
@@ -846,6 +924,7 @@ export function createScene(canvas, opts) {
         sp.sub.rotateOnAxis(sp.axis, dt * sp.speed);
         if (sp.bob) sp.sub.position.y = sp.baseY + Math.sin(t * 1.3 + sp.phase) * sp.bob;
       }
+      if (st.chart) chartUpdate(st, dt);
       st.emph = lerp(st.emph, st.emphT, 1 - Math.pow(0.0001, dt));
       st.mat.color.copy(st.colIdle).lerp(st.colHot, st.emph);   // hue = information layer
       st.mat.opacity = 0.55 + st.emph * 0.4;
@@ -1041,7 +1120,7 @@ export function createScene(canvas, opts) {
     beacon.line.geometry.dispose(); beacon.line.material.dispose();
     grid.geometry.dispose(); grid.material.dispose();
     if (dust) { dust.geometry.dispose(); dust.material.dispose(); }
-    for (const st of stations) { st.line.geometry.dispose(); st.mat.dispose(); if (st.occ) st.occ.geometry.dispose(); if (st.seal) { st.seal.geometry.dispose(); st.seal.material.dispose(); } if (st.spinSubs) st.spinSubs.forEach(sp => sp.sub.children.forEach(c => c.geometry.dispose())); if (st.extra) st.extra.geometry.dispose(); st.group.children.forEach(c => { if (c.userData && c.userData.isFill) c.material.dispose(); }); }
+    for (const st of stations) { st.line.geometry.dispose(); st.mat.dispose(); if (st.occ) st.occ.geometry.dispose(); if (st.seal) { st.seal.geometry.dispose(); st.seal.material.dispose(); } if (st.spinSubs) st.spinSubs.forEach(sp => sp.sub.children.forEach(c => c.geometry.dispose())); if (st.extra) st.extra.geometry.dispose(); if (st.chart) { st.chart.line.geometry.dispose(); st.chart.occ.geometry.dispose(); } st.group.children.forEach(c => { if (c.userData && c.userData.isFill) c.material.dispose(); }); }
     occMat.dispose();
     if (bloomOn) {
       rtBright.dispose(); rtA.dispose(); rtB.dispose();
