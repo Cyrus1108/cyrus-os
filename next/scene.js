@@ -466,7 +466,12 @@ function buildTorii() {
   const occ = new THREE.Mesh(mergeSolid(solid), occluderMaterial());
   const g = new THREE.Group();
   g.add(occ); g.add(line);
-  g.position.set(0, 0, -16.5);                     // approach axis, south of DISCIPLINE
+  // approach axis, BETWEEN the morning station and the monument — the south
+  // camera (overview / DISCIPLINE stop) reads the deck THROUGH the gate, and
+  // the walk order tells the story: morning ritual → gate → the 90 days.
+  // (z −16.5 was tried first: the overview's steep look-down clips anything
+  //  that far south below the frame — the gate was simply never on screen.)
+  g.position.set(0, 0, -9.2);
   return { group: g, line, occ };
 }
 
