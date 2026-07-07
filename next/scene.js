@@ -212,24 +212,40 @@ function stationParts(id, rpg) {
         }],
         labelY: 3.7, pickR: 2.1,
       };
-    case 'ACADEMICS': {                  // 书堆 — stacked tomes + an open book on top
+    case 'ACADEMICS': {                  // 书堆 — cover shells + inset page blocks,
+      // varied thickness, staggered offsets, a BIG fanned open book on the summit
       const BOOKS = [
-        { w: 1.75, h: 0.24, d: 1.20, y: 0.12, ry: 0 },
-        { w: 1.55, h: 0.20, d: 1.05, y: 0.34, ry: 15 },
-        { w: 1.85, h: 0.26, d: 1.25, y: 0.57, ry: -9 },
-        { w: 1.45, h: 0.18, d: 0.95, y: 0.79, ry: 24 },
-        { w: 1.30, h: 0.16, d: 0.85, y: 0.96, ry: -18 },
+        { w: 1.85, h: 0.30, d: 1.30, y: 0.15, ry: 0, x: 0, z: 0 },
+        { w: 1.60, h: 0.22, d: 1.10, y: 0.41, ry: 14, x: 0.10, z: -0.06 },
+        { w: 1.95, h: 0.34, d: 1.32, y: 0.69, ry: -8, x: -0.08, z: 0.05 },
+        { w: 1.50, h: 0.20, d: 1.00, y: 0.96, ry: 26, x: 0.14, z: 0.02 },
+        { w: 1.35, h: 0.24, d: 0.92, y: 1.18, ry: -16, x: -0.05, z: -0.04 },
       ];
       const wire = [], solid = [];
       for (const b of BOOKS) {
-        const p = [0, b.y, 0], r = [0, b.ry * DEG, 0];
-        wire.push({ geo: B(b.w, b.h, b.d), pos: p, rot: r });
-        solid.push({ geo: B(b.w, b.h, b.d), pos: p, rot: r });
+        const r = [0, b.ry * DEG, 0];
+        // cover shell (also the occluder)
+        wire.push({ geo: B(b.w, b.h, b.d), pos: [b.x, b.y, b.z], rot: r });
+        solid.push({ geo: B(b.w, b.h, b.d), pos: [b.x, b.y, b.z], rot: r });
+        // page block — inset, peeking toward the fore-edge (offset rotated with
+        // the book so pages stay on the right side of the spine)
+        const fore = 0.05 * b.w;
+        const fx = Math.cos(b.ry * DEG) * fore, fz = -Math.sin(b.ry * DEG) * fore;
+        wire.push({ geo: B(b.w * 0.94, b.h * 0.56, b.d * 0.86), pos: [b.x + fx, b.y, b.z + fz], rot: r });
       }
-      // open book on the summit — two thin leaves meeting at the spine
-      wire.push({ geo: B(0.58, 0.04, 0.82), pos: [-0.26, 1.16, 0], rot: [0, 0, 22 * DEG] });
-      wire.push({ geo: B(0.58, 0.04, 0.82), pos: [0.26, 1.16, 0], rot: [0, 0, -22 * DEG] });
-      return { wire, solid, labelY: 2.7, pickR: 1.8 };
+      // open book on the summit — two main leaves + a smaller fanned page pair,
+      // slight yaw so it reads from the district camera
+      const oy = 1.38, yaw = 18 * DEG;
+      const leaf = (w, tilt, lift, off) => ({
+        geo: B(w, 0.045, 1.05),
+        pos: [Math.cos(yaw) * off, oy + lift, -Math.sin(yaw) * off],
+        rot: [0, yaw, tilt * DEG],
+      });
+      wire.push(leaf(0.85, 18, 0, -0.40));   // left cover leaf
+      wire.push(leaf(0.85, -18, 0, 0.40));   // right cover leaf
+      wire.push(leaf(0.72, 30, 0.05, -0.30)); // fanned page pair (lifted, steeper)
+      wire.push(leaf(0.72, -30, 0.05, 0.30));
+      return { wire, solid, labelY: 2.9, pickR: 1.9 };
     }
     case 'JP-N2':
       return {
