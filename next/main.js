@@ -1528,7 +1528,14 @@ async function main() {
   } else {
     scene.beginIntro();      // seed approach pose + slow pre-drift (behind boot)
     scene.start();           // render loop on immediately
-    runBoot(() => { scene.reveal(); decodeNameplate(); });
+    runBoot(() => {
+      scene.reveal(); decodeNameplate();
+      // re-measure Lenis at deck handoff: if it cached its scroll limit before
+      // layout settled (limit 0), every wheel clamps to target 0 — input eaten,
+      // camera parked — until a window resize. resize() also re-syncs
+      // target=actual, which is a no-op here (nothing scrolls during boot).
+      if (lenis) lenis.resize();
+    });
   }
 }
 
