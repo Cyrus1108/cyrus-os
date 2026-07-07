@@ -285,16 +285,28 @@ function stationParts(id, ctx) {
       S(B(0.5, 0.78, 0.08), [0.62, 0.39, 0.76]);
       wire.push({ geo: B(1.9, 0.04, 0.04), pos: [0, 2.06, 0.74] });
       for (let i = 0; i < 5; i++) wire.push({ geo: B(0.03, 0.24, 0.03), pos: [-0.8 + i * 0.4, 1.95, 0.74] });
-      // 石灯笼 — base / post / light box / pyramid cap
+      // 石灯笼 — base / post / GLOWING light box / pyramid cap
       S(B(0.32, 0.12, 0.32), [1.62, 0.06, 0.72]);
       wire.push({ geo: new THREE.CylinderGeometry(0.05, 0.07, 0.45, 6), pos: [1.62, 0.35, 0.72] });
-      S(B(0.26, 0.22, 0.26), [1.62, 0.68, 0.72]);
       wire.push({ geo: new THREE.CylinderGeometry(0.01, 0.24, 0.16, 4), pos: [1.62, 0.87, 0.72], rot: [0, 45 * DEG, 0] });
       // 庭院围篱 — two rails + posts, front-left
       wire.push({ geo: B(1.15, 0.035, 0.035), pos: [-1.75, 0.3, 0.8] });
       wire.push({ geo: B(1.15, 0.035, 0.035), pos: [-1.75, 0.52, 0.8] });
       for (let i = 0; i < 3; i++) wire.push({ geo: B(0.04, 0.6, 0.04), pos: [-2.25 + i * 0.5, 0.3, 0.8] });
-      return { wire, solid, labelY: 3.3, pickR: 2.0 };
+      // MOTIVATED night light — the house is INHABITED: lantern box + window
+      // panes + door crack glow warm, and one real point light pools on the
+      // ground around the lantern (per-station `lamp`, built in the loop).
+      const glowSolid = [
+        { geo: B(0.26, 0.22, 0.26), pos: [1.62, 0.68, 0.72] },        // lantern light box
+        { geo: B(0.95, 0.5, 0.02), pos: [-0.5, 0.62, 0.745] },        // ground-floor window pane
+        { geo: B(1.5, 0.42, 0.02), pos: [0, 1.56, 0.675] },           // upper window pane
+        { geo: B(0.06, 0.7, 0.02), pos: [0.4, 0.4, 0.805] },          // door crack
+      ];
+      return {
+        wire, solid, glowSolid, glowColor: 0xffb35c,
+        lamp: { pos: [1.62, 0.85, 0.9], color: 0xffa54d, intensity: 26, distance: 9 },
+        labelY: 3.3, pickR: 2.0,
+      };
     }
     case 'FINANCE': {                    // neoclassical bank — a real BUILDING,
       const wire = [], solid = [];       // not a flat facade (owner: 厚实、有深度)
@@ -521,13 +533,16 @@ function buildTorii() {
   ];
   const solid = wire.map(p => ({ geo: p.geo.clone(), pos: p.pos, rot: p.rot }));
   const line = new THREE.LineSegments(mergeEdges(wire),
-    new THREE.LineBasicMaterial({ color: 0x2f7d78, transparent: true, opacity: 0.62, toneMapped: false }));
+    new THREE.LineBasicMaterial({ color: 0x2f7d78, transparent: true, opacity: 0.16, toneMapped: false }));
   const occ = new THREE.Mesh(mergeSolid(solid), new THREE.MeshStandardMaterial({
     color: 0x64201a, roughness: 0.62, metalness: 0.08, side: THREE.DoubleSide,   // 朱红 vermilion(暗夜档)
     polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
   }));
+  // warm gate light under the lintel — the entrance is TENDED, not abandoned
+  const lamp = new THREE.PointLight(0xffa54d, 22, 10, 2);
+  lamp.position.set(0, 3.1, 0.3);
   const g = new THREE.Group();
-  g.add(occ); g.add(line);
+  g.add(occ); g.add(line); g.add(lamp);
   // approach axis, BETWEEN the morning station and the monument — the south
   // camera (overview / DISCIPLINE stop) reads the deck THROUGH the gate, and
   // the walk order tells the story: morning ritual → gate → the 90 days.
@@ -816,6 +831,7 @@ export function createScene(canvas, opts) {
     const sc = sunLight.shadow.camera;
     sc.left = -24; sc.right = 24; sc.top = 24; sc.bottom = -24; sc.near = 4; sc.far = 64;
     sunLight.shadow.bias = -0.0004; sunLight.shadow.normalBias = 0.02;
+    sunLight.shadow.radius = 3;                    // soft penumbra
   }
   scene.add(sunLight);
   scene.add(new THREE.HemisphereLight(0x27354d, 0x0b0e14, 0.5));
@@ -908,6 +924,22 @@ export function createScene(canvas, opts) {
       occ = new THREE.Mesh(mergeSolid(s.solid), bodyMat);
       occ.castShadow = occ.receiveShadow = shadowsOn;
       group.add(occ);
+    }
+    // motivated night light: emissive panes (windows/lanterns) + one warm
+    // point light pooling on the ground — the strongest "this is REAL" cue
+    if (s.glowSolid && s.glowSolid.length) {
+      const gm = new THREE.Mesh(mergeSolid(s.glowSolid), new THREE.MeshStandardMaterial({
+        color: 0x120b04, emissive: s.glowColor || 0xffb35c, emissiveIntensity: 1.25,
+      }));
+      gm.userData.isGlow = true;
+      if (bloomOn) gm.layers.enable(BLOOM_LAYER);
+      group.add(gm);
+    }
+    if (s.lamp) {
+      const pl = new THREE.PointLight(s.lamp.color || 0xffa54d, s.lamp.intensity || 20,
+        s.lamp.distance || 9, 2);
+      pl.position.set(...s.lamp.pos);
+      group.add(pl);
     }
     group.add(line);
     // optional toggleable sub-mesh (e.g. TRADING's wax seal): separate line, own
@@ -1267,7 +1299,7 @@ export function createScene(canvas, opts) {
       if (st.chart) chartUpdate(st, dt);
       st.emph = lerp(st.emph, st.emphT, 1 - Math.pow(0.0001, dt));
       st.mat.color.copy(st.colIdle).lerp(st.colHot, st.emph);   // hue = information layer
-      st.mat.opacity = 0.55 + st.emph * 0.4;
+      st.mat.opacity = 0.36 + st.emph * 0.55;   // edges recede idle (solids lead), wake on hover
     }
     pick();
     updateLabels();
@@ -1477,7 +1509,7 @@ export function createScene(canvas, opts) {
     walkers.path.geometry.dispose(); walkers.path.material.dispose();
     walkers.folk.geometry.dispose(); walkers.folk.material.dispose();
     if (dust) { dust.geometry.dispose(); dust.material.dispose(); }
-    for (const st of stations) { st.line.geometry.dispose(); st.mat.dispose(); if (st.bodyMat) st.bodyMat.dispose(); if (st.occ) st.occ.geometry.dispose(); if (st.seal) { st.seal.geometry.dispose(); st.seal.material.dispose(); } if (st.spinSubs) st.spinSubs.forEach(sp => sp.sub.children.forEach(c => { c.geometry.dispose(); if (c.userData && c.userData.isGlow) c.material.dispose(); })); if (st.extra) st.extra.geometry.dispose(); if (st.chart) { st.chart.line.geometry.dispose(); st.chart.occ.geometry.dispose(); } }
+    for (const st of stations) { st.line.geometry.dispose(); st.mat.dispose(); if (st.bodyMat) st.bodyMat.dispose(); if (st.occ) st.occ.geometry.dispose(); if (st.seal) { st.seal.geometry.dispose(); st.seal.material.dispose(); } if (st.spinSubs) st.spinSubs.forEach(sp => sp.sub.children.forEach(c => { c.geometry.dispose(); if (c.userData && c.userData.isGlow) c.material.dispose(); })); if (st.extra) st.extra.geometry.dispose(); if (st.chart) { st.chart.line.geometry.dispose(); st.chart.occ.geometry.dispose(); } st.group.children.forEach(c => { if (c.userData && c.userData.isGlow) { c.geometry.dispose(); c.material.dispose(); } }); }
     floor.geometry.dispose(); floor.material.dispose();
     if (scene.environment) scene.environment.dispose();
     if (bloomOn) {
