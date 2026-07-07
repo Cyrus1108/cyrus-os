@@ -247,22 +247,35 @@ function stationParts(id, rpg) {
       wire.push(leaf(0.72, -30, 0.05, 0.30));
       return { wire, solid, labelY: 2.9, pickR: 1.9 };
     }
-    case 'JP-N2':
-      return {
-        wire: [
-          { geo: B(0.14, 2.5, 0.14), pos: [-1.0, 1.25, 0] },
-          { geo: B(0.14, 2.5, 0.14), pos: [1.0, 1.25, 0] },
-          { geo: B(2.7, 0.2, 0.2), pos: [0, 2.55, 0] },
-          { geo: B(2.2, 0.12, 0.16), pos: [0, 1.95, 0] },
-        ],
-        solid: [
-          { geo: B(0.14, 2.5, 0.14), pos: [-1.0, 1.25, 0] },
-          { geo: B(0.14, 2.5, 0.14), pos: [1.0, 1.25, 0] },
-          { geo: B(2.7, 0.2, 0.2), pos: [0, 2.55, 0] },
-          { geo: B(2.2, 0.12, 0.16), pos: [0, 1.95, 0] },
-        ],
-        labelY: 3.5, pickR: 2.0,
-      };
+    case 'JP-N2': {                      // 町屋 — two-storey machiya, lantern, fence
+      // (the deck's grand torii moved to the entrance axis — see buildTorii)
+      const wire = [], solid = [];
+      const S = (geo, pos, rot) => { wire.push({ geo: geo.clone(), pos, rot }); solid.push({ geo, pos, rot }); };
+      // house — ground floor, skirt roof (披檐), inset upper floor, gable roof
+      S(B(2.2, 1.0, 1.5), [0, 0.5, 0]);
+      S(B(2.55, 0.06, 1.78), [0, 1.06, 0.06]);                       // 披檐 (slight front overhang)
+      S(B(2.0, 0.9, 1.35), [0, 1.52, 0]);
+      S(prismGeo(2.45, 0.92, 1.97, 2.5), [0, 0, 0]);                 // gable roof, side gables
+      // 格子窗 — ground floor (framed, 4 bars) + upper floor (5 bars)
+      wire.push({ geo: B(0.95, 0.5, 0.04), pos: [-0.5, 0.62, 0.76] });
+      for (let i = 0; i < 4; i++) wire.push({ geo: B(0.028, 0.5, 0.028), pos: [-0.86 + i * 0.24, 0.62, 0.77] });
+      wire.push({ geo: B(1.5, 0.42, 0.04), pos: [0, 1.56, 0.69] });
+      for (let i = 0; i < 5; i++) wire.push({ geo: B(0.028, 0.42, 0.028), pos: [-0.6 + i * 0.3, 1.56, 0.70] });
+      // door + balcony railing
+      S(B(0.5, 0.78, 0.08), [0.62, 0.39, 0.76]);
+      wire.push({ geo: B(1.9, 0.04, 0.04), pos: [0, 2.06, 0.74] });
+      for (let i = 0; i < 5; i++) wire.push({ geo: B(0.03, 0.24, 0.03), pos: [-0.8 + i * 0.4, 1.95, 0.74] });
+      // 石灯笼 — base / post / light box / pyramid cap
+      S(B(0.32, 0.12, 0.32), [1.62, 0.06, 0.72]);
+      wire.push({ geo: new THREE.CylinderGeometry(0.05, 0.07, 0.45, 6), pos: [1.62, 0.35, 0.72] });
+      S(B(0.26, 0.22, 0.26), [1.62, 0.68, 0.72]);
+      wire.push({ geo: new THREE.CylinderGeometry(0.01, 0.24, 0.16, 4), pos: [1.62, 0.87, 0.72], rot: [0, 45 * DEG, 0] });
+      // 庭院围篱 — two rails + posts, front-left
+      wire.push({ geo: B(1.15, 0.035, 0.035), pos: [-1.75, 0.3, 0.8] });
+      wire.push({ geo: B(1.15, 0.035, 0.035), pos: [-1.75, 0.52, 0.8] });
+      for (let i = 0; i < 3; i++) wire.push({ geo: B(0.04, 0.6, 0.04), pos: [-2.25 + i * 0.5, 0.3, 0.8] });
+      return { wire, solid, labelY: 3.3, pickR: 2.0 };
+    }
     case 'FINANCE': {                    // neoclassical bank — a real BUILDING,
       const wire = [], solid = [];       // not a flat facade (owner: 厚实、有深度)
       // 3 stylobate steps, deep — they run back under the whole hall
