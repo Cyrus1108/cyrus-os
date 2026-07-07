@@ -521,7 +521,7 @@ function buildTorii() {
   ];
   const solid = wire.map(p => ({ geo: p.geo.clone(), pos: p.pos, rot: p.rot }));
   const line = new THREE.LineSegments(mergeEdges(wire),
-    new THREE.LineBasicMaterial({ color: 0x2f7d78, transparent: true, opacity: 0.62 }));
+    new THREE.LineBasicMaterial({ color: 0x2f7d78, transparent: true, opacity: 0.62, toneMapped: false }));
   const occ = new THREE.Mesh(mergeSolid(solid), new THREE.MeshStandardMaterial({
     color: 0x64201a, roughness: 0.62, metalness: 0.08, side: THREE.DoubleSide,   // 朱红 vermilion(暗夜档)
     polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
@@ -576,11 +576,11 @@ function buildSakura(withPetals) {
   const lg = new THREE.BufferGeometry();
   lg.setAttribute('position', new THREE.Float32BufferAttribute(linePos, 3));
   const lines = new THREE.LineSegments(lg,
-    new THREE.LineBasicMaterial({ color: 0x7a5a63, transparent: true, opacity: 0.7 }));
+    new THREE.LineBasicMaterial({ color: 0x7a5a63, transparent: true, opacity: 0.7, toneMapped: false }));
   const cg = new THREE.BufferGeometry();
   cg.setAttribute('position', new THREE.Float32BufferAttribute(canopyPos, 3));
   const canopy = new THREE.Points(cg, new THREE.PointsMaterial({
-    color: 0xF2A8C6, size: 0.085, transparent: true, opacity: 0.8, sizeAttenuation: true, depthWrite: false }));
+    color: 0xF2A8C6, size: 0.085, transparent: true, opacity: 0.8, sizeAttenuation: true, depthWrite: false, toneMapped: false }));
   const group = new THREE.Group();
   group.add(lines); group.add(canopy);
   let petals = null;
@@ -654,7 +654,7 @@ function buildWalkers() {
   const sg = new THREE.BufferGeometry();
   sg.setAttribute('position', new THREE.Float32BufferAttribute(slabs, 3));
   const path = new THREE.LineSegments(sg,
-    new THREE.LineBasicMaterial({ color: 0x5a6360, transparent: true, opacity: 0.5 }));
+    new THREE.LineBasicMaterial({ color: 0x5a6360, transparent: true, opacity: 0.5, toneMapped: false }));
   // -- pedestrians (dynamic) -------------------------------------------------
   const WALKERS = [
     { pts: [[-3, -8.2], [3, -8.2], [4.2, -10.6], [0, -11.7], [-4.2, -10.6]], loop: true, speed: 0.55, stride: 5.2, u: 0.1 },
@@ -674,7 +674,7 @@ function buildWalkers() {
   const warr = new Float32Array(WALKERS.length * 6 * 2 * 3);
   wg.setAttribute('position', new THREE.BufferAttribute(warr, 3).setUsage(THREE.DynamicDrawUsage));
   const folk = new THREE.LineSegments(wg,
-    new THREE.LineBasicMaterial({ color: 0x9aa08a, transparent: true, opacity: 0.85 }));
+    new THREE.LineBasicMaterial({ color: 0x9aa08a, transparent: true, opacity: 0.85, toneMapped: false }));
   folk.frustumCulled = false;
   function sample(w, u) {
     // u∈[0,1) along the (looped or ping-pong) polyline → {x, z, dx, dz}
@@ -888,7 +888,7 @@ export function createScene(canvas, opts) {
   for (const def of mock.stations) {
     const s = stationParts(def.id, mock);
     const line = new THREE.LineSegments(mergeEdges(s.wire),
-      new THREE.LineBasicMaterial({ color: 0x6d6a1c, transparent: true, opacity: reducedMotion ? 0.9 : 0 }));
+      new THREE.LineBasicMaterial({ color: 0x6d6a1c, transparent: true, opacity: reducedMotion ? 0.9 : 0, toneMapped: false }));
     if (bloomOn) line.layers.enable(BLOOM_LAYER);   // every station feeds a soft holo-glow;
     const group = new THREE.Group();                 // hover brightens the colour → glow wakes up
     // station hue → idle (dimmed, slightly desaturated) / hot (brightened) pair
@@ -915,7 +915,7 @@ export function createScene(canvas, opts) {
     let seal = null;
     if (s.sealWire && s.sealWire.length) {
       seal = new THREE.LineSegments(mergeEdges(s.sealWire),
-        new THREE.LineBasicMaterial({ color: 0xd8c24a, transparent: true, opacity: 0 }));
+        new THREE.LineBasicMaterial({ color: 0xd8c24a, transparent: true, opacity: 0, toneMapped: false }));
       seal.visible = false;
       if (bloomOn) seal.layers.enable(BLOOM_LAYER);      // glows while shown
       group.add(seal);
@@ -1663,7 +1663,7 @@ function buildBeacon(mock, topY) {
   const base = topY(i) + 0.15, top = Math.max(base + 1.6, 6.6);
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute([x, base, z, x, top, z], 3));
-  const mat = new THREE.LineBasicMaterial({ color: 0x38d9d0, transparent: true, opacity: 0 });
+  const mat = new THREE.LineBasicMaterial({ color: 0x38d9d0, transparent: true, opacity: 0, toneMapped: false });
   return { line: new THREE.LineSegments(g, mat), x, z, topY: top };
 }
 
@@ -1675,7 +1675,7 @@ function buildTodayGlow(mock, pillars) {
   for (const [a, b] of PILLAR_EDGES) { pos.push(...c[a], ...c[b]); }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  const line = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0xefe000, transparent: true, opacity: 0 }));
+  const line = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0xefe000, transparent: true, opacity: 0, toneMapped: false }));
   line.layers.set(BLOOM_LAYER);        // bloom pass only — real pillar drawn by pillars.mesh
   return line;
 }
