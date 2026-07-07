@@ -69,7 +69,9 @@ const DISTRICTS = [
     slots: ['ACADEMICS', 'JP-N2', 'MORNING', 'TRADING', 'TODOS'] },
   // OPERATIONS — the big apps; right sector. Batch 1: FINANCE (centered);
   // FITNESS/AI/CALENDAR/WISHLIST reserved for later batches.
-  { id: 'OPERATIONS', az: 0, r: 14, arc: 100, phi: 62,
+  // phi 68 → lower, more frontal camera: the bank facade reads face-on instead
+  // of being crushed under a ~50° look-down (it's the only station until B4).
+  { id: 'OPERATIONS', az: 0, r: 14, arc: 100, phi: 68,
     slots: ['FITNESS', 'AI', 'FINANCE', 'CALENDAR', 'WISHLIST'] },
   // ASCENSION — the game layer; back sector, behind the monument. Batch 1:
   // SYSTEM (centered, spacers hold room for the real RPG later). Pulled IN and
