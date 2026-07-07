@@ -144,15 +144,31 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => (
 // Hand-rolled (rAF), cheap, cancellable. reduced-motion → final text instantly.
 // Purely presentational: only writes el.textContent, never touches data.
 const SCRAMBLE_GLYPHS = '▚▞▛▜░▒▓#<>/\\|=+*·:.—_0123456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+// active-scramble registry + ONE global listener: if the tab is backgrounded
+// mid-scramble, settle every running scramble to its final text immediately
+// (rAF is throttled/paused while hidden, which would freeze a garbage frame).
+const _activeScrambles = new Set();
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) for (const fin of [..._activeScrambles]) fin();
+  });
+}
 function scramble(el, finalText, dur = 460) {
   if (!el) return;
   const text = finalText != null ? finalText : el.textContent;
   if (REDUCED || !text) { el.textContent = text || ''; return; }
   if (el._scrRAF) cancelAnimationFrame(el._scrRAF);
+  if (el._scrFin) _activeScrambles.delete(el._scrFin);           // drop a superseded finalizer
   const chars = [...text];
   const settleAt = chars.map(() => 0.15 + Math.random() * 0.6);   // per-char lock-in
   const g = SCRAMBLE_GLYPHS, gl = g.length;
   const start = (typeof performance !== 'undefined' ? performance : Date).now();
+  const finalize = () => {
+    if (el._scrRAF) cancelAnimationFrame(el._scrRAF);
+    el._scrRAF = null; el.textContent = text;
+    _activeScrambles.delete(finalize); el._scrFin = null;
+  };
+  el._scrFin = finalize; _activeScrambles.add(finalize);
   const step = (t) => {
     const p = Math.min(1, (t - start) / dur);
     let out = '';
@@ -162,7 +178,7 @@ function scramble(el, finalText, dur = 460) {
     }
     el.textContent = out;
     if (p < 1) { el._scrRAF = requestAnimationFrame(step); }
-    else { el.textContent = text; el._scrRAF = null; }
+    else { finalize(); }                                          // settle + deregister
   };
   el._scrRAF = requestAnimationFrame(step);
 }
@@ -1154,6 +1170,13 @@ function renderTradingDeskBody(st, scene) {
   }
   body.querySelectorAll('.hud-v .num').forEach(countUp);
 }
+// mirror the trading desk's sealed state onto the 3D monument (盘前封条 ring).
+// pulse=true adds a one-time bloom flash — only when a user action seals it.
+function syncTradingSeal(scene, pulse = false) {
+  if (!scene || !scene.setTradingSealed) return;
+  const desk = DATA._tradingDesk;
+  scene.setTradingSealed(!!(desk && desk.sealed), pulse);
+}
 async function onDeskItemClick(btn, scene) {
   const desk = DATA._tradingDesk; if (!desk || desk.sealed) return;
   const id = btn.dataset.tdid;
@@ -1195,9 +1218,10 @@ async function onDeskSeal(scene) {
   try {
     DATA._tradingDesk = await DB.sealTradingDesk(prev);
     rebuildTradingDeskStation(); refreshOpenStation('TRADING', scene);
+    syncTradingSeal(scene, true);                          // materialize the ring (+bloom pulse)
     if (audio.hud) audio.hud();                            // 印章 / quest cue
     setLink('ok');
-  } catch (err) { setLink('down'); }
+  } catch (err) { syncTradingSeal(scene); setLink('down'); }   // revert → reflect true state
 }
 async function onDeskUnseal(scene) {
   const desk = DATA._tradingDesk; if (!desk || !desk.sealed) return;
@@ -1207,8 +1231,9 @@ async function onDeskUnseal(scene) {
   try {
     DATA._tradingDesk = await DB.unsealTradingDesk(prev);
     rebuildTradingDeskStation(); refreshOpenStation('TRADING', scene);
+    syncTradingSeal(scene);                                // dissolve the ring
     setLink('ok');
-  } catch (err) { setLink('down'); }
+  } catch (err) { syncTradingSeal(scene); setLink('down'); }   // revert → reflect true state
 }
 
 function buildLiveData(loaded, session) {
@@ -1398,6 +1423,9 @@ async function main() {
     const el = scene.labelFor(s.id); if (!el) return;
     const nm = el.querySelector('.lbl-name'); if (nm) nm.dataset.full = nm.textContent;
   });
+  // reflect the (already-loaded) trading desk seal state on the monument — no
+  // bloom pulse on this initial sync. Covers both LIVE and DEMO (mock desk).
+  syncTradingSeal(scene, false);
   // decode-in the deck nameplate once the boot ceremony hands off to the deck.
   const decodeNameplate = () => { const np = document.querySelector('.np-main'); if (np) scramble(np, np.textContent, 620); };
 
@@ -1452,9 +1480,32 @@ async function main() {
   hudEl.addEventListener('click', (e) => { if (e.target === hudEl) closeHUD(scene); });
 
   // ── Lenis smooth scroll → camera advance ────────────────────────────────────
+  // + magnetic snap (ease to nearest tour stop after ~1s idle) and district
+  // annunciation (scramble-decode the sector name into the readout on arrival).
   if (!REDUCED && Lenis) {
     lenis = new Lenis({ lerp: 0.08, wheelMultiplier: 0.9 });
-    lenis.on('scroll', ({ scroll, limit }) => { scene.setScroll(limit > 0 ? scroll / limit : 0); });
+    let snapTimer = 0, lastStopId = null;
+    const annunciate = (id) => {
+      if (hudOpen || scene.hovered) return;                // hover / HUD own the readout
+      scramble(readout, id === '__overview' ? 'DECK · IDLE' : 'SECTOR · ' + id, 420);
+    };
+    lenis.on('scroll', ({ scroll, limit }) => {
+      const frac = limit > 0 ? scroll / limit : 0;
+      scene.setScroll(frac);
+      // arrival at a new nearest stop → announce the sector
+      const id = scene.nearestStopId();
+      if (id !== lastStopId) { lastStopId = id; annunciate(id); }
+      // magnetic snap: fires only after scroll input goes idle; never fights an
+      // active scroll (each event resets the timer), skips if already parked.
+      clearTimeout(snapTimer);
+      if (limit <= 0) return;
+      snapTimer = setTimeout(() => {
+        if (scene.mode !== 'deck' || hudOpen) return;       // don't disturb focus / HUD
+        const snap = scene.nearestStop();
+        if (Math.abs(snap - frac) < 0.004) return;          // already at a stop
+        lenis.scrollTo(snap * limit, { duration: 0.7 });    // gentle ease-in
+      }, 1000);
+    });
     const raf = (t) => { lenis.raf(t); requestAnimationFrame(raf); };
     requestAnimationFrame(raf);
   }

@@ -60,35 +60,38 @@ function pillarCorners(i, h) {
 // never an empty station. Placement is deterministic — slots spread evenly
 // across [az-arc/2 … az+arc/2] at the district radius — so a module added later
 // lands exactly where the gap was held.
+// A district MAY carry `y` (default 0) — a group elevation shared by its slots,
+// so "ascension" reads vertically (a floating dais) instead of by exile-distance.
 const DISTRICTS = [
   // DISCIPLINE — the daily cockpit; closest to the monument, front arc (faces
   // the resting camera). Batch 1: all five instantiated.
-  { id: 'DISCIPLINE', az: -90, r: 13.5, arc: 104, phi: 60,
+  { id: 'DISCIPLINE', az: -90, r: 12, arc: 100, phi: 60,
     slots: ['ACADEMICS', 'JP-N2', 'MORNING', 'TRADING', 'TODOS'] },
-  // OPERATIONS — the big apps; right sector, pulled outward. Batch 1: FINANCE
-  // (centered); FITNESS/AI/CALENDAR/WISHLIST reserved for later batches.
-  { id: 'OPERATIONS', az: 0, r: 17.5, arc: 116, phi: 62,
+  // OPERATIONS — the big apps; right sector. Batch 1: FINANCE (centered);
+  // FITNESS/AI/CALENDAR/WISHLIST reserved for later batches.
+  { id: 'OPERATIONS', az: 0, r: 14, arc: 100, phi: 62,
     slots: ['FITNESS', 'AI', 'FINANCE', 'CALENDAR', 'WISHLIST'] },
   // ASCENSION — the game layer; back sector, behind the monument. Batch 1:
-  // SYSTEM (centered, spacers hold room for the real RPG later).
-  { id: 'ASCENSION', az: 90, r: 16, arc: 64, phi: 62,
+  // SYSTEM (centered, spacers hold room for the real RPG later). Pulled IN and
+  // lifted UP (y): ascension is expressed by elevation, not by distance.
+  { id: 'ASCENSION', az: 90, r: 11.5, arc: 56, phi: 58, y: 2.6,
     slots: ['__asc_l', 'SYSTEM', '__asc_r'] },
   // CREED — belief / resilience; left sector. All reserved for a later batch.
-  { id: 'CREED', az: 180, r: 17.5, arc: 80, phi: 62,
+  { id: 'CREED', az: 180, r: 13.5, arc: 72, phi: 62,
     slots: ['PRINCIPLES', 'LOWDAY', 'MOTIVATION'] },
 ];
 // derive per-slot world positions (once) + per-district framing info.
-const STATION_LAYOUT = {};   // id → { x, z, az, districtId }   (real modules only)
-const DISTRICT_INFO = {};    // id → { az, r, phi, cx, cz }     (centroid on its axis)
+const STATION_LAYOUT = {};   // id → { x, y, z, az, districtId }  (real modules only)
+const DISTRICT_INFO = {};    // id → { az, r, phi, y, cx, cz }    (centroid on its axis)
 for (const d of DISTRICTS) {
-  const n = d.slots.length, caz = d.az * DEG;
-  DISTRICT_INFO[d.id] = { az: d.az, r: d.r, phi: d.phi, cx: Math.cos(caz) * d.r, cz: Math.sin(caz) * d.r };
+  const n = d.slots.length, caz = d.az * DEG, dy = d.y || 0;
+  DISTRICT_INFO[d.id] = { az: d.az, r: d.r, phi: d.phi, y: dy, cx: Math.cos(caz) * d.r, cz: Math.sin(caz) * d.r };
   for (let k = 0; k < n; k++) {
     const id = d.slots[k];
     if (!id || id.startsWith('__')) continue;                    // spacer → hold a gap
     const az = n === 1 ? d.az : d.az - d.arc / 2 + d.arc * (k / (n - 1));
     const a = az * DEG;
-    STATION_LAYOUT[id] = { x: Math.cos(a) * d.r, z: Math.sin(a) * d.r, az, districtId: d.id };
+    STATION_LAYOUT[id] = { x: Math.cos(a) * d.r, y: dy, z: Math.sin(a) * d.r, az, districtId: d.id };
   }
 }
 
@@ -202,7 +205,43 @@ function stationParts(id) {
         ],
         labelY: 3.5, pickR: 2.0,
       };
-    case 'FINANCE': {                    // K線碑 — candlestick ledger monument
+    case 'FINANCE': {                    // neoclassical bank facade (hidden-line)
+      const wire = [], solid = [];
+      // 3 stacked stylobate steps (each wider than the one above)
+      const STEPS = [
+        { w: 3.2, d: 1.5, y: 0.08 },
+        { w: 2.9, d: 1.32, y: 0.24 },
+        { w: 2.6, d: 1.15, y: 0.40 },
+      ];
+      for (const s of STEPS) {
+        const g = B(s.w, 0.16, s.d), p = [0, s.y, 0];
+        wire.push({ geo: g.clone(), pos: p }); solid.push({ geo: g, pos: p });
+      }
+      const topStep = 0.48;                        // top face of the 3rd step
+      // 6 hexagonal columns evenly spaced across ~2.3 width, standing on the step
+      const nCol = 6, span = 2.3, colH = 1.55, colY = topStep + colH / 2;
+      for (let i = 0; i < nCol; i++) {
+        const x = -span / 2 + span * (i / (nCol - 1));
+        wire.push({ geo: new THREE.CylinderGeometry(0.09, 0.09, colH, 6), pos: [x, colY, 0] });
+      }
+      const colTop = topStep + colH;               // 2.03
+      // entablature across the column tops
+      const entY = colTop + 0.11;
+      const entG = () => B(2.7, 0.22, 0.5);
+      wire.push({ geo: entG(), pos: [0, entY, 0] }); solid.push({ geo: entG(), pos: [0, entY, 0] });
+      // triangular pediment gable sitting on the entablature
+      const pedBase = colTop + 0.22, pedApex = pedBase + 0.82;
+      wire.push({ geo: prismGeo(2.7, 0.25, pedBase, pedApex) });
+      solid.push({ geo: prismGeo(2.7, 0.25, pedBase, pedApex) });
+      // recessed dark door centred behind the middle columns (wire + solid)
+      const doorG = () => B(0.7, 1.05, 0.12);
+      wire.push({ geo: doorG(), pos: [0, topStep + 0.52, -0.15] });
+      solid.push({ geo: doorG(), pos: [0, topStep + 0.52, -0.15] });
+      // single slab behind the colonnade → the columns read with depth occlusion
+      solid.push({ geo: B(2.35, 1.62, 0.12), pos: [0, 1.28, -0.34] });
+      return { wire, solid, labelY: 3.8, pickR: 2.0 };
+    }
+    case 'TRADING': {                    // K線 — holographic price-chart monument
       const C = [
         { x: -1.0, bLo: 0.6, bHi: 1.6, wLo: 0.3, wHi: 1.9 },
         { x: -0.5, bLo: 1.6, bHi: 2.4, wLo: 1.3, wHi: 2.8 },
@@ -218,23 +257,19 @@ function stationParts(id) {
         wire.push({ geo: B(0.05, c.bLo - c.wLo, 0.05), pos: [c.x, (c.bLo + c.wLo) / 2, 0] });
         solid.push({ geo: B(0.32, bh, 0.32), pos: [c.x, by, 0] });
       }
-      return { wire, solid, labelY: 3.9, pickR: 1.9 };
+      // minimal axis frame → the candles read as a chart, not random posts
+      wire.push({ geo: B(2.7, 0.05, 0.05), pos: [0, 0.32, 0] });        // baseline rail
+      wire.push({ geo: B(0.05, 3.0, 0.05), pos: [-1.35, 1.82, 0] });    // left value axis
+      // 盘前封条 — wax-seal ring that MATERIALIZES on the monument when sealed.
+      // Built into a separate LineSegments (st.seal) by the station loop below,
+      // toggled by setTradingSealed(). Floats over/in-front-of the chart.
+      const sealWire = [
+        { geo: new THREE.TorusGeometry(0.55, 0.06, 4, 24), pos: [0, 2.15, 0.45] },
+        { geo: B(0.06, 0.9, 0.06), pos: [-0.32, 1.5, 0.45], rot: [0, 0, 32 * DEG] },   // ribbon strokes
+        { geo: B(0.06, 0.9, 0.06), pos: [0.32, 1.5, 0.45], rot: [0, 0, -32 * DEG] },
+      ];
+      return { wire, solid, sealWire, labelY: 3.9, pickR: 1.9 };
     }
-    case 'TRADING':                      // 盘前封条 — a commitment stele with a wax-seal ring
-      return {
-        wire: [
-          { geo: B(1.9, 2.5, 0.34), pos: [0, 1.6, 0] },                              // upright tablet
-          { geo: B(2.4, 0.4, 1.0), pos: [0, 0.2, 0] },                               // base plinth
-          { geo: new THREE.TorusGeometry(0.5, 0.06, 4, 20), pos: [0, 1.78, 0.2] },   // wax-seal ring (on the face)
-          { geo: B(1.3, 0.05, 0.05), pos: [-0.1, 2.28, 0.18] },                      // checklist rules
-          { geo: B(1.3, 0.05, 0.05), pos: [-0.1, 1.02, 0.18] },
-        ],
-        solid: [
-          { geo: B(1.9, 2.5, 0.34), pos: [0, 1.6, 0] },
-          { geo: B(2.4, 0.4, 1.0), pos: [0, 0.2, 0] },
-        ],
-        labelY: 3.5, pickR: 1.9,
-      };
     case 'TODOS':
       return {
         wire: [
@@ -253,13 +288,21 @@ function stationParts(id) {
       };
     case 'SYSTEM':
     default:
+      // SYSTEM's group sits elevated (ASCENSION.y); the hex dais is the floating
+      // platform under the core, the hairline tethers it from deck level (local
+      // y ≈ -2.6, i.e. world 0) up to the dais underside.
       return {
         wire: [
           { geo: new THREE.IcosahedronGeometry(1.35, 0), pos: [0, 1.6, 0] },
           { geo: new THREE.TorusGeometry(1.7, 0.02, 4, 28), pos: [0, 1.6, 0], rot: [24 * DEG, 0, 0] },
           { geo: new THREE.TorusGeometry(1.7, 0.02, 4, 28), pos: [0, 1.6, 0], rot: [90 * DEG, 0, 32 * DEG] },
+          { geo: new THREE.CylinderGeometry(1.5, 1.7, 0.18, 6), pos: [0, 0, 0] },     // floating hex dais
+          { geo: B(0.03, 2.51, 0.03), pos: [0, -1.345, 0] },                          // hairline tether to deck
         ],
-        solid: [{ geo: new THREE.IcosahedronGeometry(1.32, 0), pos: [0, 1.6, 0] }],
+        solid: [
+          { geo: new THREE.IcosahedronGeometry(1.32, 0), pos: [0, 1.6, 0] },
+          { geo: new THREE.CylinderGeometry(1.5, 1.7, 0.18, 6), pos: [0, 0, 0] },
+        ],
         labelY: 3.4, pickR: 2.0, spin: true,
       };
   }
@@ -285,7 +328,7 @@ export function createScene(canvas, opts) {
 
   // -- camera state (spherical orbit around target) ---------------------------
   const cam = {
-    baseTheta: -90 * DEG, basePhi: 58 * DEG, baseRadius: 30,
+    baseTheta: -90 * DEG, basePhi: 58 * DEG, baseRadius: 27,
     dragYaw: 0, dragPitch: 0, dragYawT: 0, dragPitchT: 0,
     scroll: 0, mode: reducedMotion ? 'static' : 'deck',
     intro: reducedMotion ? 0 : 1,     // 1 = high approach pose, 0 = deck base
@@ -333,8 +376,18 @@ export function createScene(canvas, opts) {
     let occ = null;
     if (s.solid && s.solid.length) { occ = new THREE.Mesh(mergeSolid(s.solid), occMat); group.add(occ); }
     group.add(line);
-    const L = STATION_LAYOUT[def.id] || { x: 0, z: 0, districtId: null };
-    group.position.set(L.x, 0, L.z);
+    // optional toggleable sub-mesh (e.g. TRADING's wax seal): separate line, own
+    // material, hidden until a flag turns it on. Same family, slightly brighter.
+    let seal = null;
+    if (s.sealWire && s.sealWire.length) {
+      seal = new THREE.LineSegments(mergeEdges(s.sealWire),
+        new THREE.LineBasicMaterial({ color: 0xd8c24a, transparent: true, opacity: 0 }));
+      seal.visible = false;
+      if (bloomOn) seal.layers.enable(BLOOM_LAYER);      // glows while shown
+      group.add(seal);
+    }
+    const L = STATION_LAYOUT[def.id] || { x: 0, y: 0, z: 0, districtId: null };
+    group.position.set(L.x, L.y || 0, L.z);
     const pick = new THREE.Mesh(new THREE.SphereGeometry(s.pickR, 8, 6),
       new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
     pick.position.y = s.labelY * 0.5;
@@ -342,7 +395,7 @@ export function createScene(canvas, opts) {
     group.add(pick); pickMeshes.push(pick);
     const anchor = new THREE.Object3D(); anchor.position.y = s.labelY; group.add(anchor);
     scene.add(group);
-    stations.push({ id: def.id, group, mat: line.material, line, occ, anchor, def, spin: !!s.spin, emph: 0, emphT: 0, districtId: L.districtId || null });
+    stations.push({ id: def.id, group, mat: line.material, line, occ, seal, anchor, def, spin: !!s.spin, emph: 0, emphT: 0, districtId: L.districtId || null });
   }
 
   // districts that actually have a station this batch → the scroll tour's stops.
@@ -521,8 +574,8 @@ export function createScene(canvas, opts) {
     const outward = new THREE.Vector3(sp.x, 0, sp.z).normalize();
     fp.p0.copy(camera.position);
     fp.t0.set(target.x, target.y, target.z);
-    fp.p1.set(sp.x + outward.x * 5.2, 4.6, sp.z + outward.z * 5.2);
-    fp.t1.set(sp.x, 1.5, sp.z);
+    fp.p1.set(sp.x + outward.x * 5.2, 4.6 + sp.y * 0.9, sp.z + outward.z * 5.2);   // respect station elevation
+    fp.t1.set(sp.x, 1.5 + sp.y, sp.z);
     fp.c.copy(fp.p0).add(fp.p1).multiplyScalar(0.5);
     fp.c.y += 3.2;
     fp.c.addScaledVector(outward, 2.4);                // bulge outward → banked arc
@@ -718,6 +771,38 @@ export function createScene(canvas, opts) {
     }
   }
   function pulseBloom() { cam.bloomPulse = 1; }
+  // TRADING wax-seal: materialize / dissolve the seal sub-mesh on the monument.
+  // Drives the same state the HUD shows (盘前封盘). Soft fade + a one-time bloom
+  // pulse when turning ON (motion allowing); reduced-motion → instant toggle.
+  function setTradingSealed(on, pulse = true) {
+    const st = stations.find(s => s.id === 'TRADING');
+    if (!st || !st.seal) return;
+    const seal = st.seal;
+    if (reducedMotion || !gsap) {
+      seal.visible = !!on; seal.material.opacity = on ? 0.95 : 0;
+      if (!running) renderOnce();
+      return;
+    }
+    gsap.killTweensOf(seal.material);
+    if (on) {
+      seal.visible = true;
+      gsap.to(seal.material, { opacity: 0.95, duration: 0.5, ease: 'power2.out' });
+      if (pulse) pulseBloom();
+    } else {
+      gsap.to(seal.material, { opacity: 0, duration: 0.35, ease: 'power2.in',
+        onComplete: () => { seal.visible = false; } });
+    }
+  }
+  // magnetic-snap helpers for the Lenis tour (main.js owns Lenis): the nearest
+  // tour stop as a 0..1 scroll fraction, and its id (for district annunciation).
+  function nearestStop() {
+    const n = TOUR.length; if (n <= 1) return 0;
+    return Math.round(clamp(cam.scroll, 0, 1) * (n - 1)) / (n - 1);
+  }
+  function nearestStopId() {
+    const n = TOUR.length; if (n <= 1) return TOUR[0];
+    return TOUR[Math.round(clamp(cam.scroll, 0, 1) * (n - 1))];
+  }
   // on-demand hit test against the pillar array at the current pointer ndc —
   // returns the day index under the cursor/tap, or null. Used to open THE 90 log
   // (works on mobile where per-frame pillar hover is disabled).
@@ -751,7 +836,7 @@ export function createScene(canvas, opts) {
     beacon.line.geometry.dispose(); beacon.line.material.dispose();
     grid.geometry.dispose(); grid.material.dispose();
     if (dust) { dust.geometry.dispose(); dust.material.dispose(); }
-    for (const st of stations) { st.line.geometry.dispose(); st.mat.dispose(); if (st.occ) st.occ.geometry.dispose(); }
+    for (const st of stations) { st.line.geometry.dispose(); st.mat.dispose(); if (st.occ) st.occ.geometry.dispose(); if (st.seal) { st.seal.geometry.dispose(); st.seal.material.dispose(); } }
     occMat.dispose();
     if (bloomOn) {
       rtBright.dispose(); rtA.dispose(); rtB.dispose();
@@ -765,6 +850,7 @@ export function createScene(canvas, opts) {
     start, stop, renderOnce, reveal, beginIntro, resize, dispose, pulseBloom,
     setScroll, applyDrag, setPointer, highlight, focusStation, returnDeck,
     frameDistrict, clearDistrict, pickPillar, setTodayScore,
+    setTradingSealed, nearestStop, nearestStopId,
     get mode() { return cam.mode; }, get hovered() { return hovered; },
     get pillarHovered() { return pillarHovered; },
     get districts() { return TOUR.slice(1); },
