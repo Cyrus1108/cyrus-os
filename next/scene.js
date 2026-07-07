@@ -487,10 +487,10 @@ function buildEnvironment(renderer) {
     const mesh = new THREE.Mesh(geo, m);
     mesh.position.set(x, y, z); mesh.scale.set(sx, sy, sz); s.add(mesh);
   };
-  add(0x8fb8ff, 4.5, 0, 9, 0, 14, 0.4, 14);      // cool ceiling (the moonlight)
-  add(0xEFE000, 1.1, -9, 3.2, 0, 0.4, 4, 7);     // faint console-yellow wall
-  add(0x38D9D0, 0.8, 9, 2.6, 4, 0.4, 3, 5);      // cyan accent panel
-  add(0x141a26, 1.0, 0, -2.5, 0, 16, 0.4, 16);   // dark floor bounce
+  add(0x8fb8ff, 0.85, 0, 9, 0, 14, 0.4, 14);     // cool ceiling (the moonlight)
+  add(0xEFE000, 0.30, -9, 3.2, 0, 0.4, 4, 7);    // faint console-yellow wall
+  add(0x38D9D0, 0.22, 9, 2.6, 4, 0.4, 3, 5);     // cyan accent panel
+  add(0x0a0d14, 0.5, 0, -2.5, 0, 16, 0.4, 16);   // dark floor bounce
   const pm = new THREE.PMREMGenerator(renderer);
   const rt = pm.fromScene(s, 0.08);
   pm.dispose(); geo.dispose(); mats.forEach(m => m.dispose());
@@ -799,7 +799,7 @@ export function createScene(canvas, opts) {
   renderer.shadowMap.enabled = shadowsOn;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.12;
+  renderer.toneMappingExposure = 0.95;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   const scene = new THREE.Scene();
@@ -808,7 +808,7 @@ export function createScene(canvas, opts) {
   // cool "moon" key light (casts the deck's shadows) + soft sky/ground fill;
   // PBR reflections come from a hand-built emissive room captured via PMREM —
   // no external HDRI (the site ships no third-party assets).
-  const sunLight = new THREE.DirectionalLight(0xbfd6ff, 2.3);
+  const sunLight = new THREE.DirectionalLight(0xbfd6ff, 1.7);
   sunLight.position.set(16, 24, -12);
   if (shadowsOn) {
     sunLight.castShadow = true;
