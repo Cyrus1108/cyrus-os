@@ -727,10 +727,13 @@ function chartUpdate(st, dt) {
   if (ch.slide > 0) { ch.slide = Math.max(0, ch.slide - dt * 2.2); chartWrite(ch); }
   if (st.emph < 0.6) { ch.forming = false; return; }   // tape walks only while selected
   if (!ch.forming) {
-    ch.legIdx = ((ch.legIdx ?? -1) + 1) % 3;           // 升 → 跌 → 升
-    const dir = [1, -1, 1][ch.legIdx];
+    ch.legIdx = ((ch.legIdx ?? -1) + 1) % 3;           // 升 → 跌 → 升 rhythm…
+    let dir = [1, -1, 1][ch.legIdx];
     const o = ch.candles[ch.candles.length - 1].c;
-    ch.target = Math.min(3.1, Math.max(0.7, o + dir * (0.35 + Math.random() * 0.55)));
+    if (o > 2.6) dir = -1; else if (o < 1.15) dir = 1; // …but never flatline at the clamps
+    ch.target = Math.min(3.05, Math.max(0.75, o + dir * (0.4 + Math.random() * 0.65)));
+    ch.hiEx = 0.1 + Math.random() * 0.3;               // per-candle wick overshoot
+    ch.loEx = 0.1 + Math.random() * 0.3;
     ch.candles.push({ o, c: o, hi: o + 0.03, lo: o - 0.03 });
     if (ch.candles.length > ch.slots.length) { ch.candles.shift(); ch.slide = 0.5; }
     ch.t = 0; ch.forming = true;
@@ -739,8 +742,8 @@ function chartUpdate(st, dt) {
   const cur = ch.candles[ch.candles.length - 1];
   const k = Math.min(1, ch.t), e = k * k * (3 - 2 * k);
   cur.c = cur.o + (ch.target - cur.o) * e + Math.sin(k * 16) * 0.045 * (1 - k);
-  cur.hi = Math.min(3.3, Math.max(cur.hi, Math.max(cur.o, cur.c) + 0.05));
-  cur.lo = Math.max(0.38, Math.min(cur.lo, Math.min(cur.o, cur.c) - 0.05));
+  cur.hi = Math.min(3.3, Math.max(cur.hi, Math.max(cur.o, cur.c) + 0.04 + ch.hiEx * e));
+  cur.lo = Math.max(0.38, Math.min(cur.lo, Math.min(cur.o, cur.c) - 0.04 - ch.loEx * e));
   chartWrite(ch);
   if (k >= 1) ch.forming = false;
 }
