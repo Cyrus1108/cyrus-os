@@ -15,6 +15,13 @@
 // Single WebGL context. Visibility-pause + context-loss recovery in main.js.
 // ============================================================================
 import * as THREE from 'three';
+// P3 post chain (vendored three r160 official addons, MIT): SSAO grounds every
+// object against the deck; OutputPass owns the final ACES + sRGB step so all
+// intermediate targets stay linear. Desktop+motion only — mobile/reduced keep
+// the direct render path.
+import { EffectComposer } from '../vendor/three-addons/postprocessing/EffectComposer.js';
+import { SSAOPass } from '../vendor/three-addons/postprocessing/SSAOPass.js';
+import { OutputPass } from '../vendor/three-addons/postprocessing/OutputPass.js';
 
 const gsap = window.gsap;
 const DEG = Math.PI / 180;
@@ -1126,6 +1133,20 @@ export function createScene(canvas, opts) {
     quadMesh = null, blurMat = null, compMat = null, todayGlow = null;
   if (bloomOn) setupBloom();
 
+  // ===== P3 composer: beauty → SSAO → OutputPass (ACES+sRGB at the very end) ==
+  // Grounds every body against the deck (contact darkening). Same gate as the
+  // bloom pipeline; kernel radius is in our world units (deck objects ≈ 1–4).
+  let composer = null, ssaoPass = null;
+  if (bloomOn) {
+    composer = new EffectComposer(renderer);
+    ssaoPass = new SSAOPass(scene, camera, W0(), H0());
+    ssaoPass.kernelRadius = 0.6;
+    ssaoPass.minDistance = 0.001;
+    ssaoPass.maxDistance = 0.08;
+    composer.addPass(ssaoPass);
+    composer.addPass(new OutputPass());
+  }
+
   function bloomSize() {
     const pr = renderer.getPixelRatio();
     return [Math.max(2, Math.floor(W0() * pr * 0.25)), Math.max(2, Math.floor(H0() * pr * 0.25))];
@@ -1410,10 +1431,12 @@ export function createScene(canvas, opts) {
     // (3) blur vertical → rtB
     blurMat.uniforms.tDiffuse.value = rtA.texture; blurMat.uniforms.uDir.value.set(0, 1);
     renderer.setRenderTarget(rtB); renderer.render(quadScene, quadCam);
-    // (4) main pass — everything on layer 0, full res, to screen
+    // (4) main pass — everything on layer 0, full res. With the P3 composer the
+    // beauty render goes SSAO → OutputPass (linear until the final ACES+sRGB);
+    // without it (composer build failure) fall back to the direct render.
     camera.layers.set(0);
     renderer.setRenderTarget(null); renderer.setClearColor(BG, 1);
-    renderer.render(scene, camera);
+    if (composer) composer.render(); else renderer.render(scene, camera);
     // (5) additive composite of the blurred bloom over the main image
     quadMesh.material = compMat;
     compMat.uniforms.tBloom.value = rtB.texture;
@@ -1579,6 +1602,7 @@ export function createScene(canvas, opts) {
     renderer.setSize(W0(), H0());
     if (dust) dust.material.uniforms.uPixelRatio.value = renderer.getPixelRatio();
     if (bloomOn) { rtBright.dispose(); rtA.dispose(); rtB.dispose(); makeTargets(); }
+    if (composer) { composer.setSize(W0(), H0()); }
     if (!running) renderOnce();
   }
   function dispose() {
@@ -1603,6 +1627,8 @@ export function createScene(canvas, opts) {
       blurMat.dispose(); compMat.dispose(); quadMesh.geometry.dispose();
       todayGlow.geometry.dispose(); todayGlow.material.dispose();
     }
+    if (ssaoPass && ssaoPass.dispose) ssaoPass.dispose();
+    if (composer && composer.dispose) composer.dispose();
     renderer.dispose();
   }
 
