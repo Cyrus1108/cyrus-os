@@ -528,7 +528,7 @@ async function syncPushSettings(){
     symbols: S.symbols,
     subjects: S.subjects,
     notif_banner_dismissed: loadLS('notif_banner_dismissed', false),
-    theme: loadLS('theme', 'cappa'),
+    theme: loadLS('theme', 'sovereign'),
     fin_base_currency: S.fin.baseCurrency || 'TWD',
     fin_fx_rates: S.fin.fxRates || {TWD:1},
     principles_last_shown: loadLS('principles_last_shown', null),

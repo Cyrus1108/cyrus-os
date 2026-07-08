@@ -1,0 +1,88 @@
+/* ══════════════════════════════════════════════════════════════════
+   Theme: TERMINAL · html[data-theme="terminal"]
+   明日方舟 / 罗德岛「终端」深色暗黄 reskin — a scoped overlay, loaded LAST so it
+   wins ties. The SOVEREIGN base is token-driven and data-fx-gated, so re-declaring
+   the color tokens here auto-recolors panels / labels / backdrop / HUDs. We then
+   explicitly: (a) drop the purple 君主徽记 crest + violet additive energy-flow
+   (terminal's data-fx omits `crest`+`flow-additive`, and we belt-and-suspenders
+   display:none them), (b) swap the sovereign violet washes for a flat dark ground +
+   faint technical grid, (c) square the corners, (d) restate the activation-yellow.
+   The 君主 (sovereign) identity is unaffected — this block only bites under
+   [data-theme="terminal"]. Token NAMES match tokens.css; only VALUES differ.
+   ══════════════════════════════════════════════════════════════════ */
+
+html[data-theme="terminal"]{
+  /* accent — dark-yellow for lines/text, bright yellow for activation/alert */
+  --brass:#C9C90E;
+  --brass-soft:#EFE000;
+  --brass-ghost:rgba(239,224,0,0.18);
+  --brass-glow:rgba(239,224,0,0.42);
+
+  --color-background-primary:#15160E;
+  --color-background-secondary:#1B1C12;
+  --color-background-tertiary:#0C0D08;
+  --color-background-input:#14150D;
+  --color-background-success:rgba(56,217,208,0.12);
+  --color-background-danger:#2A1512;
+  --color-background-warning:#2A2410;
+
+  --color-text-primary:#ECECDD;
+  --color-text-secondary:#9A9A86;
+  --color-text-tertiary:#62625A;
+  --color-text-success:#38D9D0;   /* cyan = info/online (Arknights) */
+  --color-text-danger:#E8896F;
+  --color-text-warning:#EFE000;
+
+  --color-border-tertiary:rgba(122,122,92,0.18);
+  --color-border-secondary:rgba(122,122,92,0.30);
+  --color-border-primary:rgba(122,122,92,0.45);
+  --color-border-danger:rgba(232,137,111,0.4);
+  --color-border-warning:rgba(239,224,0,0.4);
+  --color-border-success:rgba(56,217,208,0.5);
+
+  /* square, tactical silhouette */
+  --border-radius-md:0px;
+  --border-radius-lg:0px;
+  color-scheme:dark;
+}
+
+/* flat dark ground; when decorations are on, replace the sovereign violet washes with a
+   faint 44px technical grid (higher specificity than components' html[data-fx~="deco"] body). */
+html[data-theme="terminal"] body{ background:#0A0B06; color:var(--color-text-primary); }
+html[data-fx~="deco"][data-theme="terminal"] body{
+  background-color:#0A0B06;
+  background-image:
+    linear-gradient(rgba(122,122,92,.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(122,122,92,.05) 1px, transparent 1px);
+  background-size:44px 44px;
+}
+
+/* terminal is flat/tactical — kill the sovereign signature glows outright */
+html[data-theme="terminal"] #crest{ display:none !important; }
+html[data-theme="terminal"] #energy-flow{ display:none !important; }
+
+/* activation yellow — check-ins / primary controls / focus rings */
+html[data-theme="terminal"] .the90-cell.on{
+  background:var(--brass-soft) !important; border-color:var(--brass-soft) !important; color:#15160A !important;
+}
+html[data-theme="terminal"] .primary{
+  background:var(--brass-soft); color:#15160A; border:1px solid #CFCF20; font-weight:600;
+}
+html[data-theme="terminal"] .mr-pill.done{ border-color:var(--brass-soft) !important; box-shadow:0 0 8px -2px var(--brass-glow); }
+html[data-theme="terminal"] input:focus,
+html[data-theme="terminal"] select:focus,
+html[data-theme="terminal"] textarea:focus{
+  border-color:var(--brass-soft) !important; box-shadow:0 0 0 1px var(--brass-soft); outline:none;
+}
+
+/* tech labels → mono + uppercase + tracking (no-op harmlessly where a class is absent) */
+html[data-theme="terminal"] .eyebrow,
+html[data-theme="terminal"] .eyebrow-mute,
+html[data-theme="terminal"] .panel-label,
+html[data-theme="terminal"] .stat-sub{
+  font-family:var(--font-mono); letter-spacing:.16em; text-transform:uppercase;
+}
+
+@media (prefers-reduced-motion:reduce){
+  html[data-theme="terminal"] body{ background-image:none; }
+}

@@ -37,13 +37,16 @@
      vendor/fonts/, precached by the SW so themes keep their type offline -->
 <link rel="stylesheet" href="./styles/fonts.css">
 
+<!-- TERMINAL theme overlay (明日方舟暗黄) — loaded LAST so html[data-theme="terminal"] wins ties; inert under sovereign -->
+<link rel="stylesheet" href="./styles/theme-terminal.css?v=7.37.0">
+
 <!-- Pre-paint: SOVEREIGN is the single identity — no theme to read any more. Stamp
      its fixed capability set on <html> before first paint so the decorative-layer
      guards are correct with no flash: glass (interaction layer on), flow-additive
      (energyflow additive blending), deco (panel/body decorations on). cube / trails
      / lifetree are permanently off. window.THEME_FX kept as a 1-entry compat shim
      for scripts/theme.js's legacy consumer. -->
-<script>(function(){window.THEME_FX={sovereign:'glass flow-additive deco crest'};var d=document.documentElement;d.setAttribute('data-theme','sovereign');d.setAttribute('data-fx','glass flow-additive deco crest');})();</script>
+<script>(function(){var FX={sovereign:'glass flow-additive deco crest',terminal:'glass deco'};var t='sovereign';try{var v=JSON.parse(localStorage.getItem('cyrus_dashboard_v6_theme')||'null');if(v==='terminal')t='terminal';}catch(e){}window.THEME_FX=FX;var d=document.documentElement;d.setAttribute('data-theme',t);d.setAttribute('data-fx',FX[t]);})();</script>
 
 <!-- Pre-paint: if the app lock is enabled, hide content until applock.js mounts the lock screen (no flash of private data) -->
 <script>(function(){try{var l=JSON.parse(localStorage.getItem('cyrus_lock')||'null');if(l&&l.enabled)document.documentElement.classList.add('app-locked-boot');}catch(e){}})();</script>
@@ -167,7 +170,9 @@
         <div class="eyebrow-mute" style="margin-bottom:10px;">Personal operating system</div>
       </div>
       <div style="text-align:right;">
-        <!-- v7.33 SOVEREIGN: 四主题退役,主题切换按钮已删除(单一身份,无可切) -->
+        <!-- 主题切换:君主(sovereign) / 终端(terminal) — theme.js toggleTheme() -->
+        <button id="theme-toggle" type="button" onclick="toggleTheme()" aria-label="切换主题" title="切换主题:君主 / 终端"
+          style="margin-bottom:8px;font-family:var(--font-mono,monospace);font-size:9px;letter-spacing:.18em;color:var(--brass);background:transparent;border:.5px solid var(--hair-strong);border-radius:var(--border-radius-md,3px);padding:4px 9px;cursor:pointer;"></button>
         <div id="clock" class="clock"></div>
         <div id="clock-sub" class="clock-sub"></div>
       </div>
