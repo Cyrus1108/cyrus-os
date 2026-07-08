@@ -95,7 +95,14 @@
 - [x] `weather(mat, amt, key)` 世界坐标 value-noise 注入 MeshStandardMaterial(albedo×色斑+roughness 抖动,免 UV;customProgramCacheKey 防程序缓存串号;可与 revEase 补丁链式共存);应用:站体 0.16/碑阵 0.12/鸟居 0.22/地板 0.10。
 - [x] `deckTexture()` Canvas 程序化甲板贴图(512² 面板缝+9000 噪点,RepeatWrapping×10,SRGB);CircleGeometry 有 UV 故地板走真贴图。
 - [x] 实机:斑驳/棱光/面板缝全部成立、glErr=0。
-### P3 后处理(SSAO/真阈值 bloom,vendor three 附件)· P4 GLB 真模型 —— 均待用户点头再开。
+### P3 SSAO 后处理 ✅ v9.3 (8609d00) — 用户已授权附件下载
+- [x] vendor three r160 官方附件 11 文件(Sonnet 下载+逐文件校验:字节数/ES 语法/相对依赖闭包全 PASS);beauty→SSAOPass→OutputPass(中间 RT 线性,末端统一 ACES+sRGB),自写 bloom 仍最后叠画布;kernelRadius 0.6/minD 0.001/maxD 0.08;移动端/reduced 原直渲;resize/dispose 接管。
+- [x] 验证(Sonnet 机械:部署即中/glErr=0/7 标签/零非扩展 console 错;总监督审美:接触暗影成立/柱阵内部遮蔽/无伪影)。注:后台标签页 rAF 冻结致 fps 探针无效,实机手感留用户。
+### P4 GLB 真模型 ✅ 决议:自建优于外购(2026-07-08)
+- [x] Sonnet 全市场调研(poly.pizza 逐页核许可,79 次工具调用):**唯一合格 CC0 = Quaternius《Torii Gate》(236 面素模)**;町屋/樱花/银行/石灯笼的像样候选全部 CC-BY(公开 repo 红线拒收),CC0 候选全部不像日式。
+- [x] 设计裁决(总监督,依用户"选最猛"常设授权采纳 A):**不换装**——我们手写的鸟居(全解剖+风化朱红+檐下灯)优于唯一可下载素模;L2 三轮后全场景是同一手作风格的整体,混第三方模型破坏一致性。程序化几何即最终资产。
+- [x] 备选留门:B=下载该鸟居做 A/B 对比(需用户批准下载);C=再扫 Kenney/OGA/itch CC0 包。用户随时可推翻 A。
+**BACKLOG II 全部完结:L2 P1→P2a→P2b→P3→P4。**
 （L3 的 SSAO 后处理链与 GLB 真模型资产=远期搁置,不在本 backlog。）
 
 ## 迭代日志(追加式,每迭代一行起)
