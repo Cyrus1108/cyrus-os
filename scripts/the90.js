@@ -3,8 +3,8 @@
    Three phases (30 days each): standardize → stabilize → optimize.
 
    Standardize:  ✓/✗ per target per day
-   Stabilize:    0–3 score per target (deep / partial / minimum / miss)
-   Optimize:     ✓/✗ plus an "optimize" prompt per target
+   Stabilize / Optimize:  1–3 graded score per target — tap ASCENDS 1→2→3
+                 (1 = minimum · 2 = partial · 3 = deep); a 4th tap clears. undefined = 未打卡.
 
    Default targets and identity statements come from Cyrus's 2026-05-11 brief. */
 
@@ -64,6 +64,13 @@ function the90PhaseLabel(phase){
   return ({standardize:'STANDARDIZE', stabilize:'STABILIZE', optimize:'OPTIMIZE'})[phase] || '';
 }
 
+/* Which phases grade quality (1–3) instead of a plain ✓/✗. Stabilize AND Optimize both
+   grade; the tap ASCENDS (1→2→3, then a 4th tap clears). Standardize stays binary. */
+function the90Graded(phase){ return phase === 'stabilize' || phase === 'optimize'; }
+/* Coerce a legacy boolean score (optimize days logged before it became graded) to a number
+   so mixed-type history still renders: true→3, false→0. Numbers/undefined pass through. */
+function the90Num(score){ return score === true ? 3 : score === false ? 0 : score; }
+
 function the90DaysUntil(target, fromDate){
   const a = new Date((fromDate || TODAY) + 'T00:00:00+08:00');
   const b = new Date(target + 'T00:00:00+08:00');
@@ -78,7 +85,7 @@ function the90DateForDay(day){
 
 /* Score is truthy if target was met. Standardize: bool. Stabilize: 1–3 = met, 0 = missed. */
 function the90ScoreMet(score, phase){
-  if(phase === 'stabilize') return typeof score === 'number' ? score > 0 : !!score;
+  if(the90Graded(phase)) return typeof score === 'number' ? score > 0 : !!score;
   return !!score;
 }
 
@@ -119,12 +126,14 @@ function toggleThe90(targetId){
     // 达成态 BEFORE 本次点击 —— 用于 false→true 的满勤仪式判定(镜像 the90WasComplete 语义)
     const wasAll = targets.length > 0 && targets.every(t => the90ScoreMet(S.the90.daily[today].scores[t.id], phase));
 
-    if(phase === 'stabilize'){
-      // Cycle 0 → 3 → 2 → 1 → 0 (start at 3 on first tap = deep work day)
-      const next = cur === undefined ? 3 : cur === 3 ? 2 : cur === 2 ? 1 : cur === 1 ? 0 : 3;
-      S.the90.daily[today].scores[targetId] = next;
+    if(the90Graded(phase)){
+      // Ascending grade: (未打卡) → 1 → 2 → 3 → clear (tap UP; a 4th tap resets).
+      const c = the90Num(cur);
+      const next = (c === 1) ? 2 : (c === 2) ? 3 : (c === undefined || c === 0) ? 1 : undefined;
+      if(next === undefined) delete S.the90.daily[today].scores[targetId];
+      else S.the90.daily[today].scores[targetId] = next;
     } else {
-      // standardize + optimize: ✓ ↔ ✗
+      // standardize: ✓ ↔ ✗
       S.the90.daily[today].scores[targetId] = !cur;
     }
     saveThe90Daily();
@@ -167,7 +176,7 @@ function the90AutoMet(targetId){
   const phase = the90Phase(the90Day());
   const cur = S.the90.daily[today].scores[targetId];
   if(the90ScoreMet(cur, phase)) return false;
-  S.the90.daily[today].scores[targetId] = (phase === 'stabilize') ? 3 : true;
+  S.the90.daily[today].scores[targetId] = the90Graded(phase) ? 3 : true;
   saveThe90Daily();
   if(typeof rThe90 === 'function') rThe90();
   if(typeof rpgAfterChange === 'function') rpgAfterChange();
@@ -334,9 +343,10 @@ function rThe90(){
     update: (b, t) => {
       const score = todayScores[t.id];
       let mark, on, off;
-      if(phase === 'stabilize'){
-        mark = score === undefined ? '·' : String(score);
-        on = score > 0; off = score === 0;
+      if(the90Graded(phase)){
+        const n = the90Num(score);
+        mark = (n === undefined) ? '·' : String(n);
+        on = (typeof n === 'number' && n > 0); off = (n === 0);
       } else {
         mark = score ? '✓' : (score === false ? '✗' : '·');
         on = !!score; off = score === false;
@@ -591,10 +601,11 @@ function renderThe90Heatmap(){
       let cls = 'h-cell';
       if(isFuture) cls += ' h-future';
       else if(score === undefined) cls += ' h-empty';
-      else if(phase === 'stabilize'){
-        if(score === 3) cls += ' h-l3';
-        else if(score === 2) cls += ' h-l2';
-        else if(score === 1) cls += ' h-l1';
+      else if(the90Graded(phase)){
+        const n = the90Num(score);
+        if(n === 3) cls += ' h-l3';
+        else if(n === 2) cls += ' h-l2';
+        else if(n === 1) cls += ' h-l1';
         else cls += ' h-miss';
       } else {
         cls += score ? ' h-on' : ' h-miss';
