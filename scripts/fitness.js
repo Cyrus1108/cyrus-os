@@ -160,8 +160,9 @@ function fitAfterChange(undo){
   if(r.changed && r.all) fitSfx('quest');
   else fitSfx(undo ? 'untick' : 'tick');
   rFitness();
-  // RPG v2: completing today's training marks the The 90 「健身」(IV) pillar met → feeds 力量/敏捷 + EXP
-  if(r.changed && r.all && typeof the90AutoMet==='function') the90AutoMet('IV');
+  // RPG v2: 今日训练全部完成 → 自动勾上赛季柱「健身」(fit) → 喂 力量/敏捷/体力 + EXP
+  // (S2 换季前这里是旧柱 IV)
+  if(r.changed && r.all && typeof the90AutoMet==='function') the90AutoMet('fit');
   if(typeof rpgAfterChange==='function') rpgAfterChange();
 }
 

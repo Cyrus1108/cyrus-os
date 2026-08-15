@@ -249,8 +249,9 @@ function aiSaveOutput(){
   aiCloseModal();
   saveAiOutputs(); rAi();
   if(typeof rAiDot==='function') rAiDot();
-  // RPG v2: an output today marks the The 90 「AI Automation」(III) pillar met → feeds 智力/创造 + EXP
-  if(aiDatesSet().has(TODAY) && typeof the90AutoMet==='function') the90AutoMet('III');
+  // RPG v2: 今天有产出 → 自动勾上赛季柱「AI 生意」(ai) → 喂 智力/创造 + EXP
+  // (S2 换季前这里是旧柱 III「AI Automation」)
+  if(aiDatesSet().has(TODAY) && typeof the90AutoMet==='function') the90AutoMet('ai');
   if(window.Sfx) Sfx.save();
 }
 function aiDelOutput(id){

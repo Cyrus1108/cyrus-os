@@ -277,7 +277,7 @@ function toggleTd(id){
     t.done = !t.done;
     if(t.done){t.doneAt = Date.now();}
     if(t.done && t.repeat && t.repeat !== 'none' && t.date){
-      const nextDate = computeNextRepeatDate(t.date, t.repeat, t.customDays);
+      const nextDate = computeNextValidRepeatDate(t.date, t.repeat, t.customDays);
       if(nextDate){
         S.todos.push({...t,id:crypto.randomUUID(),date:nextDate,done:false,doneAt:null,created:TODAY,position:S.todos.reduce((m,x)=>Math.max(m,x.position||0),0)+1});
       }
@@ -287,6 +287,21 @@ function toggleTd(id){
   };
   if(window.beatTap && row) window.beatTap(row, apply);
   else apply();
+}
+/* 快进重复任务:一直按重复规则往前推,直到落在「严格晚于今天」的那一天。
+   一个存档日期早已过去的重复任务(例如 12 天前的每日任务今天才勾),用单步推算
+   会生成一个「一出生就已逾期」的下一次 —— 于是每勾一次只前进一天,任务永远追不上
+   今天。中间被跳过的次数是故意丢弃的:过期的重复不用补做。
+   返回 null 表示规则本身给不出日期(如 custom_days 没填天数)或超出安全上限。
+   日期是 'YYYY-MM-DD',字符串比较等同日期比较。 */
+function computeNextValidRepeatDate(currentDate, repeat, customDays){
+  let d = computeNextRepeatDate(currentDate, repeat, customDays);
+  let guard = 0;
+  while(d && d <= TODAY){
+    if(++guard > 1000) return null;    // 安全阀:任何不前进的规则都不会把页面挂死
+    d = computeNextRepeatDate(d, repeat, customDays);
+  }
+  return d || null;
 }
 function computeNextRepeatDate(currentDate, repeat, customDays){
   const next = new Date(currentDate+'T00:00:00');

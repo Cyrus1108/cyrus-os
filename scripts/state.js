@@ -157,6 +157,9 @@ let S={
   jp:{date:TODAY,streak:0,last:null,log:{},note:'',list:JSON.parse(JSON.stringify(DEF_JP))},
   tr:{date:TODAY,bias:'',list:JSON.parse(JSON.stringify(DEF_TR)),sealed:false,sealedAt:null,broke:false},
   todos:[],
+  /* 目标 Goals —— 只存 localStorage,永不同步(Supabase 没有 goals 表,本次不改 schema)。
+     形态见 scripts/goals.js;写入走 saveGoals()(saveLSRaw,不设 dirty、不进 SETTINGS_KEYS)。 */
+  goals:[],
   hermes:[],   /* Hermes notices — read/dismiss only; written server-side by the assistant */
   cats:JSON.parse(JSON.stringify(DEFAULT_CATS)),
   activeCat:'all',

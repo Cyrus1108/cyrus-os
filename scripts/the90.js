@@ -1,72 +1,109 @@
-/* The 90 — 90-day commitment tracker.
-   Day 1 = 2026-05-11, Day 90 = 2026-08-09.
-   Three phases (30 days each): standardize → stabilize → optimize.
+/* 赛季记分板 —— S2 · 营收之季(2026-08-13 → 2026-11-13)。
+   上一季「The 90」(2026-05-11 → 2026-08-09)的继任者。存储与同步完全不变:
+   还是 S.the90 / the90_meta / the90_daily,还是同样的字段。变的只有赛季窗口、
+   四根柱子、以及所有文案。旧赛季的日行数据一行都不删。
 
-   Standardize:  ✓/✗ per target per day
-   Stabilize / Optimize:  1–3 graded score per target — tap ASCENDS 1→2→3
-                 (1 = minimum · 2 = partial · 3 = deep); a 4th tap clears. undefined = 未打卡.
+   每日打卡 = 分级打卡(v7.38.0 的评分方式,原样保留):点一下 1、再点 2、再点 3,
+   第四下清空。1 = 最低标准 · 2 = 部分 · 3 = 深度;未打卡 = undefined。
+   旧布尔值(true/false)由 the90Num 兼容成 3/0,所以上一季的历史照常显示。
 
-   Default targets and identity statements come from Cyrus's 2026-05-11 brief. */
+   销售行动 = 三个数字计数器(陌生开发 / 跟进 / 新扫码),和打卡存在同一天的
+   scores 对象里(scores 是 jsonb,存数字没问题)。全库没有任何地方遍历 scores
+   ——只按显式键读(红线:禁止 for-in / Object.keys)——所以数字键与柱子键、以及
+   lowday 的 _amp/_low/_lowx/_trig 命名空间键可以安全共处。 */
 
-const THE_90_START = '2026-05-11';
-const THE_90_END = '2026-08-09';
+/* ════════════════ RENAME POINT ════════════════
+   这一季所有对用户可见的名字都只写在这个块里。换季只改这里。 */
 
-// Fallback only — the live targets come from Supabase the90_meta (S.the90.meta.targets).
-// Kept in sync with the real 5 so the standard/twoMin/badDay fallbacks never show stale text.
-const THE_90_TARGETS_DEFAULT = [
-  { id: 'I',   label: '21:30 上床',   twoMin: '把手机放到客厅充电器',   badDay: '21:30 灯关 + 闭眼躺平',  standard: '21:30 上床、灯关无手机，实际睡满 7 小时' },
-  { id: 'II',  label: '10 分钟冥想',  twoMin: '坐到瑜伽垫 + 打开计时器', badDay: '1 分钟深呼吸 × 3 次',    standard: '完整 10 分钟、不中断的专注冥想' },
-  { id: 'III', label: 'AI Automation', twoMin: '打开编辑器或教程，写下今天要推进的一步', badDay: '读 5 分钟 AI 文档 / 教程',  standard: '当天对 AI Automation 有实质投入（学习或构建，有可见产出 / 进展）' },
-  { id: 'IV',  label: '每周健身 5 天', twoMin: '换上健身服',            badDay: '10 俯卧撑 + 10 深蹲',    standard: '完成当日训练（力量/有氧 ≥30 分钟），本周累计 ≥5 天' },
-  { id: 'V',   label: '性能量管理',   twoMin: '冲动时去阳台站 30 秒',   badDay: '冲动时做 10 俯卧撑代替', standard: '早上绝对不释放；12:30–13:00 后才视情况，非必要或忙碌则保留' },
+const SEASON_NAME  = 'S2 · 营收之季';
+const SEASON_START = '2026-08-13';
+const SEASON_END   = '2026-11-13';
+
+const DAILY_NOTE_LABEL       = '今日营收';
+const DAILY_NOTE_PLACEHOLDER = '今天带来了什么进账——钱、证据、客户,都算…';
+
+const SEASON_CHECKIN_LABEL  = '今日打卡';
+const SEASON_COUNTERS_LABEL = '销售行动';
+const SEASON_WEEK_LABEL     = '本周';
+const SEASON_HEATMAP_LABEL  = '热力图 · 全季';
+const SEASON_TAGLINE = (daysLeft) => daysLeft > 0
+  ? `11/13 那个 Cyrus 正在向你走来 · ${daysLeft} 天`
+  : '11/13 到了。回顾你成为的人。';
+
+/* 三个阶段平分赛季窗口(93 天 → 每段 31 天)。只是标签与里程碑,不改变打卡方式:
+   全季都是分级打卡(见 the90Graded)。currentPhase 仍照写进 the90_meta,表结构不动。 */
+const SEASON_PHASES = [
+  { id: 'open',    label: '开局' },
+  { id: 'push',    label: '加速' },
+  { id: 'harvest', label: '收成' },
 ];
 
-/* 暑假重心转向 AI Automation：柱 III 由「课业全 A」重命名。用户数据自愈（仿
-   cleanJapanese）——仅当 III 仍是旧默认标签时整组替换，保留任何未来自定义。幂等。 */
-function cleanThe90Targets(){
-  const meta = S.the90 && S.the90.meta;
-  if(!meta || !Array.isArray(meta.targets)) return false;
-  const t = meta.targets.find(x => x.id === 'III');
-  if(t && t.label === '课业全 A'){
-    t.label    = 'AI Automation';
-    t.twoMin   = '打开编辑器或教程，写下今天要推进的一步';
-    t.badDay   = '读 5 分钟 AI 文档 / 教程';
-    t.standard = '当天对 AI Automation 有实质投入（学习或构建，有可见产出 / 进展）';
-    return true;
-  }
-  return false;
-}
-
-const THE_90_IDENTITIES = [
-  '我是一个掌控自己睡眠的人',
-  '我是一个每天拍球的人',
-  '我是一个让钱为我工作的人',
-  '我是一个走向日语流利的人',
-  '我是一个把训练当饭吃的人',
+/* 四根柱子 —— 每天分级打卡 1–3。
+   fallback only:真正生效的是 Supabase the90_meta.targets(S.the90.meta.targets)。 */
+const SEASON_TARGETS_DEFAULT = [
+  { id: 'ai',   label: 'AI 生意', twoMin: '打开客户名单,写一句开场白',   badDay: '发出 1 条陌生开发消息',
+    standard: '当天对 AI 生意有实质推进:开发、跟进、交付或产出,有可见证据' },
+  { id: 'jp',   label: '日本語',  twoMin: '打开 Anki,过 5 张卡',        badDay: '听 5 分钟日语音频',
+    standard: '当天有完整一段日语输入或输出(词汇 / 语法 / 听力 / 口说)' },
+  { id: 'fit',  label: '健身',    twoMin: '换上健身服走出房门',          badDay: '10 俯卧撑 + 10 深蹲',
+    standard: '完成当日训练(力量 / 有氧 ≥30 分钟)' },
+  { id: 'ball', label: '篮球',    twoMin: '把球和鞋放到门口',            badDay: '原地运球 5 分钟',
+    standard: '当天真的去打球或练球 ≥30 分钟' },
 ];
+
+/* 销售行动计数器 —— 每天的整数,和柱子同存在 scores 里。id 不与柱子 id 冲突。 */
+const SEASON_COUNTERS = [
+  { id: 'dm',     label: '陌生开发' },
+  { id: 'follow', label: '跟进' },
+  { id: 'scan',   label: '新扫码' },
+];
+
+/* 一天算「有效」需要达标几根柱子(streak 用)。低谷日另有一条更低的底线(见 computeThe90Streak)。 */
+const SEASON_ACTIVE_THRESHOLD = 3;
+
+/* ════════════════ 上一季(只读) ════════════════
+   旧赛季 The 90 的起点与柱子 id。只有两个用途:(1) 迁移判断——起点早于本季的
+   meta 就是旧的;(2) RPG 把旧日行的达标数算回历史 EXP(见 rpg.js rpgMetOn),
+   否则等级会倒退,违反「等级/EXP 永不回退」的红线。 */
+const SEASON_LEGACY_START = '2026-05-11';
+const SEASON_LEGACY_TARGET_IDS = ['I', 'II', 'III', 'IV', 'V'];
 
 /* ════════ Pure helpers ════════ */
 
+/* 赛季长度(含首尾两天)。2026-08-13 → 2026-11-13 = 93 天。 */
+function seasonLength(){
+  const s = new Date(SEASON_START + 'T00:00:00+08:00');
+  const e = new Date(SEASON_END + 'T00:00:00+08:00');
+  return Math.floor((e - s) / 86400000) + 1;
+}
+/* 每个阶段的长度(天)。93 / 3 = 31;除不尽时最后一段吃掉余数。 */
+function seasonPhaseLen(){ return Math.ceil(seasonLength() / SEASON_PHASES.length); }
+
 function the90Day(dateStr){
-  // Day 1 = start_date. dateStr defaults to TODAY.
+  // Day 1 = SEASON_START. dateStr defaults to TODAY.
   const d = new Date((dateStr || TODAY) + 'T00:00:00+08:00');
-  const s = new Date(THE_90_START + 'T00:00:00+08:00');
+  const s = new Date(SEASON_START + 'T00:00:00+08:00');
   return Math.floor((d - s) / 86400000) + 1;
 }
 
+/* 阶段只是标签与里程碑。上一季的日期会算出 day <= 0 → 落在第一段,这没关系:
+   打卡方式全季一致(the90Graded 恒真),所以旧数据的达标判定不受影响。 */
 function the90Phase(day){
-  if(day <= 30) return 'standardize';
-  if(day <= 60) return 'stabilize';
-  return 'optimize';
+  const len = seasonPhaseLen();
+  const i = Math.min(SEASON_PHASES.length - 1, Math.max(0, Math.ceil(day / len) - 1));
+  return SEASON_PHASES[i].id;
 }
 
 function the90PhaseLabel(phase){
-  return ({standardize:'STANDARDIZE', stabilize:'STABILIZE', optimize:'OPTIMIZE'})[phase] || '';
+  const p = SEASON_PHASES.find(x => x.id === phase);
+  return p ? p.label : '';
 }
 
-/* Which phases grade quality (1–3) instead of a plain ✓/✗. Stabilize AND Optimize both
-   grade; the tap ASCENDS (1→2→3, then a 4th tap clears). Standardize stays binary. */
-function the90Graded(phase){ return phase === 'stabilize' || phase === 'optimize'; }
+/* 分级打卡:本季**全程**都是 1–3 分级(v7.38.0 的评分方式),没有布尔阶段。
+   函数签名保留(rpg.js 等按名调用),但恒返回 true。
+   对历史数据是等价的:the90ScoreMet 在 graded 分支里对布尔值走 `!!score`,
+   与旧的 standardize 布尔判定逐位一致,所以上一季的达标数一个不差。 */
+function the90Graded(phase){ return true; }
 /* Coerce a legacy boolean score (optimize days logged before it became graded) to a number
    so mixed-type history still renders: true→3, false→0. Numbers/undefined pass through. */
 function the90Num(score){ return score === true ? 3 : score === false ? 0 : score; }
@@ -78,39 +115,78 @@ function the90DaysUntil(target, fromDate){
 }
 
 function the90DateForDay(day){
-  const s = new Date(THE_90_START + 'T00:00:00+08:00');
+  const s = new Date(SEASON_START + 'T00:00:00+08:00');
   s.setDate(s.getDate() + day - 1);
   return s.toLocaleDateString('sv-SE');
 }
 
-/* Score is truthy if target was met. Standardize: bool. Stabilize: 1–3 = met, 0 = missed. */
+/* 达标判定。分级:1–3 = 达标,0 = 没做到,undefined = 未打卡。
+   旧布尔值:true = 达标,false = 没做到(与上一季的判定完全一致)。 */
 function the90ScoreMet(score, phase){
   if(the90Graded(phase)) return typeof score === 'number' ? score > 0 : !!score;
   return !!score;
 }
 
+/* 当前生效的柱子(云端 meta 优先,拉取前用默认值兜底)。 */
+function seasonTargets(){
+  const t = S.the90 && S.the90.meta && S.the90.meta.targets;
+  return (Array.isArray(t) && t.length) ? t : SEASON_TARGETS_DEFAULT;
+}
+
+/* 读/写今天那一格计数器的值。计数器只按显式 id 访问,不遍历 scores。 */
+function the90CounterValue(counterId, dateStr){
+  const sc = S.the90 && S.the90.daily && S.the90.daily[dateStr || TODAY] && S.the90.daily[dateStr || TODAY].scores;
+  const v = sc ? Number(sc[counterId]) : 0;
+  return Number.isFinite(v) ? Math.max(0, v) : 0;
+}
+
 /* ════════ State shape ════════
    S.the90 = {
      meta: { startDate, endDate, targets: [...], currentPhase },
-     daily: { 'YYYY-MM-DD': { scores: {I:bool, II:bool, ...}, note: string } }
+     daily: { 'YYYY-MM-DD': { scores: {ai:1..3, …, dm:number, …, _amp:1..5}, note: string } }
    }
 */
 
+function freshSeasonMeta(){
+  return {
+    startDate: SEASON_START,
+    endDate: SEASON_END,
+    targets: JSON.parse(JSON.stringify(SEASON_TARGETS_DEFAULT)),
+    currentPhase: SEASON_PHASES[0].id,
+  };
+}
+
+/* 迁移到本季。幂等,而且**每次渲染都重跑**:pullThe90Meta 或 realtime 回声会把
+   上一季那行 meta 重新灌回 S,只在 init 迁一次是不够的。判据是起点日期——起点
+   早于本季 = 旧的,整组换成本季 meta 并经既有的 saveThe90Meta 落库(同样的列,
+   不改表结构)。条件自熄:推上去一次之后再拉回来的就是本季的了。
+   (渲染函数里写库违反渲染纯度红线;这是有意的例外,因为只有渲染路径同时看得到
+    init / pull / realtime 三条来路。条件为假时零副作用。) */
 function ensureThe90Defaults(){
   if(!S.the90) S.the90 = { meta: null, daily: {} };
-  if(!S.the90.meta){
-    S.the90.meta = {
-      startDate: THE_90_START,
-      endDate: THE_90_END,
-      targets: JSON.parse(JSON.stringify(THE_90_TARGETS_DEFAULT)),
-      currentPhase: 'standardize',
-    };
+  if(!S.the90.daily) S.the90.daily = {};
+  const m = S.the90.meta;
+  if(!m){ S.the90.meta = freshSeasonMeta(); return; }
+  if(!m.startDate || m.startDate < SEASON_START){
+    S.the90.meta = freshSeasonMeta();
+    if(typeof saveThe90Meta === 'function') saveThe90Meta();
+    return;
   }
+  if(!Array.isArray(m.targets) || !m.targets.length){
+    m.targets = JSON.parse(JSON.stringify(SEASON_TARGETS_DEFAULT));
+  }
+}
+
+/* 今天那一行(没有就现建)。 */
+function the90TodayEntry(){
+  if(!S.the90.daily[TODAY]) S.the90.daily[TODAY] = { scores: {}, note: '' };
+  if(!S.the90.daily[TODAY].scores) S.the90.daily[TODAY].scores = {};
+  return S.the90.daily[TODAY];
 }
 
 /* ════════ Interactions ════════ */
 
-let _the90PerfectSfxDate = null;   // SFX latch: 5/5 flourish at most once per day
+let _the90PerfectSfxDate = null;   // SFX latch: 满勤 flourish at most once per day
 function toggleThe90(targetId){
   // 三拍:被点的打卡格是 reconcile 复用的持久节点(data-key=targetId),beatTap 的
   // transform 不会被 apply 里的 rThe90() 重渲染打断。拿不到格子则直接落地状态。
@@ -118,7 +194,7 @@ function toggleThe90(targetId){
   const apply = function(){
     ensureThe90Defaults();
     const today = TODAY;
-    if(!S.the90.daily[today]) S.the90.daily[today] = { scores: {}, note: '' };
+    the90TodayEntry();
     const day = the90Day();
     const phase = the90Phase(day);
     const cur = S.the90.daily[today].scores[targetId];
@@ -133,7 +209,7 @@ function toggleThe90(targetId){
       if(next === undefined) delete S.the90.daily[today].scores[targetId];
       else S.the90.daily[today].scores[targetId] = next;
     } else {
-      // standardize: ✓ ↔ ✗
+      // 本季走不到这里(the90Graded 恒真);留着以防未来某季改回布尔打卡。
       S.the90.daily[today].scores[targetId] = !cur;
     }
     saveThe90Daily();
@@ -181,6 +257,21 @@ function the90AutoMet(targetId){
   if(typeof rThe90 === 'function') rThe90();
   if(typeof rpgAfterChange === 'function') rpgAfterChange();
   return true;
+}
+
+/* 销售行动计数器 ±1。存进今天那一行的 scores(与柱子同一个对象,id 不冲突),
+   最小值 0。这是手势路径,所以音效写在状态落地之后、守卫之内。 */
+function bumpThe90Counter(counterId, delta){
+  if(!SEASON_COUNTERS.some(c => c.id === counterId)) return;
+  ensureThe90Defaults();
+  const entry = the90TodayEntry();
+  const cur = the90CounterValue(counterId);
+  const next = Math.max(0, cur + delta);
+  if(next === cur) return;                                                   // 已经是 0 还按减:不写库、不出声
+  entry.scores[counterId] = next;
+  saveThe90Daily();
+  if(window.Sfx){ next > cur ? Sfx.tick() : Sfx.untick(); }
+  rThe90();
 }
 
 function toggleThe90Drawer(id){
@@ -243,7 +334,7 @@ function toggleThe90Std(id){
 
 /* Global keys on the main page (only when the finance overlay is closed):
      、         → open the finance view (mirror of the in-finance privacy key)
-     1 … 5      → toggle the matching target's hard-standard box (left→right)
+     1 … N      → toggle the matching target's hard-standard box (left→right)
    Guarded so it never fires while typing or while finance owns the keyboard. */
 function initThe90Keys(){
   document.addEventListener('keydown', (e)=>{
@@ -273,8 +364,8 @@ function initThe90Keys(){
       if(typeof openFinance==='function'){ e.preventDefault(); openFinance(); }
       return;
     }
-    // 1–5 → toggle that target's hard-standard box
-    if(e.key>='1' && e.key<='5'){
+    // 1–9 → toggle that target's hard-standard box(实际有几根柱子由下面的守卫决定)
+    if(e.key>='1' && e.key<='9'){
       if(!document.getElementById('the90-standards')) return;
       ensureThe90Defaults();
       const t = S.the90.meta.targets[Number(e.key)-1];
@@ -298,6 +389,7 @@ function onThe90Note(){
 function rThe90(){
   ensureThe90Defaults();
   const meta = S.the90.meta;
+  const total = seasonLength();
   const day = the90Day();
   const phase = the90Phase(day);
   meta.currentPhase = phase; // auto-advance
@@ -305,15 +397,38 @@ function rThe90(){
   const todayScores = S.the90.daily[TODAY]?.scores || {};
   const todayNote = S.the90.daily[TODAY]?.note || '';
 
-  // Day X / 90 + phase chip
+  // 网格列数交给 CSS 变量:柱子数与赛季长度换了,打卡格/标签/本周/热力图都跟着变。
+  // 用 setProperty 逐个写、**不要** setAttr('style', …) 整条覆盖:#the90-panel 是
+  // glass.js 的 Focus Space 目标(聚焦飞行期间它自己会往 inline style 里写
+  // view-transition-name / FLIP 变换),整条重写会在飞行途中把那些抹掉。
+  const panelEl = document.getElementById('the90-panel');
+  if(panelEl){
+    panelEl.style.setProperty('--the90-n', String(meta.targets.length));
+    panelEl.style.setProperty('--the90-days', String(total));
+  }
+  // 赛季名(静态一次,但 setText 有守卫,重复渲染不写)
+  setText(document.getElementById('the90-season'), SEASON_NAME);
+  // 各区块标题 —— 全部来自 RENAME POINT 常量块,index.html 里不留死文案
+  setText(document.getElementById('the90-checkin-label'), SEASON_CHECKIN_LABEL);
+  setText(document.getElementById('the90-counters-label'), SEASON_COUNTERS_LABEL);
+  setText(document.getElementById('the90-week-label'), SEASON_WEEK_LABEL);
+  setText(document.getElementById('the90-heatmap-label'), SEASON_HEATMAP_LABEL);
+  setText(document.getElementById('the90-note-label'), DAILY_NOTE_LABEL);
+  setAttr(document.getElementById('the90-note'), 'placeholder', DAILY_NOTE_PLACEHOLDER);
+
+  // Day X / 总天数 + 阶段徽章
   // ⑧ day counter: roll the number up on first load (0→day); non-numeric states fall back to text.
   const dayEl = document.getElementById('the90-day');
   if(day < 1) dayEl.textContent = '— PRE';
-  else if(day > 90) dayEl.textContent = 'COMPLETE';
+  else if(day > total) dayEl.textContent = 'COMPLETE';
   else {
     let dayB = dayEl.querySelector('.n');
     const prevDay = dayB ? (parseInt(dayB.textContent) || 0) : 0;
-    if(!dayB){ dayEl.innerHTML = `DAY <b class="n">${prevDay}</b> / 90`; dayB = dayEl.querySelector('.n'); }
+    if(!dayB || dayEl.dataset.total !== String(total)){
+      dayEl.innerHTML = `DAY <b class="n">${prevDay}</b> / ${total}`;
+      dayEl.dataset.total = String(total);
+      dayB = dayEl.querySelector('.n');
+    }
     if(typeof animateNumber==='function') animateNumber(dayB, prevDay, day, 500);
     else dayB.textContent = day;
   }
@@ -321,11 +436,9 @@ function rThe90(){
 
   // Identity statement removed per Cyrus's request — only the tagline (date + countdown) shows.
 
-  // Tagline — countdown to August 9
-  const daysLeft = the90DaysUntil(THE_90_END, new Date().toLocaleDateString('sv-SE'));   // 读实时日期,跨午夜不会停在昨天
-  setText(document.getElementById('the90-tagline'), daysLeft > 0
-    ? `8/9 那个 Cyrus 正在向你走来 · ${daysLeft} 天`
-    : '8/9 到了。回顾你成为的人。');
+  // Tagline — 倒数到赛季结束
+  const daysLeft = the90DaysUntil(SEASON_END, new Date().toLocaleDateString('sv-SE'));   // 读实时日期,跨午夜不会停在昨天
+  setText(document.getElementById('the90-tagline'), SEASON_TAGLINE(daysLeft));
 
   // Today's check-in cells (one per target) — persistent keyed DOM: only the tapped cell's
   // class/mark change in place, so a redundant render never rebuilds the very <button> a
@@ -337,7 +450,7 @@ function rThe90(){
       const b = document.createElement('button');
       b.className = 'the90-cell';
       b.setAttribute('onclick', `toggleThe90('${t.id}')`);
-      b.innerHTML = `<span class="the90-cell-id">${t.id}</span><span class="the90-cell-mark"></span>`;
+      b.innerHTML = `<span class="the90-cell-id">${escH(String(t.id).toUpperCase())}</span><span class="the90-cell-mark"></span>`;
       return b;
     },
     update: (b, t) => {
@@ -353,10 +466,37 @@ function rThe90(){
       }
       setClass(b, 'on', on);
       setClass(b, 'off', off);
-      setAttr(b, 'title', t.label);
+      setAttr(b, 'title', `${t.label} · 点一下升一级 1→2→3,第四下清空`);
       setText(b.querySelector('.the90-cell-mark'), mark);
     }
   });
+
+  // 销售行动计数器 —— 三个 ± 步进器,值存在同一天的 scores 里(键控行,持久节点)
+  const cntEl = document.getElementById('the90-counters');
+  if(cntEl){
+    reconcileList(cntEl, SEASON_COUNTERS, {
+      key: c => c.id,
+      create: c => {
+        const d = document.createElement('div');
+        d.className = 'the90-counter';
+        d.innerHTML = `<span class="the90-counter-label">${escH(c.label)}</span>`
+          + `<div class="the90-counter-ctl">`
+          + `<button class="the90-counter-btn" onclick="bumpThe90Counter('${c.id}',-1)" aria-label="${escH(c.label)} 减一">−</button>`
+          + `<span class="the90-counter-num">0</span>`
+          + `<button class="the90-counter-btn" onclick="bumpThe90Counter('${c.id}',1)" aria-label="${escH(c.label)} 加一">+</button>`
+          + `</div>`;
+        return d;
+      },
+      update: (d, c) => {
+        const n = the90CounterValue(c.id);
+        const numEl = d.querySelector('.the90-counter-num');
+        const prev = parseInt(numEl.textContent) || 0;
+        if(typeof animateNumber === 'function') animateNumber(numEl, prev, n, 300);
+        else setText(numEl, String(n));
+        setClass(d, 'has', n > 0);
+      }
+    });
+  }
 
   // Target labels under cells
   setHTML(document.getElementById('the90-labels'), meta.targets.map(t =>
@@ -381,7 +521,7 @@ function rThe90(){
       },
       update: (b, t) => {
         const i = meta.targets.indexOf(t);
-        const std = t.standard || (THE_90_TARGETS_DEFAULT[i] && THE_90_TARGETS_DEFAULT[i].standard) || '';
+        const std = t.standard || (SEASON_TARGETS_DEFAULT[i] && SEASON_TARGETS_DEFAULT[i].standard) || '';
         const open = !!the90StdOpen[t.id];
         setClass(b, 'open', open);
         setAttr(b, 'title', `硬标准 · ${t.label}（按 ${i+1}）`);
@@ -430,19 +570,28 @@ function rThe90(){
   if(typeof animateNumber==='function') animateNumber(streakEl, prevStreak, newStreak, 500);
   else streakEl.textContent = newStreak;
   // ⑥ Best week + Milestone roll their numbers up too (consistent with Streak).
-  const bestStr = computeThe90BestWeek();            // e.g. "23/35"
+  const weekMax = meta.targets.length * 7;           // 四柱 → 28
+  const bestStr = computeThe90BestWeek();            // e.g. "19/28"
   const bestNum = parseInt(bestStr) || 0;
   const bestEl = document.getElementById('the90-bestweek');
   let bestB = bestEl.querySelector('.n');
   const prevBest = bestB ? (parseInt(bestB.textContent) || 0) : 0;
-  if(!bestB){ bestEl.innerHTML = `<b class="n">${prevBest}</b>/35`; bestB = bestEl.querySelector('.n'); }
+  if(!bestB || bestEl.dataset.max !== String(weekMax)){
+    bestEl.innerHTML = `<b class="n">${prevBest}</b>/${weekMax}`;
+    bestEl.dataset.max = String(weekMax);
+    bestB = bestEl.querySelector('.n');
+  }
   if(typeof animateNumber==='function') animateNumber(bestB, prevBest, bestNum, 500);
   else bestB.textContent = bestNum;
 
-  const nextMs = day < 30 ? 30 : day < 60 ? 60 : day < 90 ? 90 : null;
+  // 里程碑 = 下一个阶段边界(31 / 62 / 93)
+  const _len = seasonPhaseLen();
+  const nextMs = SEASON_PHASES
+    .map((_, i) => Math.min(total, (i + 1) * _len))
+    .find(b => day < b) ?? null;
   const msEl = document.getElementById('the90-milestone');
   if(!nextMs){
-    msEl.textContent = '已完成 90 天';
+    msEl.textContent = `已完成 ${total} 天`;
   } else {
     const daysToMs = nextMs - day;
     let msB = msEl.querySelector('.n');
@@ -473,26 +622,26 @@ function rThe90(){
   // Life-tree cultivation-chamber telemetry HUD (sterile theme)
   const ltGrow = document.getElementById('lt-grow');
   if(ltGrow){
-    setText(ltGrow, (day < 1 ? 0 : Math.min(100, Math.round(day / 90 * 100))) + '%');
+    setText(ltGrow, (day < 1 ? 0 : Math.min(100, Math.round(day / total * 100))) + '%');
     setText(document.getElementById('lt-streak'), computeThe90Streak());
     setText(document.getElementById('lt-phase'), the90PhaseLabel(phase));
     setText(document.getElementById('lt-left'), (daysLeft > 0 ? daysLeft : 0) + '天');
     setText(document.getElementById('lt-today'), metToday + '/' + meta.targets.length);
     const ch = document.getElementById('lifetree-chamber');
-    if(ch) ch.classList.toggle('milestone', day === 30 || day === 60 || day === 90);
+    if(ch) ch.classList.toggle('milestone', day > 0 && day % seasonPhaseLen() === 0);
     // state-reactive ambient: more complete today → warmer/brighter whole-system glow
     if(typeof setAmbientLevel === 'function') setAmbientLevel(metToday / meta.targets.length);
   }
 
-  // Heatmap — 13 weeks x 5 targets.
-  // Gate the 450-cell innerHTML rebuild behind a cheap signature: it only depends on the
+  // Heatmap — 赛季全长 × 柱子数(本季 93 × 4 = 372 格)。
+  // Gate the full innerHTML rebuild behind a cheap signature: it only depends on the
   // in-window day scores, the target set/order, and TODAY (which drives isToday/isFuture;
   // phase is derived from the day index). Unrelated renderAll passes skip the rebuild and
   // reuse the byte-identical cached markup.
   const heatHost = document.getElementById('the90-heatmap');
   const heatSig = TODAY + '|' + meta.targets.map(t => t.id).join(',') + '|' + (() => {
     const parts = [];
-    for(let d = 1; d <= 90; d++){
+    for(let d = 1; d <= total; d++){
       const date = the90DateForDay(d);
       const sc = S.the90.daily[date]?.scores;
       if(sc) parts.push(date + ':' + meta.targets.map(t => sc[t.id]).join(','));
@@ -510,10 +659,10 @@ function rThe90(){
 
   // Drawer contents (two-min entries + bad day minimums) — guarded so unrelated renders skip.
   setHTML(document.getElementById('the90-twomin-body'), meta.targets.map(t =>
-    `<div class="the90-drawer-row"><span class="the90-drawer-id">${t.id}</span><span class="the90-drawer-label">${escH(t.label)}</span><span class="the90-drawer-text">${escH(t.twoMin)}</span></div>`
+    `<div class="the90-drawer-row"><span class="the90-drawer-id">${escH(String(t.id).toUpperCase())}</span><span class="the90-drawer-label">${escH(t.label)}</span><span class="the90-drawer-text">${escH(t.twoMin)}</span></div>`
   ).join(''));
   setHTML(document.getElementById('the90-badday-body'), meta.targets.map(t =>
-    `<div class="the90-drawer-row"><span class="the90-drawer-id">${t.id}</span><span class="the90-drawer-label">${escH(t.label)}</span><span class="the90-drawer-text">${escH(t.badDay)}</span></div>`
+    `<div class="the90-drawer-row"><span class="the90-drawer-id">${escH(String(t.id).toUpperCase())}</span><span class="the90-drawer-label">${escH(t.label)}</span><span class="the90-drawer-text">${escH(t.badDay)}</span></div>`
   ).join(''));
 
   // Today's note
@@ -528,10 +677,10 @@ function rThe90(){
 }
 
 function computeThe90Streak(){
-  // Reads S.the90.daily, hydrated by pullThe90Daily's last-95-days window (= the 90-day
-  // program length + buffer). That window must stay ≥ the program length so no in-window
-  // day is trimmed and the streak never breaks falsely on a long run.
-  // Current run of days (most recent → back) meeting ≥3 of 5 targets.
+  // Reads S.the90.daily, hydrated by pullThe90Daily's rolling window (= the season length
+  // + buffer). That window must stay ≥ seasonLength() so no in-window day is trimmed and
+  // the streak never breaks falsely on a long run.
+  // Current run of days (most recent → back) meeting ≥ SEASON_ACTIVE_THRESHOLD targets.
   // Today is PENDING: if it isn't met yet it neither counts nor breaks the run —
   // you simply haven't extended your streak today. Only a genuine PAST miss ends it.
   // (This is why it must not collapse to 0 the instant you uncheck today's 3rd target.)
@@ -542,9 +691,9 @@ function computeThe90Streak(){
     const day = S.the90.daily[date];
     const phase = the90Phase(d);
     const met = day ? S.the90.meta.targets.filter(t => the90ScoreMet(day.scores?.[t.id], phase)).length : 0;
-    // Low Day drops the day's pass-bar to ONE minimal action (≥1 instead of ≥3) — the
-    // mechanism behind 「底线永远留在最低」. A low day with 0 met still breaks the run.
-    const bar = (typeof lowDayOn === 'function' && lowDayOn(date)) ? 1 : 3;
+    // Low Day drops the day's pass-bar to ONE minimal action (≥1 instead of the season
+    // threshold) — 「底线永远留在最低」. A low day with 0 met still breaks the run.
+    const bar = (typeof lowDayOn === 'function' && lowDayOn(date)) ? 1 : SEASON_ACTIVE_THRESHOLD;
     // 渡: a crossed low day satisfies its own floor even with 0 targets scored — the
     // protocol says do the one minimal action and DON'T grade it, so the crossing
     // itself must hold the streak (「底线永远留在最低」). Else following the protocol
@@ -558,11 +707,12 @@ function computeThe90Streak(){
 }
 
 function computeThe90BestWeek(){
-  // Best week so far = max total met-checks (out of 35) across all completed weeks
-  let best = 0, bestStr = '0/35';
+  // Best week so far = max total met-checks (out of 柱子数 × 7) across all completed weeks
+  const max = (S.the90?.meta?.targets || SEASON_TARGETS_DEFAULT).length * 7;
+  let best = 0, bestStr = `0/${max}`;
   const today = new Date(TODAY + 'T00:00:00+08:00');
   for(let w = 0; ; w++){
-    const start = new Date(THE_90_START + 'T00:00:00+08:00');
+    const start = new Date(SEASON_START + 'T00:00:00+08:00');
     start.setDate(start.getDate() + w * 7);
     if(start > today) break;
     let total = 0, dayCount = 0;
@@ -577,18 +727,17 @@ function computeThe90BestWeek(){
     }
     if(dayCount === 7 && total > best){
       best = total;
-      bestStr = `${total}/35`;
+      bestStr = `${total}/${max}`;
     }
   }
   return bestStr;
 }
 
 function renderThe90Heatmap(){
-  // 13 cols (weeks 1..13) × 5 rows (targets I..V). Each cell = one day.
-  // Actually we want one cell per day per target — that's 90 days × 5 targets = 450 cells.
-  // Display as a grid: rows = targets, cols = days. We'll show 13 weeks of 7 = 91 days, cap at 90.
+  // 一格 = 某根柱子的某一天。rows = 柱子,cols = 赛季的每一天(本季 4 × 93 = 372 格)。
+  // 列数由 CSS 变量 --the90-days 驱动(rThe90 写在 #the90-panel 上),换季不用改 CSS。
   const meta = S.the90.meta;
-  const total = 90;
+  const total = seasonLength();
 
   const rows = meta.targets.map((t, rowIndex) => {
     const cells = [];

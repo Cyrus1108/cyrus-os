@@ -1,15 +1,24 @@
-/* Theme — TWO identities:
+/* Theme — THREE identities, cycled in this order:
      君主 SOVEREIGN (default)  — data-theme="sovereign", full fx (crest + additive flow)
      终端 TERMINAL  (Arknights) — data-theme="terminal",  fx without crest / flow-additive
+     奶白 NOTEBOOK  (纸感浅色)  — data-theme="notebook",  只留 glass(交互层),
+                                  关掉 deco / crest / flow-additive —— 深色装饰(紫色氛围团、
+                                  加色能量丝、WebGL 徽记)打在奶油纸上会变成灰雾,data-fx
+                                  是 index.html 里既有的、专门用来关这类重装饰的开关。
    Each identity = a data-theme value + a data-fx capability string. The CSS is token-driven
-   and data-fx-gated (see styles/theme-terminal.css + tokens.css), so switching data-theme
-   recolors the whole UI and data-fx toggles the heavy decorations. A user toggle persists to
-   settings.theme and reloads ONCE, so crest.js / energyflow.js / sovereign.js all re-init
-   cleanly from index.html's pre-paint stamp — no fragile live re-wiring of WebGL modules. */
+   and data-fx-gated (see styles/theme-terminal.css / theme-notebook.css + tokens.css), so
+   switching data-theme recolors the whole UI and data-fx toggles the heavy decorations. A
+   user toggle persists to settings.theme and reloads ONCE, so crest.js / energyflow.js /
+   sovereign.js all re-init cleanly from index.html's pre-paint stamp — no fragile live
+   re-wiring of WebGL modules. */
 
-const THEME_FX = window.THEME_FX || { sovereign:'glass flow-additive deco crest', terminal:'glass deco' };
-const THEMES = ['sovereign', 'terminal'];
-const THEME_LABEL = { sovereign:'♛ 君主', terminal:'◈ 终端' }; // ♛ 君主 / ◈ 终端
+const THEME_FX = window.THEME_FX || {
+  sovereign:'glass flow-additive deco crest',
+  terminal:'glass deco',
+  notebook:'glass',
+};
+const THEMES = ['sovereign', 'terminal', 'notebook'];
+const THEME_LABEL = { sovereign:'♛ 君主', terminal:'◈ 终端', notebook:'✎ 奶白' };
 
 function currentTheme(){
   const t = document.documentElement.getAttribute('data-theme');
@@ -37,8 +46,10 @@ function applyTheme(name, persist){
   }
 }
 
+/* 循环:君主 → 终端 → 奶白 → 君主 …(顺序即 THEMES 的顺序) */
 function toggleTheme(){
-  applyTheme(currentTheme() === 'sovereign' ? 'terminal' : 'sovereign', true);
+  const i = THEMES.indexOf(currentTheme());
+  applyTheme(THEMES[(i + 1) % THEMES.length], true);
 }
 
 function updateThemeBtn(){

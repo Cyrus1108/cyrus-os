@@ -240,6 +240,39 @@ button.check-btn.done{border-color:var(--brass);color:var(--brass);}
 .todo-done .todo-text{text-decoration:line-through;color:var(--mute);}
 .todo-meta{display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap;}
 
+/* ════════ 可归档面板 ════════
+   收起 = 面板体全部隐藏、只留一条细行。DOM 不删(交易的时段 ticker 一直在写)。 */
+.panel-archived-bar{display:none;}
+.panel-archived > *:not(.panel-archived-bar){display:none !important;}
+.panel-archived{padding:12px 14px;}
+.panel-archived .panel-archived-bar{
+  display:flex;align-items:center;gap:10px;
+}
+.panel-archived-name{
+  flex:1;min-width:0;
+  font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--mute);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+/* .panel-label-row 的 ::after 是那条渐隐线(flex:1 吃掉剩余空间);order:1 把
+   「收起」排到那条线之后,也就是最右端。 */
+.panel-archive-btn{order:1;flex-shrink:0;}
+
+/* ════════ 目标 Goals ════════
+   行结构与 todo 行同构(拖动柄 + 勾选框 + 正文 + 行操作),只是正文多一段说明。 */
+.goal-card{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:10px 0;border-bottom:.5px solid var(--hair);
+}
+.goal-card:last-child{border-bottom:none;}
+.goal-body{flex:1;min-width:0;}
+.goal-title{font-size:13.5px;color:var(--ink);line-height:1.5;font-family:var(--serif);}
+.goal-done .goal-title{text-decoration:line-through;color:var(--mute);}
+.goal-done{opacity:.5;}
+.goal-desc{font-size:11.5px;color:var(--mute);line-height:1.5;margin-top:3px;}
+.goal-meta{display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap;}
+.goal-card:hover .drag-handle{opacity:.45;}
+.goal-card:hover .row-actions{opacity:1;}
+
 .cat-pills{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px;}
 .cat-pill{padding:4px 10px;border:.5px solid var(--hair-strong);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);cursor:pointer;background:transparent;font-family:var(--sans);transition:background var(--dur-base) var(--ease-silk),border-color var(--dur-base) var(--ease-silk),color var(--dur-base) var(--ease-silk);border-radius:4px;}
 .cat-pill.active{background:var(--brass);color:var(--color-background-primary);border-color:var(--brass);}
@@ -345,8 +378,16 @@ button.check-btn.done{border-color:var(--brass);color:var(--brass);}
   color:var(--mute);margin-bottom:10px;
 }
 
+/* 赛季名 —— 面板顶部的小字身份牌 */
+.the90-season{
+  font-family:var(--mono);font-size:9px;letter-spacing:.30em;text-transform:uppercase;
+  color:var(--mute);margin-bottom:10px;
+}
+
+/* 柱子数与赛季长度由 JS 写在 #the90-panel 的 --the90-n / --the90-days 上,
+   换季(柱子数变、天数变)不用改 CSS。默认值只是兜底。 */
 .the90-cells{
-  display:grid;grid-template-columns:repeat(5,1fr);gap:8px;
+  display:grid;grid-template-columns:repeat(var(--the90-n,5),1fr);gap:8px;
   margin-bottom:6px;
   /* top/bottom padding so a cell's hover-lift + brass border aren't clipped by
      overflow:hidden (kept, sides stay 0, for the all-done celebrate sweep) */
@@ -389,7 +430,7 @@ button.check-btn.done{border-color:var(--brass);color:var(--brass);}
 .the90-cell.off .the90-cell-mark{color:var(--color-text-danger);}
 
 .the90-labels{
-  display:grid;grid-template-columns:repeat(5,1fr);gap:8px;
+  display:grid;grid-template-columns:repeat(var(--the90-n,5),1fr);gap:8px;
   margin-bottom:6px;
 }
 .the90-label{
@@ -400,7 +441,7 @@ button.check-btn.done{border-color:var(--brass);color:var(--brass);}
 
 /* Hard-standard boxes — one per target, collapsed shows ⌄, click/1–5 expands */
 .the90-standards{
-  display:grid;grid-template-columns:repeat(5,1fr);gap:8px;
+  display:grid;grid-template-columns:repeat(var(--the90-n,5),1fr);gap:8px;
   margin-bottom:14px;align-items:start;
 }
 .the90-std{
@@ -445,9 +486,46 @@ button.check-btn.done{border-color:var(--brass);color:var(--brass);}
 }
 
 .the90-week{
-  display:grid;grid-template-columns:repeat(5,1fr);gap:8px;
+  display:grid;grid-template-columns:repeat(var(--the90-n,5),1fr);gap:8px;
   margin:6px 0 14px;
 }
+
+/* ── 销售行动计数器(陌生开发 / 跟进 / 新扫码)── */
+.the90-counters{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+  margin:6px 0 16px;
+}
+.the90-counter{
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  padding:9px 6px;
+  border:.5px solid var(--hair);border-radius:var(--border-radius-md);
+  background:color-mix(in srgb, var(--ink) 4%, transparent);
+  transition:border-color var(--dur-base) var(--ease-silk);
+}
+.the90-counter.has{border-color:var(--brass-ghost);}
+.the90-counter-label{
+  font-size:10px;color:var(--mute);letter-spacing:.06em;
+  font-family:var(--serif);font-style:italic;
+}
+.the90-counter-ctl{display:flex;align-items:center;gap:8px;}
+.the90-counter-num{
+  font-family:var(--serif);font-size:20px;line-height:1;
+  color:var(--ghost);min-width:1.6em;text-align:center;
+  transition:color var(--dur-base) var(--ease-silk);
+}
+.the90-counter.has .the90-counter-num{color:var(--ink);}
+.the90-counter-btn{
+  width:24px;height:24px;padding:0;line-height:1;
+  display:flex;align-items:center;justify-content:center;
+  background:transparent;border:.5px solid var(--hair-strong);
+  border-radius:var(--border-radius-md);
+  color:var(--mute);font-family:var(--sans);font-size:14px;
+  cursor:pointer;
+  transition:border-color var(--dur-fast) var(--ease-press),color var(--dur-fast) var(--ease-press),transform var(--dur-fast) var(--ease-press);
+}
+.the90-counter-btn:hover{border-color:var(--brass);color:var(--brass);}
+.the90-counter-btn:active{transform:scale(.9);}
+.the90-counter-btn:focus-visible{outline:none;box-shadow:0 0 0 2px var(--color-background-secondary),0 0 0 4px var(--brass);}
 .the90-week-stat{
   font-family:var(--mono);font-size:11px;color:var(--brass);
   text-align:center;letter-spacing:.04em;
@@ -476,17 +554,18 @@ button.check-btn.done{border-color:var(--brass);color:var(--brass);}
   padding:8px 0;
   position:relative;
 }
-/* ② breathing marker over today's column. 90 cols, 1px gaps → exact left/width.
-   --col is today's day number (1..90); top/bottom match the grid's 8px padding. */
+/* ② breathing marker over today's column. D 列、1px 间隙 → 精确 left/width。
+   --col 是今天的第几天(1..D);D = --the90-days(JS 写在 #the90-panel 上);
+   top/bottom 与网格的 8px padding 对齐。 */
 .the90-today-col{
   position:absolute; top:8px; bottom:8px;
-  left:calc((100% - 89px) / 90 * (var(--col) - 1) + (var(--col) - 1) * 1px);
-  width:calc((100% - 89px) / 90);
+  left:calc((100% - (var(--the90-days,90) - 1) * 1px) / var(--the90-days,90) * (var(--col) - 1) + (var(--col) - 1) * 1px);
+  width:calc((100% - (var(--the90-days,90) - 1) * 1px) / var(--the90-days,90));
   border-radius:1px; pointer-events:none; z-index:3;
   background:var(--brass-glow);   /* resting fill — breathe now animates opacity only (§2.4 no glow) */
 }
 .the90-h-row{
-  display:grid;grid-template-columns:repeat(90,1fr);gap:1px;
+  display:grid;grid-template-columns:repeat(var(--the90-days,90),1fr);gap:1px;
 }
 .h-cell{
   aspect-ratio:1;border-radius:1px;

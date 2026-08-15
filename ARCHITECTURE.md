@@ -1,6 +1,6 @@
 # CyrusOS · 活体架构地图（ARCHITECTURE.md）
 
-> **对齐版本:`cyrus-os-v7.36.0`**(= sw.js CACHE_VERSION;版本叙事在 [CHANGELOG.md](./CHANGELOG.md),本文件只描述现状。SOVEREIGN 重设计 P0-P4 已上线:渲染层骨架化 render-core.js/单一君主终端身份/系统窗降临+beat.js 三拍/君主徽记 crest.js+能量丝分层/七 HUD 精修(微标签体系 SYS.00-12、Lucide 图标全接线、RPG 紫锚色环、markets.js 下线)。方向书 REDESIGN.md;实现代理必读 AGENT-BRIEF.md。)
+> **对齐版本:`cyrus-os-v7.39.0`**(= sw.js CACHE_VERSION;版本叙事在 [CHANGELOG.md](./CHANGELOG.md),本文件只描述现状。v7.39.0:The 90 换季为 **S2 · 营收之季**(四柱 ai/jp/fit/ball,全程分级打卡,+三个销售计数器);新 goals.js 目标面板(纯 LS);第三主题「奶白 Notebook」;可归档面板机制;重复待办快进修复。SOVEREIGN 重设计 P0-P4 已上线:渲染层骨架化 render-core.js/单一君主终端身份/系统窗降临+beat.js 三拍/君主徽记 crest.js+能量丝分层/七 HUD 精修(微标签体系 SYS.00-12、Lucide 图标全接线、RPG 紫锚色环、markets.js 下线)。方向书 REDESIGN.md;实现代理必读 AGENT-BRIEF.md。)
 > 两者不一致即说明本文档已开始腐烂，修文档）。最后全面核对：2026-06-11。
 
 **这份文档的用途**：动工前读它，代替考古式读码。红线与部署纪律在
@@ -118,7 +118,8 @@ rMotivation → rMetrics → rpgAfterChange → attachRipples`
 | japanese.js | N2 清单；**完成即打卡**：`jpSettle()` 全勾→log[TODAY]，streak 由 `jpComputeStreak()` 从 log 推导（连续天数）；清单按日重置（jp.date）；ci-btn 仅展示 |
 | trading.js | 交易清单 + 偏向笔记（每日重置） |
 | todos.js | 待办 + 分类 + 重复 + 提醒（`toggleTd` 完成时生成下一次重复） |
-| the90.js | 90 天五柱：打卡格（stabilize 期 0–3 档循环，`the90ScoreMet` 判达标）、热力圈、streak（低谷日门槛 1 否则 3）、硬标准、`_the90PerfectSfxDate` 闩锁 |
+| the90.js | **赛季记分板**（v7.39.0 起 = S2 · 营收之季 2026-08-13→11-13，93 天）：文件头一个 **RENAME POINT 常量块**装下全部季名/日期/文案/四柱/计数器，换季只改那一块；四柱 `ai/jp/fit/ball` **全程分级打卡**（点一下升一级 1→2→3、第四下清空；`the90Graded()` 恒真，`the90Num` 兼容旧布尔 true→3/false→0；`the90ScoreMet` 对历史数据与旧的分阶段判定逐位等价）；三阶段（开局/加速/收成，31 天一段）只是标签+里程碑，仍照写 `meta.currentPhase`；三个销售计数器 `dm/follow/scan` 存**同一个 scores 对象**（数字键，靠「只按显式键访问」的红线与柱子及 `_amp` 等命名空间键共处）；`ensureThe90Defaults` 按 `startDate < SEASON_START` **每次渲染重迁**旧赛季 meta（pull/realtime 会把旧行灌回来）；网格列数走 CSS 变量 `--the90-n`/`--the90-days`；streak 门槛 `SEASON_ACTIVE_THRESHOLD`（低谷日 1）；旧赛季日行一行不删 |
+| goals.js | **目标面板**（v7.39.0）：title/说明/期限 + 倒数标签（Xd / 今天 / 逾期 Xd / 达成）、增删改、拖拽排序、达成沉底；**只存 localStorage**（`goals` 键，`saveLSRaw`，不进 SETTINGS_KEYS、不设 dirty）——Supabase 没有 goals 表，刻意不改 schema，代价是不跨设备同步 |
 | hermes.js | Hermes 通知列表；`_hermesSeen` id 差分 + `window._hermesPulled` 门 → 新通知才 `Sfx.notice()`；dismiss 幂等 |
 | finance.js | 记账全家桶：账户/分类/交易(插入式)/预算/目标/周期/隐私遮罩/CSV/主题日历与时间选择器；`finSubmitTx` 与 `finWizSave` 两条保存路径 |
 | finance-charts.js | Chart.js 分析图 |
@@ -132,7 +133,7 @@ rMotivation → rMetrics → rpgAfterChange → attachRipples`
 | lowday.js | 低谷日断路器：`_amp/_low/_lowx/_trig` 命名空间键写进 the90_daily.scores；协议弹窗、战略面封锁 `lowdayBlocked`、渡 `lowdayCross`、`adversityLedger()` |
 | principles.js | 信条与原则弹窗三模式（宣读/核查/修订）；`principlesAutoShow`/`principlesEveningAutoShow`（标记列见 §3 settings）；修订被低谷锁；核查草稿 `prDraft` 保存才落库 |
 | applock.js | 应用锁（PIN/生物识别可选） |
-| theme.js | 主题切换 **三态** `THEMES=['cappa','sterile','terminal']`（`toggleTheme` 循环 / `applyTheme(name,persist)` / `currentTheme`）；仅 sterile 走 `ensureLifeTree()`+ambient 动态 import；`updateThemeBtn` 标签 ◆终末/▣终端/☼经典 |
+| theme.js | 主题切换 **三态** `THEMES=['sovereign','terminal','notebook']`(`toggleTheme` 按数组循环 君主→终端→奶白 / `applyTheme(name,persist)` 落 LS+推 settings+reload 一次 / `currentTheme`);每个身份 = 一个 `data-theme` 值 + 一串 `data-fx` 能力标志(sovereign 全开、terminal 无 crest/flow-additive、**notebook 只留 glass** —— 深色重装饰打在奶油纸上会变灰雾);`THEME_FX` 与 index.html 预绘脚本里的副本**必须同步**;`updateThemeBtn` 标签 ♛君主/◈终端/✎奶白 |
 | ambient.js | sterile 主题环境音 |
 | lifetree.js | Three.js 粒子生命树（The 90 进度驱动生长；不可见自动暂停）；动态 import 加载，但**仍列在 APP_SHELL**（SW 缓存它，离线 sterile 才能用——别"清理"掉） |
 | dragsort.js | 通用拖拽排序 `makeSortable`（jp/tr/todos/principles 等共用） |
@@ -148,13 +149,20 @@ tokens（全部变量源；v7.32.0 起含 `--z-*` 全局层叠梯度）→ fonts
 background-gradient、todo/.row 行角标、定制 `.row-cb` 勾选框、`brassFlow` 液态流光
 打在 `.creed-pillars/#dateline/#the90-tagline`；v7.18.0 末段附 SAO 导览样式
 `.nav-arrow`/`.drawer-nav`/`.navd-list`/`.navd-item`/`.hn-item` + 进/退/选 keyframes）→
-animations → theme-sterile（作用域 `html[data-theme="sterile"]`，默认主题的新装饰一律用
-`html:not([data-theme="sterile"])` 隔离）→ **theme-terminal**（v7.18.0，作用域
-`html[data-theme="terminal"]`，深色 token 重映射；**坑**：cappa 装饰的
-`html:not([data-theme="sterile"])` 隔离把 terminal 也算进默认装饰，故 theme-terminal 必须
-**晚于** components 加载以覆盖，herocube 另在 JS 里 guard `['sterile','terminal']`）→
-finance → fitness → calendar → ai → store → motivation → system（RPG HUD：
-角标/扫描线/辉光/庆祝弹窗/段位流光）→ lowday → principles。
+animations → finance → fitness → calendar → ai → store → motivation → system（RPG HUD：
+角标/扫描线/辉光/庆祝弹窗/段位流光）→ lowday → principles → fonts →
+**主题 overlay 必须最后加载**（同权重时才赢得过 components）：
+**theme-terminal**（v7.18.0，作用域 `html[data-theme="terminal"]`，深色 token 重映射）→
+**theme-notebook**（v7.39.0，作用域 `html[data-theme="notebook"]`，奶白纸感浅色：
+页面 `#FAF6F0` / 面板 `#FDFAF4` / 内嵌纸块 `#F2EDE4` / 墨 `#2A2A2A` / 细线 `#1E1E1E` 低透明度 /
+金 `--brass-soft:#D4A574` 做填充、`--brass:#8F6222` 做小字与线条；四支荧光笔
+`--accent-{yellow,red,blue,amber}` 各带 `-ink`（压暗版，给文字）与 `-soft`（淡洗，给底纹）——
+**淡色只做填充，永不承载小字**）。
+**写主题 overlay 的三个坑**：①`color-scheme` 在 tokens.css 里写死在裸 `html` 上，浅色主题
+必须在自己的作用域里改回 `light`，否则滚动条/日期选择器/autofill 仍是深色；②深色专属的
+硬编码色（`#app-cover` 内联开屏、`.focus-backdrop` 近黑遮罩、date/time 控件的 invert 滤镜）
+不吃 token，要逐个点名覆盖；③重装饰不要在 CSS 里一条条关——用 `data-fx` 能力标志
+（notebook 只给 `glass`），这正是它被设计出来的用途。
 
 ---
 
@@ -257,10 +265,22 @@ synced settings date 列 + SETTINGS_KEYS 镜像；**先写标记再弹**（backd
 
 - **RPG 单调律**：等级/EXP 永不回退；`achievements` jsonb append-only；
   `rpgAchExp()` 只读已存键，绝不实时重测；逆境账户(渡)计数只增
+- **换季不许让 EXP 倒退**（v7.39.0 起）：柱子 id 换了一整套，但历史日行里存的还是
+  上一季的 `I–V`。`rpgTargetIdsFor(date)` 按日期分流——早于 `SEASON_START` 的用
+  `SEASON_LEGACY_TARGET_IDS`，其余用当季 targets；`rpgTotalExp` 的满勤 +25 也按
+  「那一天当时有几根柱子」判定。少了这两条，换季当天全部历史会被算成 0 达标，
+  累计 EXP 崩塌、等级倒退，直接撞上上一条红线。**下次换季必须照做。**
+  `RPG_ACTIVITY_ATTR` 则是**整组替换**（不能留旧行：`rpgAttrFromCounts` 把每一行
+  都算进权重和，死行会永久拉低全部属性）——代价是新柱子没有历史，属性从 10 起
+  在新赛季前 30 天内爬升。
 - **rpg-stats.py ↔ rpg.js 镜像耦合**（改任何一边必须同步另一边 + EC2 重部署）：
   `TIER_EXP{15/30/50/100}` · `ACH_TIER`（**断言 55 条**）· `ACTIVITY_ATTR` 多对多矩阵
-  （睡眠 I 喂全部 6 维；III AI Automation 加喂 CRE 创造）· `TARGET_LABEL{I睡眠 II冥想 III AI Automation IV健身 V性能量}`（III 暑假由「课业」重命名，v7.13.2；rpg.js 无 TARGET_LABEL，前端柱名走 the90_meta.targets） ·
-  `ATTR_ORDER[STR,AGI,INT,WIS,VIT,CRE]`（v7.15.0 加第6属性 创造） · `THE90_START=2026-05-11`
+  （v7.39.0 起 = `ai/jp/fit/ball` 四柱：ai→INT+CRE、jp→INT+WIS、fit→STR+AGI+VIT、
+  ball→AGI+VIT+STR）· `TARGET_LABEL`（应随之变为 `{ai AI 生意, jp 日本語, fit 健身, ball 篮球}`；
+  rpg.js 无 TARGET_LABEL，前端柱名走 the90_meta.targets） ·
+  `ATTR_ORDER[STR,AGI,INT,WIS,VIT,CRE]`（v7.15.0 加第6属性 创造） ·
+  `THE90_START`（应随之变为 `SEASON_START=2026-08-13`）
+  **⚠️ v7.39.0 只改了前端；服务端 rpg-stats.py 尚未同步（见 §7.6）**
 - **finBalance 的 transfer 不对称**（toAmount vs amount）字节级保留；不就地 sort
   `S.fin.transactions`
 - 隐私遮罩 = 值**不进 DOM**，不是 CSS 隐藏
@@ -308,6 +328,17 @@ hermes-cyrus/
    待用户确认是否清除
 4. 财务**利息计算疑似不正确**（用户报告，未排查；fin_accounts.interestRate 相关）
 5. ~~creed.js 死文件~~ **已删（v7.17.0）**：文件 + index.html 脚本标签 + APP_SHELL 条目均移除；CREED_VARIANTS(state.js) 与 #creed-trigger/#creed-wrap 标记保留(principles.js 用)
+6. **rpg-stats.py 仍停在上一季的柱子**（v7.39.0 换季只动了前端）：`ACTIVITY_ATTR` /
+   `TARGET_LABEL` / `THE90_START` 还是 `I–V` + `2026-05-11`，于是 EC2 的早/晚战报会
+   按不存在的柱子算属性、日报里的目标名也是旧的。需按 §5 的新映射改 hermes-cyrus
+   仓库的 `scripts/rpg-stats.py` 并重新部署到 EC2。前端不受影响。
+7. **rpg.js 的 `day30/day60/day90` 成就与 `comeback` 的硬编码 `3`**：里程碑成就的文案
+   仍写「The 90 第 30 天」，且 day 计数已随 S2 重新从 1 开始（成就 append-only，已解锁的
+   不会被撤销，会在 S2 第 30/60/90 天再次达成）；`comeback` 里的门槛 `3` 没有跟着
+   `SEASON_ACTIVE_THRESHOLD` 走。都属文案/口径小瑕疵，未改。
+8. **目标面板不跨设备同步**（v7.39.0）：`goals` 只存 localStorage —— 本次刻意不动
+   schema。若要同步，按 §4 R1 建 `goals` 表（原型 C 列表整替）并把 `saveGoals`
+   接进 dirty/push 链路。面板归档状态（`archived_panels`）则是有意只留本机。
 
 更多产品向 backlog（滑动切换、健身面板、Morning Ritual 改造等）在 Claude 的
 跨会话记忆里维护，不在本文档。

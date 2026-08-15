@@ -19,15 +19,19 @@ const RPG_ATTRS = [
 ];
 const RPG_ATTR_ORDER = ['STR','AGI','INT','WIS','VIT','CRE'];
 const RPG_ATTR_NAME = { STR:'力量', AGI:'敏捷', INT:'智力', WIS:'智慧', VIT:'体力', CRE:'创造' };
-// activity (the90 target id) → attribute weights. Sleep (I) is the foundation →
-// full weight to all six; the others feed only their directly-related attributes.
+// activity (the90 target id) → attribute weights. 换季(S2 · 营收之季)后柱子换成
+// 四根,矩阵整组替换 —— 不能保留上一季的 I–V 行:rpgAttrFromCounts 会把每一行都算进
+// 权重和(wsum),留着死行会永久拉低全部属性。
+// 属性归属沿用上一季的对应关系:ai 接旧 III(AI Automation),fit 接旧 IV(健身)。
 const RPG_ACTIVITY_ATTR = {
-  I:   { STR:1, AGI:1, INT:1, WIS:1, VIT:1, CRE:1 },   // 睡眠 — foundation, feeds all six
-  II:  { INT:1, WIS:1 },                                // 冥想
-  III: { INT:1, CRE:1 },                               // AI Automation — feeds 智力 + 创造
-  IV:  { STR:1, AGI:1 },                               // 健身
-  V:   { VIT:1, WIS:1, INT:1 },                         // 性能量管理
+  ai:   { INT:1, CRE:1 },          // AI 生意 — 智力 + 创造(承接旧 III)
+  jp:   { INT:1, WIS:1 },          // 日本語 — 智力 + 智慧
+  fit:  { STR:1, AGI:1, VIT:1 },   // 健身 — 力量 + 敏捷 + 体力(承接旧 IV,加体力)
+  ball: { AGI:1, VIT:1, STR:1 },   // 篮球 — 敏捷 + 体力 + 力量
 };
+/* 上一季的柱子 id —— 只用于把历史日行的达标数算回累计 EXP(见 rpgMetOn)。
+   the90.js 定义了同名常量;这里的字面量是它没加载时的兜底。 */
+const RPG_LEGACY_TARGET_IDS = ['I','II','III','IV','V'];
 const RPG_TITLES = { E:'觉醒者', D:'挑战者', C:'攀登者', B:'破限者', A:'支配者', S:'君主' };
 // per-attr hues — MUST mirror the .sa-* colours in system.css (used for SVG fills).
 // SOVEREIGN violet-anchored six-hue ring (50° apart, S50/L70) — see system.css
@@ -37,28 +41,40 @@ const RPG_ATTR_COLOR = { STR:'#D98CCC', AGI:'#99D98C', INT:'#8CB3D9', WIS:'#A68C
 /* ── pure helpers ── */
 function rpgTargets(){
   return (S.the90 && S.the90.meta && S.the90.meta.targets)
-    || (typeof THE_90_TARGETS_DEFAULT !== 'undefined' ? THE_90_TARGETS_DEFAULT : []);
+    || (typeof SEASON_TARGETS_DEFAULT !== 'undefined' ? SEASON_TARGETS_DEFAULT : []);
+}
+/* 某一天该按哪一组柱子 id 计数。本季开始之前的日期用上一季的 id —— 否则换季当天
+   全部历史日行都会被算成 0 达标,累计 EXP 崩塌、等级倒退,直接违反「等级/EXP 永不
+   回退」的红线(ARCHITECTURE §5)。 */
+function rpgTargetIdsFor(dateStr){
+  const seasonStart = (typeof SEASON_START !== 'undefined') ? SEASON_START : null;
+  if(seasonStart && dateStr && dateStr < seasonStart){
+    return (typeof SEASON_LEGACY_TARGET_IDS !== 'undefined') ? SEASON_LEGACY_TARGET_IDS : RPG_LEGACY_TARGET_IDS;
+  }
+  return rpgTargets().map(t => t.id);
 }
 function rpgMetOn(dateStr){
-  // # of targets met on a given date (0..5)
+  // # of targets met on a given date (本季 0..4;上一季的日期 0..5)
   if(typeof the90Phase!=='function' || typeof the90Day!=='function' || typeof the90ScoreMet!=='function') return 0;
   const day = S.the90 && S.the90.daily && S.the90.daily[dateStr];
   if(!day) return 0;
   const phase = the90Phase(the90Day(dateStr));
   const scores = day.scores || {};
   let met = 0;
-  for(const t of rpgTargets()){ if(the90ScoreMet(scores[t.id], phase)) met++; }
+  for(const id of rpgTargetIdsFor(dateStr)){ if(the90ScoreMet(scores[id], phase)) met++; }
   return met;
 }
 function rpgTotalExp(){
   // Σ over all past+today days: metCount*10 + perfect-day(25). + phase milestones reached.
   let exp = 0;
   const daily = (S.the90 && S.the90.daily) || {};
-  const nTargets = rpgTargets().length;
   for(const date in daily){
     if(date > TODAY) continue;
     const met = rpgMetOn(date);
     exp += met * 10;
+    // 满勤 +25 —— 按「那一天当时有几根柱子」判定(上一季 5 根,本季 4 根),
+    // 否则换季会把历史上的满勤日全部作废,累计 EXP 倒退。
+    const nTargets = rpgTargetIdsFor(date).length;
     if(nTargets && met === nTargets) exp += 25;
   }
   if(typeof the90Day === 'function'){
@@ -779,9 +795,11 @@ function rpgGrowthSVG(days){
   const line = rpgSmoothPath(pts);
   const area = line + ' L 100 30 L 0 30 Z';
 
-  let marks = '';                                    // C · The 90 phase milestones in window
+  let marks = '';                                    // C · 赛季阶段里程碑(落在窗口内的)
   if(typeof the90Day==='function'){
-    [30,60,90].forEach(M=>{
+    const _len = (typeof seasonPhaseLen==='function') ? seasonPhaseLen() : 30;
+    const _n = (typeof SEASON_PHASES!=='undefined') ? SEASON_PHASES.length : 3;
+    Array.from({length:_n}, (_,i)=>(i+1)*_len).forEach(M=>{
       for(let j=0;j<days;j++){
         const ds = dates[W-1+j];
         if(ds<=TODAY && the90Day(ds)===M){

@@ -5,7 +5,7 @@
    - TradingView widgets and external CDNs: stale-while-revalidate.
    Bump CACHE_VERSION on every shell change to force clients to drop the old cache. */
 
-const CACHE_VERSION = 'cyrus-os-v7.38.0';
+const CACHE_VERSION = 'cyrus-os-v7.39.0';
 const APP_SHELL = [
   './',
   './index.html',
@@ -20,8 +20,9 @@ const APP_SHELL = [
   './styles/tokens.css',
   './styles/fonts.css',
   './styles/base.css',
-  './styles/components.css?v=7.35.0',
+  './styles/components.css?v=7.39.0',
   './styles/theme-terminal.css?v=7.37.0',
+  './styles/theme-notebook.css?v=7.39.0',
   './styles/animations.css',
   './styles/finance.css',
   './styles/fitness.css',
@@ -45,6 +46,7 @@ const APP_SHELL = [
   './scripts/trading.js',
   './scripts/todos.js',
   './scripts/the90.js',
+  './scripts/goals.js',
   './scripts/hermes.js',
   './scripts/finance.js',
   './scripts/finance-charts.js',

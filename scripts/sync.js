@@ -154,9 +154,10 @@ async function pullThe90Meta(){
 
 async function pullThe90Daily(){
   if(typeof ensureThe90Defaults === 'function') ensureThe90Defaults();
-  // Only fetch the last 95 days: the 90-day program length + a 5-day buffer. This window
-  // must stay >= the program length so a refresh/realtime pull never trims an in-window day.
-  const since = new Date(Date.now() - 95 * 86400000).toISOString().slice(0,10);
+  // Only fetch a rolling window: the season length + buffer. It must stay >= seasonLength()
+  // so a refresh/realtime pull never trims an in-window day and the streak can't break
+  // falsely. S2 是 93 天 → 110 天留足缓冲(换季时顺手加宽,原为 90 天季的 95)。
+  const since = new Date(Date.now() - 110 * 86400000).toISOString().slice(0,10);
   const { data } = await sb.from('the90_daily').select('*')
     .eq('user_id', currentUser.id).gte('date', since);
   // Preserve a locally-dirty (un-pushed) TODAY edit so a concurrent realtime/refresh pull

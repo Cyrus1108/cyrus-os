@@ -310,6 +310,76 @@ function withViewTransition(fn){
   document.startViewTransition(fn);
 }
 
+/* ════ 可归档面板(面板收纳)════
+   index.html 里任何带 data-panel="<id>" 的面板都能被收成一条细行。状态只存
+   localStorage(`cyrus_dashboard_v6_archived_panels`)—— 刻意不进 SETTINGS_KEYS,
+   所以永远不碰 settings 表、不跨设备同步(这是本机的界面偏好,不是数据)。
+   面板体只是加个 class 藏起来,DOM 一直在:交易面板的市场时段 ticker(tick())
+   每秒都在往 #sessions 里写,节点消失会报错。
+   v7 没有现成的面板显隐系统(store.js 是心愿单 HUD,不是面板管理器),所以这里
+   新建一个通用的最小机制,而不是给交易面板单独写死一套。 */
+
+const ARCHIVED_PANELS_DEFAULT = ['trading'];              // 交易已暂停 → 首次运行默认收起
+const PANEL_NAMES = { trading: '交易台 · Trading desk' };
+
+let archivedPanels = [];
+
+function loadArchivedPanels(){
+  const stored = loadLS('archived_panels', null);
+  // 键不存在 → 种默认值;用户手动展开后存下的 [] 必须能活过刷新(所以不能用 || )
+  archivedPanels = Array.isArray(stored) ? stored : ARCHIVED_PANELS_DEFAULT.slice();
+}
+function saveArchivedPanels(){ saveLSRaw('archived_panels', archivedPanels); }
+
+function archivePanel(id){
+  if(!archivedPanels.includes(id)) archivedPanels.push(id);
+  saveArchivedPanels();
+  if(window.Sfx) Sfx.close();
+  rPanels();
+}
+function unarchivePanel(id){
+  archivedPanels = archivedPanels.filter(p => p !== id);
+  saveArchivedPanels();
+  if(window.Sfx) Sfx.open();
+  rPanels();
+}
+
+function rPanels(){
+  document.querySelectorAll('[data-panel]').forEach(el => {
+    const id = el.dataset.panel;
+    const name = PANEL_NAMES[id] || id;
+
+    // 归档态的细行 —— 建一次,之后复用(持久节点,不会在用户按下去的瞬间被重建)
+    let bar = el.querySelector(':scope > .panel-archived-bar');
+    if(!bar){
+      bar = document.createElement('div');
+      bar.className = 'panel-archived-bar';
+      bar.innerHTML = `<span class="panel-archived-name"></span>`
+        + `<span class="tag tag-done">已收起</span>`
+        + `<button class="ghost fx-btn panel-archived-expand">展开</button>`;
+      bar.querySelector('.panel-archived-expand').addEventListener('click', () => unarchivePanel(id));
+      el.prepend(bar);
+    }
+    setText(bar.querySelector('.panel-archived-name'), name);
+
+    // 面板头里的「收起」按钮 —— 也是建一次
+    if(!el.querySelector(':scope > .panel-head .panel-archive-btn')){
+      const row = el.querySelector(':scope > .panel-head .panel-label-row');
+      if(row){
+        const btn = document.createElement('button');
+        btn.className = 'row-btn panel-archive-btn';
+        btn.textContent = '收起';
+        btn.title = '把这个面板收成一行(只存本机)';
+        btn.addEventListener('click', () => archivePanel(id));
+        row.appendChild(btn);
+      }
+    }
+
+    setClass(el, 'panel-archived', archivedPanels.includes(id));
+  });
+  attachRipples();
+}
+
 /* Ripple effect */
 function addRipple(e){
   const btn = e.currentTarget;
@@ -384,7 +454,7 @@ function rMetrics(){
   updateShowDoneBtn();
 }
 
-function renderAll(){rDate();rMR();rAC();rJP();rTR();rCats();rTodos();if(typeof rThe90==='function') rThe90();if(typeof rLowDay==='function') rLowDay();if(typeof rHermes==='function') rHermes();if(typeof rMotivation==='function') rMotivation();rMetrics();if(typeof rpgAfterChange==='function') rpgAfterChange();if(typeof rCalDot==='function') rCalDot();if(typeof rAiDot==='function') rAiDot();if(typeof rStoreDot==='function') rStoreDot();attachRipples();}
+function renderAll(){rDate();rMR();rAC();rJP();rTR();rCats();rTodos();if(typeof rThe90==='function') rThe90();if(typeof rGoals==='function') rGoals();if(typeof rPanels==='function') rPanels();if(typeof rLowDay==='function') rLowDay();if(typeof rHermes==='function') rHermes();if(typeof rMotivation==='function') rMotivation();rMetrics();if(typeof rpgAfterChange==='function') rpgAfterChange();if(typeof rCalDot==='function') rCalDot();if(typeof rAiDot==='function') rAiDot();if(typeof rStoreDot==='function') rStoreDot();attachRipples();}
 
 function onAuthReady(){
   /* Called by auth.js once a Supabase session is established.
@@ -449,6 +519,9 @@ async function init(){
   // expire & archive overdue 'no-carry' todos so they don't keep nagging day after day
   if(typeof sweepExpiredTodos==='function') sweepExpiredTodos();
   showDone = loadLS('show_done', false);
+  // 只存本机、永不同步的功能状态(目标面板 / 面板归档)
+  if(typeof initGoals === 'function') initGoals();
+  if(typeof loadArchivedPanels === 'function') loadArchivedPanels();
   if(typeof initTheme === 'function') initTheme();
   if(typeof initFinance === 'function') initFinance();
   if(typeof initFitness === 'function') initFitness();
@@ -466,8 +539,8 @@ async function init(){
     const dailyCache = loadLS('the90_daily', null);
     if(dailyCache) S.the90.daily = dailyCache;
   }
-  // 暑假重心: rename The 90 柱 III 课业→AI Automation (self-healing, idempotent)
-  if(typeof cleanThe90Targets==='function' && cleanThe90Targets()) saveThe90Meta();
+  // (旧的 cleanThe90Targets「柱 III 课业→AI Automation」自愈已退役 —— S2 换季后整组
+  //  meta 由 the90.js 的 ensureThe90Defaults 按起点日期迁移,覆盖同一件事且更彻底)
 
   // v6.50: the THE CREED row now opens the 信条与原则 protocol modal
   // (the old inline variant rotation retired; CREED_VARIANTS stays for the login card)
@@ -496,8 +569,9 @@ async function init(){
     if(typeof cleanJapanese==='function' && cleanJapanese()){ saveJP(); if(typeof rJP==='function') rJP(); }
     // pull is authoritative: re-run the expiry sweep against synced todos
     if(typeof sweepExpiredTodos==='function' && sweepExpiredTodos() && typeof rTodos==='function') rTodos();
-    // pull is authoritative: heal the renamed The 90 柱 III against synced meta
-    if(typeof cleanThe90Targets==='function' && cleanThe90Targets()){ saveThe90Meta(); if(typeof rThe90==='function') rThe90(); }
+    // pull is authoritative: 如果云端来的还是上一季的 meta,这里立刻迁到本季并回推
+    // (ensureThe90Defaults 幂等;renderAll 的 rThe90 也会再兜一次,见其注释)
+    if(typeof ensureThe90Defaults==='function') ensureThe90Defaults();
     renderAll();
     // 晨间宣读 / 晚间核查 auto-show — once per day, only after the synced
     // markers arrived (runs exactly once per page load; rehydrate never re-enters init)

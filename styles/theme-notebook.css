@@ -1,0 +1,217 @@
+/* ══════════════════════════════════════════════════════════════════
+   Theme: 奶白 · NOTEBOOK · html[data-theme="notebook"]
+   一本摊开的奶油色笔记本 —— 纸、墨、一点金,外加四支淡色荧光笔。
+   和 theme-terminal.css 同一套做法:作用域 overlay,最后加载所以平权时赢;
+   SOVEREIGN 底座是 token 驱动 + data-fx 门控的,所以在这里重新声明颜色 token
+   就能整体换肤;剩下的只处理「深色专属」的那几处(色域声明、原生控件配色、
+   深色遮罩、深色开屏封面),以及把重装饰关掉。
+   君主 / 终端两个身份完全不受影响 —— 本文件的每条规则都锁在
+   [data-theme="notebook"] 下。Token 名与 tokens.css 一致,只有值不同。
+
+   重装饰怎么关:notebook 的 data-fx 只留 `glass`(交互层),不给 deco /
+   crest / flow-additive(见 index.html 预绘脚本 + scripts/theme.js)。于是
+   紫色氛围渐变、面板 tilt、WebGL 徽记、加色能量丝全部自动熄火 —— 这正是
+   index.html 里那套 data-fx 能力标志被设计出来的用途。
+   ══════════════════════════════════════════════════════════════════ */
+
+html[data-theme="notebook"]{
+  /* 原生控件(滚动条、日期选择器、autofill)必须知道这是浅色页面。
+     tokens.css 在裸 html 上写死了 color-scheme:dark,这里权重更高。 */
+  color-scheme:light;
+
+  /* ── 金 ──
+     --brass 承载「主操作 + 小字 + 线条」,所以它必须是能读的深金;
+     --brass-soft 才是主人钦定的那支金 #D4A574,只用于填充/进度条/微光。 */
+  --brass:#8F6222;
+  --brass-soft:#D4A574;
+  --brass-ghost:rgba(212,165,116,0.34);
+  --brass-glow:rgba(212,165,116,0.45);
+
+  /* ── 纸 ──
+     primary   = 面板/卡片纸面(比页面底色再亮一点点)
+     secondary = 略微凹陷的层:编辑框、抽屉、.sov-fill 面板填充层
+     tertiary  = 内嵌纸块 / 热力图空格
+     input     = 表单字段(最亮,像贴上去的一张便条) */
+  --color-background-primary:#FDFAF4;
+  --color-background-secondary:#F6F2EA;
+  --color-background-tertiary:#F2EDE4;
+  --color-background-input:#FFFDF8;
+  --color-background-success:rgba(103,141,88,0.14);
+  --color-background-danger:#FAEAE7;
+  --color-background-warning:#FAF0DC;
+
+  /* ── 墨 ──
+     secondary / tertiary 都是从 #9A958C 压暗来的:原色在 #FAF6F0 上只有
+     ~2.9:1,远不到正文 4.5:1。压暗不是可选项。 */
+  --color-text-primary:#2A2A2A;
+  --color-text-secondary:#57534B;
+  --color-text-tertiary:#6B665D;
+  --color-text-success:#4B6E3C;
+  --color-text-danger:#B03A2C;
+  --color-text-warning:#8A5E12;
+
+  /* ── 细线 —— #1E1E1E 低透明度,铅笔痕而不是黑框 ── */
+  --color-border-tertiary:rgba(30,30,30,0.10);
+  --color-border-secondary:rgba(30,30,30,0.18);
+  --color-border-primary:rgba(30,30,30,0.34);
+  --color-border-danger:rgba(176,58,44,0.36);
+  --color-border-warning:rgba(138,94,18,0.36);
+  --color-border-success:rgba(75,110,60,0.42);
+
+  /* 纸角比君主的 4px 更圆一些,像便签本 */
+  --border-radius-md:6px;
+  --border-radius-lg:12px;
+
+  /* ── 荧光笔四色(主人的 Nintendo 卡带配色)──
+     --accent-*      填充 / 色条 / 色块(淡色,永远不承载小字)
+     --accent-*-ink  同色压暗版,给文字用 —— 淡色上写小字必糊
+     --accent-*-soft 半透明淡洗,给底纹用 */
+  --accent-yellow:#FFE082;
+  --accent-yellow-ink:#7E5B08;
+  --accent-yellow-soft:rgba(255,224,130,0.34);
+
+  --accent-red:#FF6B6B;
+  --accent-red-ink:#B03A2C;
+  --accent-red-soft:rgba(255,107,107,0.16);
+
+  --accent-blue:#6FB3FF;
+  --accent-blue-ink:#2C5C8F;
+  --accent-blue-soft:rgba(111,179,255,0.18);
+
+  --accent-amber:#E6A23C;
+  --accent-amber-ink:#8A5E12;
+  --accent-amber-soft:rgba(230,162,60,0.20);
+
+  /* 淡色填充之上的墨色(淡色在浅色主题里始终够亮,所以恒为深墨) */
+  --on-accent-ink:#2A2A2A;
+}
+
+/* ── 页面底色 ──
+   base.css 把 html,body 的底色接到 --color-background-tertiary(内嵌纸块层),
+   这里显式改写成主人钦定的页面奶白,让「页面 → 面板」有一档明度差。 */
+html[data-theme="notebook"],
+html[data-theme="notebook"] body{
+  background:#FAF6F0;
+  color:var(--color-text-primary);
+}
+
+/* ── 重装饰:关掉深色专属的背景层 ──
+   data-fx 已经不给 crest / flow-additive / deco 了(徽记与 glass-trails 另有
+   `html:not([data-fx~="…"])` 规则自动隐藏);能量丝是自启 IIFE、三主题都画,
+   所以和 terminal 一样显式关掉 —— 发光丝带落在纸上只会变成一层灰雾。 */
+html[data-theme="notebook"] #crest{ display:none !important; }
+html[data-theme="notebook"] #energy-flow{ display:none !important; }
+
+/* deco 关掉之后会连带失去的一条纪律:全屏系统窗的「无退出键」规则原本挂在
+   data-fx~="deco" 上。这里补回来,三个主题的交互一致。 */
+html[data-theme="notebook"] .sys-back[aria-label="关闭"]{ display:none !important; }
+
+/* ── 原生控件 ──
+   base.css 为深色 UI 把日期/时间控件锁成 color-scheme:dark,并给日历小图标加了
+   一层 invert 滤镜。浅色页面上两者都要撤销,否则弹出的是黑底选择器、图标发白。 */
+html[data-theme="notebook"] input[type=date],
+html[data-theme="notebook"] input[type=time]{
+  color-scheme:light;
+  accent-color:var(--brass);
+}
+html[data-theme="notebook"] input[type=date]::-webkit-calendar-picker-indicator,
+html[data-theme="notebook"] input[type=time]::-webkit-calendar-picker-indicator{
+  filter:none;
+  opacity:.55;
+}
+
+/* ── 遮罩 ──
+   聚焦背板原本是近黑半透明,在纸上会像一块脏玻璃;换成奶白雾面。 */
+html[data-theme="notebook"] .focus-backdrop{
+  background:rgba(250,246,240,0.72);
+}
+html[data-theme="notebook"] .dragging{
+  box-shadow:0 8px 24px rgba(30,30,30,0.14);
+}
+
+/* ── 纸的质感 ──
+   面板 = 一张浮起来的纸:极淡投影 + 细线边,不用辉光。 */
+html[data-theme="notebook"] .panel,
+html[data-theme="notebook"] .the90-panel{
+  background:var(--color-background-primary);
+  border:.5px solid var(--color-border-tertiary);
+  box-shadow:0 1px 2px rgba(30,30,30,0.04), 0 6px 18px -12px rgba(30,30,30,0.16);
+}
+/* sovereign.js 注入的填充层跟着变成纸色(它盖在面板底下,深色会透出脏边) */
+html[data-theme="notebook"] .sov-fill{ background:var(--color-background-primary); }
+
+/* ── 排版:笔记本用无衬线正文 + 更收敛的字距(君主的 mono 太机械)── */
+html[data-theme="notebook"]{
+  --font-sans:'Inter','Noto Sans SC','PingFang SC','Microsoft YaHei',system-ui,sans-serif;
+}
+html[data-theme="notebook"] .sov-micro,
+html[data-theme="notebook"] .eyebrow-mute{
+  letter-spacing:.16em;
+}
+
+/* ── 四支荧光笔:按面板给一条彩色书脊 ──
+   只用在面板级容器的左缘,文字一律用 -ink 版本,淡色只做填充。 */
+html[data-theme="notebook"] #the90-panel{ border-left:3px solid var(--accent-amber); }
+html[data-theme="notebook"] #goals-panel{ border-left:3px solid var(--accent-blue); }
+html[data-theme="notebook"] .mr-panel{ border-left:3px solid var(--accent-yellow); }
+html[data-theme="notebook"] #hermes-panel{
+  border-left:3px solid var(--accent-yellow);
+  background:var(--accent-yellow-soft);
+}
+html[data-theme="notebook"] #hermes-panel .hermes-head-label,
+html[data-theme="notebook"] #hermes-panel .hermes-head-glyph{ color:var(--accent-yellow-ink); }
+html[data-theme="notebook"] #hermes-panel .hermes-head-count{
+  background:var(--accent-yellow); color:var(--on-accent-ink);
+}
+
+/* 打卡格达标态:淡黄填充 + 深墨数字(淡色上不写浅字) */
+html[data-theme="notebook"] .the90-cell.on{
+  background:var(--accent-yellow); border-color:var(--accent-amber);
+}
+html[data-theme="notebook"] .the90-cell.on .the90-cell-id,
+html[data-theme="notebook"] .the90-cell.on .the90-cell-mark{ color:var(--on-accent-ink); }
+
+/* 热力图:空格是纸,达标格是琥珀阶梯,漏掉的是淡红 */
+html[data-theme="notebook"] .h-cell{ background:var(--color-background-tertiary); }
+html[data-theme="notebook"] .h-cell.h-on,
+html[data-theme="notebook"] .h-cell.h-l3{ background:var(--accent-amber); opacity:1; }
+html[data-theme="notebook"] .h-cell.h-l2{ background:var(--accent-amber); opacity:.62; }
+html[data-theme="notebook"] .h-cell.h-l1{ background:var(--accent-yellow); opacity:.85; }
+html[data-theme="notebook"] .h-cell.h-miss{ background:var(--accent-red); opacity:.42; }
+
+/* 主操作按钮:深金底 + 纸色字(#8F6222 上的 #FDFAF4 ≈ 6.5:1) */
+html[data-theme="notebook"] .primary{
+  background:var(--brass); color:var(--color-background-primary);
+  border:1px solid var(--brass);
+}
+html[data-theme="notebook"] .mr-pill.done{
+  border-color:var(--accent-yellow);
+  background:var(--accent-yellow-soft);
+}
+html[data-theme="notebook"] input:focus,
+html[data-theme="notebook"] select:focus,
+html[data-theme="notebook"] textarea:focus{
+  background:var(--color-background-input);
+  box-shadow:0 0 0 2px var(--color-background-primary), 0 0 0 4px var(--brass);
+}
+
+/* 选区:淡黄荧光笔划过的效果 */
+html[data-theme="notebook"] ::selection{ background:var(--accent-yellow); color:var(--on-accent-ink); }
+html[data-theme="notebook"] ::-moz-selection{ background:var(--accent-yellow); color:var(--on-accent-ink); }
+
+/* ── 开屏封面 ──
+   #app-cover 的深紫是写死在 index.html 的内联 <style> 里的(为了首帧就能画)。
+   这里用更高权重(html[data-theme] + #id)把它换成奶白,免得每次启动闪一下夜空。 */
+html[data-theme="notebook"] #app-cover{
+  background:radial-gradient(125% 85% at 50% 40%, #FFFDF8 0%, #FAF6F0 46%, #F2EDE4 100%);
+}
+html[data-theme="notebook"] #app-cover .cover-aura{
+  background:radial-gradient(circle, rgba(212,165,116,.34), rgba(212,165,116,0) 62%);
+}
+html[data-theme="notebook"] #app-cover .cover-crest{ mix-blend-mode:multiply; opacity:.5; }
+html[data-theme="notebook"] #app-cover .cover-word{ color:#2A2A2A; }
+html[data-theme="notebook"] #app-cover .cover-sub{ color:#6B665D; }
+html[data-theme="notebook"] #app-cover .cover-load{ background:rgba(212,165,116,.22); }
+html[data-theme="notebook"] #app-cover .cover-load span{
+  background:linear-gradient(90deg, transparent, var(--brass-soft), transparent);
+}
