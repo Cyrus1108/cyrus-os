@@ -447,14 +447,13 @@ function tick(){
 }
 
 function rMetrics(){
-  document.getElementById('m-ac').textContent=S.ac.filter(t=>!t.done).length;
   const d=S.tr.list.filter(i=>i.d).length,t=S.tr.list.length;
   document.getElementById('m-tr').innerHTML=`${d}<span style="color:var(--brass-ghost);"> / ${t}</span>`;
   document.getElementById('m-td').textContent=S.todos.filter(t=>!t.done && !t.archived).length;
   updateShowDoneBtn();
 }
 
-function renderAll(){rDate();rMR();rAC();rJP();rTR();rCats();rTodos();if(typeof rThe90==='function') rThe90();if(typeof rGoals==='function') rGoals();if(typeof rPanels==='function') rPanels();if(typeof rLowDay==='function') rLowDay();if(typeof rHermes==='function') rHermes();if(typeof rMotivation==='function') rMotivation();rMetrics();if(typeof rpgAfterChange==='function') rpgAfterChange();if(typeof rCalDot==='function') rCalDot();if(typeof rAiDot==='function') rAiDot();if(typeof rStoreDot==='function') rStoreDot();attachRipples();}
+function renderAll(){rDate();rMR();rTR();rCats();rTodos();if(typeof rThe90==='function') rThe90();if(typeof rGoals==='function') rGoals();if(typeof rPanels==='function') rPanels();if(typeof rLowDay==='function') rLowDay();rMetrics();if(typeof rpgAfterChange==='function') rpgAfterChange();if(typeof rCalDot==='function') rCalDot();attachRipples();}
 
 function onAuthReady(){
   /* Called by auth.js once a Supabase session is established.
@@ -474,17 +473,6 @@ async function init(){
     }
   }
   if(cleanMorning()) saveMR();
-  const ac=loadLS('ac',null);if(Array.isArray(ac))S.ac=ac;
-  const jp=loadLS('jp',null);
-  if(jp){
-    S.jp=jp;
-    let _jpChg=false;
-    // daily reset (mirrors mr/tr): yesterday's checks don't carry into today —
-    // the log keeps history, the list flags belong to ONE day only
-    if(jp.date!==TODAY){S.jp.date=TODAY;S.jp.list=(jp.list||[]).map(i=>({...i,d:false}));_jpChg=true;}
-    if(typeof cleanJapanese==='function' && cleanJapanese())_jpChg=true;   // retire legacy presets (j1–j4)
-    if(_jpChg)saveLSRaw('jp',S.jp);   // 仅写本地,不推云;pullJapanese + 拉后 cleanJapanese 才是权威
-  }
   const tr=loadLS('tr',null);
   // carry the user's custom trading checklist across the day-rollover (mirror mr/jp).
   // BUG was: the else branch mapped over the in-memory DEF_TR default, not tr.list.
@@ -508,14 +496,7 @@ async function init(){
   const rpgLS=loadLS('rpg',null);if(rpgLS&&typeof rpgLS==='object'&&!Array.isArray(rpgLS))S.rpg=Object.assign({},S.rpg,rpgLS);
   const prI=loadLS('principles',null);if(prI&&Array.isArray(prI))S.principles.items=prI;
   const prD=loadLS('principles_daily',null);if(prD&&typeof prD==='object'&&!Array.isArray(prD))S.principles.daily=prD;
-  const fitE=loadLS('fit_exercises',null);if(fitE&&Array.isArray(fitE))S.fit.exercises=fitE;
-  const fitP=loadLS('fit_plan',null);if(fitP&&typeof fitP==='object'&&!Array.isArray(fitP))S.fit.plan=Object.assign({week:{},restDefault:90},fitP);
-  const fitL=loadLS('fit_log',null);if(fitL&&typeof fitL==='object'&&!Array.isArray(fitL))S.fit.log=fitL;
-  const fitBd=loadLS('fit_body',null);if(fitBd&&typeof fitBd==='object'&&!Array.isArray(fitBd))S.fit.body=fitBd;
-  const fitD=loadLS('fit_diet',null);if(fitD&&typeof fitD==='object'&&!Array.isArray(fitD))S.fit.diet=fitD;
   const calE=loadLS('cal_events',null);if(calE&&Array.isArray(calE))S.cal=calE;
-  const aiL=loadLS('ai_outputs',null);if(aiL&&Array.isArray(aiL))S.ai=aiL;
-  const stL=loadLS('wishlist',null);if(stL&&Array.isArray(stL))S.store=stL;
   // expire & archive overdue 'no-carry' todos so they don't keep nagging day after day
   if(typeof sweepExpiredTodos==='function') sweepExpiredTodos();
   showDone = loadLS('show_done', false);
@@ -524,10 +505,7 @@ async function init(){
   if(typeof loadArchivedPanels === 'function') loadArchivedPanels();
   if(typeof initTheme === 'function') initTheme();
   if(typeof initFinance === 'function') initFinance();
-  if(typeof initFitness === 'function') initFitness();
   if(typeof initCalendar === 'function') initCalendar();
-  if(typeof initAi === 'function') initAi();
-  if(typeof initStore === 'function') initStore();
   if(typeof initTriCarousel === 'function') initTriCarousel();
   if(typeof initThe90Keys === 'function') initThe90Keys();
 
@@ -555,7 +533,6 @@ async function init(){
   // principlesEveningAutoShow 自带幂等(review_prompted/低谷锁/modal-blocked),不会重复弹。
   setInterval(()=>{ if(typeof principlesEveningAutoShow==='function') principlesEveningAutoShow(); }, 60000);
   attachRipples();
-  checkNotifBanner();
   // after the first-paint entrance animations settle, stop list rows from replaying
   // their fade-in on every re-render (a toggle re-render would otherwise flicker)
   setTimeout(()=>document.body.classList.add('booted'), 1500);
@@ -564,9 +541,6 @@ async function init(){
      then subscribe to Realtime for cross-device updates. */
   if(typeof pullAll === 'function'){
     await pullAll();
-    // pull is authoritative: strip any legacy N2 presets that arrived from the DB
-    // (e.g. an older device re-pushed them) and write the cleaned list back.
-    if(typeof cleanJapanese==='function' && cleanJapanese()){ saveJP(); if(typeof rJP==='function') rJP(); }
     // pull is authoritative: re-run the expiry sweep against synced todos
     if(typeof sweepExpiredTodos==='function' && sweepExpiredTodos() && typeof rTodos==='function') rTodos();
     // pull is authoritative: 如果云端来的还是上一季的 meta,这里立刻迁到本季并回推
@@ -581,9 +555,6 @@ async function init(){
     if(typeof subscribeRealtime === 'function') subscribeRealtime();
   }
 
-  /* Stage 4: ensure this device's existing push subscription is bound to the current user
-     in Supabase (in case the user logged in fresh on a different account). */
-  if(typeof reattachPushSubscription === 'function') reattachPushSubscription();
 }
 
 /* Service Worker — shell cache for offline + foundation for Stage 4 Web Push.

@@ -24,11 +24,7 @@
 <link rel="stylesheet" href="./styles/components.css?v=7.39.0">
 <link rel="stylesheet" href="./styles/animations.css">
 <link rel="stylesheet" href="./styles/finance.css">
-<link rel="stylesheet" href="./styles/fitness.css">
 <link rel="stylesheet" href="./styles/calendar.css">
-<link rel="stylesheet" href="./styles/ai.css">
-<link rel="stylesheet" href="./styles/store.css">
-<link rel="stylesheet" href="./styles/motivation.css">
 <link rel="stylesheet" href="./styles/system.css">
 <link rel="stylesheet" href="./styles/lowday.css">
 <link rel="stylesheet" href="./styles/principles.css">
@@ -131,31 +127,18 @@
 </div>
 
 <div id="drawer-backdrop" class="drawer-backdrop" onclick="closeDrawer()"></div>
-<!-- v7.18 右侧导览抽屉(原 Markets 抽屉改造)。六大频道 SAO 式逐条滑入;
-     Markets 已撤(日后并入交易面板专注页)。频道沿用旧按钮 id+onclick→rCalDot/rAiDot 零改。 -->
+<!-- v7.40.0 减法后导览三频道:系统 / 财务 / 日历(SAO 式逐条滑入)。 -->
 <aside id="drawer" class="drawer drawer-nav" aria-hidden="true" inert>
   <div class="navd-list">
       <button id="sys-btn" class="hn-item navd-item" data-i="01" onclick="navOpen('sys')" aria-label="系统">
         <svg class="ic hn-ico" aria-hidden="true"><use href="./vendor/icons.svg#i-sys"/></svg>
         <span class="hn-tx"><span class="hn-en">SYS</span><span class="hn-zh">系统</span></span></button>
-      <button id="fit-btn" class="hn-item navd-item" data-i="02" onclick="navOpen('fit')" aria-label="健身">
-        <svg class="ic hn-ico" aria-hidden="true"><use href="./vendor/icons.svg#i-fit"/></svg>
-        <span class="hn-tx"><span class="hn-en">FIT</span><span class="hn-zh">健身</span></span></button>
-      <button id="ai-btn" class="hn-item navd-item" data-i="03" onclick="navOpen('ai')" aria-label="AI Automation">
-        <svg class="ic hn-ico" aria-hidden="true"><use href="./vendor/icons.svg#i-ai"/></svg>
-        <span class="hn-tx"><span class="hn-en">AUT</span><span class="hn-zh">AI</span></span></button>
-      <button id="fin-btn" class="hn-item navd-item" data-i="04" onclick="navOpen('fin')" aria-label="财务">
+      <button id="fin-btn" class="hn-item navd-item" data-i="02" onclick="navOpen('fin')" aria-label="财务">
         <svg class="ic hn-ico" aria-hidden="true"><use href="./vendor/icons.svg#i-fin"/></svg>
         <span class="hn-tx"><span class="hn-en">FIN</span><span class="hn-zh">财务</span></span></button>
-      <button id="cal-btn" class="hn-item navd-item" data-i="05" onclick="navOpen('cal')" aria-label="日历">
+      <button id="cal-btn" class="hn-item navd-item" data-i="03" onclick="navOpen('cal')" aria-label="日历">
         <svg class="ic hn-ico" aria-hidden="true"><use href="./vendor/icons.svg#i-cal"/></svg>
         <span class="hn-tx"><span class="hn-en">CAL</span><span class="hn-zh">日历</span></span></button>
-      <button id="motiv-btn" class="hn-item navd-item" data-i="06" onclick="navOpen('motiv')" aria-label="动力">
-        <svg class="ic hn-ico" aria-hidden="true"><use href="./vendor/icons.svg#i-pwr"/></svg>
-        <span class="hn-tx"><span class="hn-en">PWR</span><span class="hn-zh">动力</span></span></button>
-      <button id="shop-btn" class="hn-item navd-item" data-i="07" onclick="navOpen('shop')" aria-label="心愿单">
-        <svg class="ic hn-ico" aria-hidden="true"><use href="./vendor/icons.svg#i-shop"/></svg>
-        <span class="hn-tx"><span class="hn-en">SHOP</span><span class="hn-zh">心愿</span></span></button>
   </div>
 </aside>
 
@@ -192,25 +175,8 @@
     </div>
   </div>
 
-  <!-- Notification permission banner -->
-  <div id="notif-banner" class="notif-banner">
-    <span class="notif-banner-text">开启浏览器通知，以便在截止时间前提醒你</span>
-    <button class="primary fx-btn" onclick="requestNotifPerm()">Enable</button>
-    <button class="ghost fx-btn" onclick="dismissNotifBanner()">Later</button>
-  </div>
-
   <!-- Low Day (低谷日) circuit-breaker — banner only shows while a low day is active -->
   <div id="lowday-banner" class="lowday-banner"></div>
-
-  <!-- Hermes notices — assistant surfaces things worth seeing; hidden when empty -->
-  <div id="hermes-panel" class="hermes-panel" style="display:none;">
-    <div class="hermes-head">
-      <span class="hermes-head-glyph" aria-hidden="true">&#9670;</span>
-      <span class="hermes-head-label">Hermes 想告诉你</span>
-      <span id="hermes-count" class="hermes-head-count">0</span>
-    </div>
-    <div id="hermes-list" class="hermes-list"></div>
-  </div>
 
   <!-- 赛季记分板 — S2 · 营收之季。存储/同步沿用 the90_meta + the90_daily。
        所有文案由 scripts/the90.js 顶部的 RENAME POINT 常量块写入,这里不留死文案。 -->
@@ -330,128 +296,6 @@
   </div>
 
   <div class="tri-grid">
-
-    <!-- Academics -->
-    <div class="panel">
-      <div class="panel-head">
-        <div class="sov-micro"><b>SYS.02</b> // ACADEMICS</div>
-        <div class="panel-label-row"><span class="eyebrow">II</span><span class="eyebrow-mute">Academics</span></div>
-        <div class="panel-stat-row">
-          <span class="serif-it">课业</span>
-          <div style="text-align:right;">
-            <div id="m-ac" class="serif-num-sm">0</div>
-            <div class="stat-sub">Pending</div>
-          </div>
-        </div>
-      </div>
-      <div style="display:flex;justify-content:flex-end;margin-bottom:8px;gap:6px;">
-        <button class="ghost fx-btn" onclick="toggleSubManage()">⚙ 科目</button>
-        <button class="ghost fx-btn" onclick="toggleAcForm()">+ 新增</button>
-      </div>
-
-      <!-- Subject preset manager (toggleable) -->
-      <div id="sub-manage" class="cat-manage">
-        <div class="cat-manage-row">
-          <input id="sub-new" type="text" placeholder="新科目名称…" style="flex:1;">
-          <button class="primary fx-btn" onclick="addSubject()">加</button>
-        </div>
-        <div id="sub-list" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;"></div>
-      </div>
-
-      <!-- Datalist consumed by both add and edit subject inputs -->
-      <datalist id="ac-subjects-list"></datalist>
-
-      <div id="ac-form" style="display:none;padding-bottom:12px;margin-bottom:8px;border-bottom:.5px solid var(--hair);">
-        <div class="edit-box">
-          <input id="f-sub" placeholder="科目" list="ac-subjects-list" style="width:100%;">
-          <input id="f-name" placeholder="内容（作业 / 考试）" style="width:100%;">
-          <div class="field-row">
-            <span class="field-label">截止</span>
-            <button type="button" class="fin-datebtn" onclick="finOpenCal('f-date')" style="flex:1;">📅 <span id="f-date-label">选择日期</span></button>
-          </div>
-          <div class="field-row">
-            <span class="field-label">时间</span>
-            <button type="button" class="fin-datebtn" onclick="openTimePicker('f-time')" style="flex:1;">🕐 <span id="f-time-label">选择时间</span></button>
-          </div>
-          <input type="hidden" id="f-date" value="">
-          <input type="hidden" id="f-time" value="">
-          <div class="fin-seg" data-seg="f-pri">
-            <button type="button" class="fin-seg-btn" data-v="high" onclick="segPick('f-pri','high')">高</button>
-            <button type="button" class="fin-seg-btn active" data-v="mid" onclick="segPick('f-pri','mid')">中</button>
-            <button type="button" class="fin-seg-btn" data-v="low" onclick="segPick('f-pri','low')">低</button>
-          </div>
-          <input type="hidden" id="f-pri" value="mid">
-          <div class="fin-chiprow" data-seg="f-remind">
-            <button type="button" class="fin-chip" data-v="0" onclick="segPick('f-remind','0','onRemindSeg')">不提醒</button>
-            <button type="button" class="fin-chip" data-v="15" onclick="segPick('f-remind','15','onRemindSeg')">15分钟</button>
-            <button type="button" class="fin-chip active" data-v="60" onclick="segPick('f-remind','60','onRemindSeg')">1小时</button>
-            <button type="button" class="fin-chip" data-v="240" onclick="segPick('f-remind','240','onRemindSeg')">4小时</button>
-            <button type="button" class="fin-chip" data-v="1440" onclick="segPick('f-remind','1440','onRemindSeg')">1天</button>
-            <button type="button" class="fin-chip" data-v="2880" onclick="segPick('f-remind','2880','onRemindSeg')">2天</button>
-            <button type="button" class="fin-chip" data-v="custom" onclick="segPick('f-remind','custom','onRemindSeg')">自定义</button>
-          </div>
-          <input type="hidden" id="f-remind" value="60">
-          <div id="f-rc" class="field-row" style="display:none;">
-            <input id="f-rc-num" type="number" min="1" placeholder="数值" style="flex:1;">
-            <select id="f-rc-unit" style="flex:1;">
-              <option value="1">分钟</option>
-              <option value="60">小时</option>
-              <option value="1440">天</option>
-            </select>
-          </div>
-          <div style="display:flex;gap:6px;">
-            <button class="primary fx-btn" onclick="addAcTask()" style="flex:1;">确认</button>
-            <button class="ghost fx-btn" onclick="toggleAcForm()" style="flex:1;">取消</button>
-          </div>
-        </div>
-      </div>
-      <div id="ac-list"></div>
-    </div>
-
-    <!-- Japanese -->
-    <div class="panel">
-      <div class="panel-head">
-        <div class="sov-micro"><b>SYS.03</b> // JP-N2</div>
-        <div class="panel-label-row"><span class="eyebrow">III</span><span class="eyebrow-mute">Japanese N2</span></div>
-        <div class="panel-stat-row">
-          <span class="serif-it">日本語</span>
-          <div style="text-align:right;">
-            <div id="streak-n" class="serif-num-sm">0</div>
-            <div class="stat-sub">连续 · 累计 <span id="jp-total">0</span> 天</div>
-          </div>
-        </div>
-      </div>
-      <div id="week-grid" class="jp-week"></div>
-      <!-- display-only since v6.49: 完成即打卡 — the list drives the log, no manual button -->
-      <button id="ci-btn" class="check-btn fx-btn" style="pointer-events:none;"></button>
-      <div class="brass-rule"></div>
-      <div class="sub-head">
-        <div class="sub-label" style="margin-bottom:0;">今日练习</div>
-        <button class="row-btn" onclick="toggleJPForm()">+ 添加</button>
-      </div>
-      <div id="jp-new-form" style="display:none;margin-bottom:8px;">
-        <div class="edit-box" style="padding:6px;">
-          <input id="jp-new-text" placeholder="新练习项目…" style="width:100%;">
-          <div style="display:flex;gap:6px;align-items:center;">
-            <select id="jp-new-repeat" onchange="toggleJpNewCustom()" style="flex:1;">
-              <option value="daily">每日</option>
-              <option value="weekdays">仅工作日</option>
-              <option value="weekends">仅周末</option>
-              <option value="weekly">每周</option>
-              <option value="biweekly">每两周</option>
-              <option value="monthly">每月</option>
-              <option value="custom_days">自定义天数…</option>
-            </select>
-            <input id="jp-new-custom" type="number" min="1" max="365" placeholder="每N天" style="width:78px;display:none;">
-            <button class="primary fx-btn" onclick="addJPItem()">加</button>
-          </div>
-        </div>
-      </div>
-      <div id="jp-checklist"></div>
-      <div class="brass-rule"></div>
-      <div class="sub-label">今日笔记</div>
-      <textarea id="jp-note" class="bias-input" oninput="onJPNote()" placeholder="今日学了什么…" style="width:100%;height:56px;resize:none;"></textarea>
-    </div>
 
     <!-- Trading — 可收纳(交易已暂停;首次运行默认收起,状态只存本机) -->
     <div class="panel" data-panel="trading">
@@ -615,25 +459,6 @@
   <div id="fin-modal" class="fin-modal"><div class="fin-modal-card" id="fin-modal-card"></div></div>
 </div>
 
-<!-- ════ Fitness module — full-screen view (v7.11) ════ -->
-<div id="fitness-view" class="fit-view" aria-hidden="true">
-  <div class="fit-top">
-    <button class="fit-back" onclick="closeFitness()"><svg class="ic" aria-hidden="true"><use href="./vendor/icons.svg#i-back"/></svg>返回</button>
-    <div class="fit-top-main">
-      <div class="fit-title">健身 · Fitness</div>
-      <div class="sov-micro" id="fit-micro"><b>FIT.10</b> // 连续 0 天</div>
-    </div>
-  </div>
-  <div class="fit-tabs">
-    <button class="fit-tab active" data-tab="today" onclick="fitSwitchTab('today')">今日</button>
-    <button class="fit-tab" data-tab="plan" onclick="fitSwitchTab('plan')">计划</button>
-    <button class="fit-tab" data-tab="trends" onclick="fitSwitchTab('trends')">趋势</button>
-    <button class="fit-tab" data-tab="diet" onclick="fitSwitchTab('diet')">饮食</button>
-  </div>
-  <div id="fit-body" class="fit-body"></div>
-  <div id="fit-modal" class="fin-modal"><div class="fin-modal-card" id="fit-modal-card"></div></div>
-</div>
-
 <!-- ════ Calendar module — full-screen view (v7.13) ════ -->
 <div id="calendar-view" class="cal-view" aria-hidden="true">
   <div class="cal-top">
@@ -644,65 +469,6 @@
   <div id="cal-month" class="cal-month"></div>
   <div id="cal-day" class="cal-day"></div>
   <div id="cal-modal" class="cal-modal"></div>
-</div>
-
-<!-- ════ AI Automation module — full-screen view (RPG v2 Phase 1) ════ -->
-<div id="ai-view" class="ai-view" aria-hidden="true">
-  <div class="ai-cover" aria-hidden="true">
-    <div class="ai-logo-wrap">
-      <svg class="ai-logo" viewBox="0 0 120 120" role="img" aria-label="AI Automation">
-        <g class="ai-l-ring"><polygon points="108,60 84,101.6 36,101.6 12,60 36,18.4 84,18.4"/></g>
-        <g class="ai-l-net">
-          <line x1="60" y1="60" x2="60" y2="28"/><line x1="60" y1="60" x2="32.3" y2="76"/><line x1="60" y1="60" x2="87.7" y2="76"/>
-          <circle cx="60" cy="28" r="4.5"/><circle cx="32.3" cy="76" r="4.5"/><circle cx="87.7" cy="76" r="4.5"/>
-        </g>
-      </svg>
-      <div class="ai-wordmark"><span>A</span><span>I</span></div>
-    </div>
-    <div class="ai-tagline" aria-hidden="true">
-      <span>A</span><span>U</span><span>T</span><span>O</span><span>M</span><span>A</span><span>T</span><span>I</span><span>O</span><span>N</span>
-    </div>
-  </div>
-  <div class="ai-top">
-    <button class="ai-back" onclick="closeAi()"><svg class="ic" aria-hidden="true"><use href="./vendor/icons.svg#i-back"/></svg>返回</button>
-    <div class="ai-top-main">
-      <div class="ai-title">AI Automation</div>
-      <div class="sov-micro" id="ai-micro"><b>AUT.11</b> // 连续 0 天</div>
-    </div>
-  </div>
-  <div class="ai-tabs">
-    <button class="ai-tab active" data-tab="log" onclick="aiSwitchTab('log')">记录</button>
-    <button class="ai-tab" data-tab="trends" onclick="aiSwitchTab('trends')">趋势</button>
-  </div>
-  <div id="ai-body" class="ai-body"></div>
-  <div id="ai-modal" class="ai-modal"></div>
-</div>
-
-<!-- ════ 心愿单 · Wishlist / Store — full-screen HUD ════ -->
-<div id="store-view" class="store-view" aria-hidden="true">
-  <div class="store-top">
-    <button class="store-back" onclick="closeStore()"><svg class="ic"><use href="./vendor/icons.svg#i-back"/></svg> 返回</button>
-    <div class="store-title">心愿单 · Wishlist</div>
-    <div class="sov-micro" id="store-micro"><b>SYS.08</b> // WISHLIST · WANT <span id="store-micro-n">0</span></div>
-  </div>
-  <div id="store-body" class="store-body"></div>
-  <div id="store-modal" class="store-modal"></div>
-</div>
-
-<!-- ════ Motivation Center — full-screen YouTube video grid ════ -->
-<div id="motivation-view" class="motiv-view" aria-hidden="true">
-  <div class="motiv-top">
-    <button class="motiv-back" onclick="closeMotivation()"><svg class="ic"><use href="./vendor/icons.svg#i-back"/></svg> 返回</button>
-    <div class="motiv-title">动力中心 · Motivation</div>
-    <div class="sov-micro" id="motiv-micro"><b>SYS.09</b> // MOTIVATION · VID <span id="motiv-micro-n">0</span></div>
-  </div>
-  <div id="motiv-body" class="motiv-body"></div>
-</div>
-<div id="motiv-player" class="motiv-player" aria-hidden="true" onclick="if(event.target===this)closeMotivPlayer()">
-  <div class="motiv-player-card">
-    <button class="motiv-player-close" onclick="closeMotivPlayer()" aria-label="关闭"><svg class="ic"><use href="./vendor/icons.svg#i-close"/></svg></button>
-    <div id="motiv-player-frame" class="motiv-player-frame"></div>
-  </div>
 </div>
 
 <!-- ════ System / Character — RPG HUD window (brass holographic, floats over page) ════ -->
@@ -748,25 +514,17 @@
 <script src="./scripts/beat.js"></script>
 <script src="./scripts/dragsort.js"></script>
 <script src="./scripts/swipe.js"></script>
-<script src="./scripts/notifications.js"></script>
 <script src="./scripts/drawer.js"></script>
 <!-- markets.js 下线(v7.36.0):O1 核实完全孤立(零调用入口、DOM 宿主不存在)。
      文件留盘待日后并入 Trading Desk 专注页(REDESIGN §6),仅不再加载/缓存。 -->
 <script src="./scripts/morning.js"></script>
-<script src="./scripts/academics.js"></script>
-<script src="./scripts/japanese.js"></script>
 <script src="./scripts/trading.js"></script>
 <script src="./scripts/todos.js"></script>
 <script src="./scripts/the90.js"></script>
 <script src="./scripts/goals.js"></script>
-<script src="./scripts/hermes.js"></script>
 <script src="./scripts/finance.js"></script>
 <script src="./scripts/finance-charts.js"></script>
-<script src="./scripts/fitness.js"></script>
 <script src="./scripts/calendar.js"></script>
-<script src="./scripts/ai.js"></script>
-<script src="./scripts/store.js"></script>
-<script src="./scripts/motivation.js"></script>
 <script src="./scripts/sound.js"></script>
 <script src="./scripts/rpg.js"></script>
 <!-- v7.0 motion stack (vendored for offline; GSAP plugins free since 3.13) -->

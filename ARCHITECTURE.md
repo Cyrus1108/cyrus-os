@@ -1,6 +1,6 @@
 # CyrusOS · 活体架构地图（ARCHITECTURE.md）
 
-> **对齐版本:`cyrus-os-v7.39.0`**(= sw.js CACHE_VERSION;版本叙事在 [CHANGELOG.md](./CHANGELOG.md),本文件只描述现状。v7.39.0:The 90 换季为 **S2 · 营收之季**(四柱 ai/jp/fit/ball,全程分级打卡,+三个销售计数器);新 goals.js 目标面板(纯 LS);第三主题「奶白 Notebook」;可归档面板机制;重复待办快进修复。SOVEREIGN 重设计 P0-P4 已上线:渲染层骨架化 render-core.js/单一君主终端身份/系统窗降临+beat.js 三拍/君主徽记 crest.js+能量丝分层/七 HUD 精修(微标签体系 SYS.00-12、Lucide 图标全接线、RPG 紫锚色环、markets.js 下线)。方向书 REDESIGN.md;实现代理必读 AGENT-BRIEF.md。)
+> **对齐版本:`cyrus-os-v7.40.0`**(= sw.js CACHE_VERSION;版本叙事在 [CHANGELOG.md](./CHANGELOG.md),本文件只描述现状。v7.40.0:**减法**——按 2026-08-25 真实使用数据审查,收缩为五件套核心:打卡(morning + the90 赛季记分板 + rpg/lowday)、待办 todos、日历 calendar、信条 principles、账本 finance。下架并删除模块:健身 fitness、AI 产出日志 ai、心愿单 store、课业 academics、日语 japanese、动力墙 motivation、Hermes 通知 hermes、Web 推送 notifications(含 sw.js push 处理与 cloudflare/ worker)、markets(原已退役)。交易台面板保留但默认收起(v7.39.0 面板归档机制)。**下架 ≠ 删数据:全部 Supabase 表与历史行原样保留**,只是前端不再读写(§3 标 ❄)。EC2/Hermes 服务端已停用,由云端「早间简报」(Claude 定时任务,读 Supabase)取代。利息自动入账已关(2026-08-25 fin_accounts.interest_rate 全部归零,pg_cron fin_accrue_interest 变 no-op)。方向书 REDESIGN.md;实现代理必读 AGENT-BRIEF.md。)
 > 两者不一致即说明本文档已开始腐烂，修文档）。最后全面核对：2026-06-11。
 
 **这份文档的用途**：动工前读它，代替考古式读码。红线与部署纪律在
@@ -24,7 +24,7 @@
 |---|---|---|
 | Windows | `C:\Users\qjuna\OneDrive\Desktop\Hermes Agent` | Claude 会话工作目录；**内容陈旧**，不是真实代码 |
 | WSL Ubuntu | `~/cyrus-os`（本仓库）+ `~/hermes-cyrus` | **真实代码与 git**；从 Windows 经 `\\wsl.localhost\Ubuntu\home\cyrus1108\...` 访问（此 UNC 桥偶发 EUNKNOWN 瞬断，重试即可） |
-| EC2（东京） | 实例 `i-054241bf9badb9655`，运行时布局 `~/.hermes/` | Hermes agent 运行处；`hermes.service`（systemd）**只存在于 EC2**，WSL 里找不到是正常的 |
+| EC2（东京） | ~~实例 `i-054241bf9badb9655`~~ | **已退役**(2026-08-25 确认 SSM 已探不到实例;Hermes 由云端早间简报取代)。下方 SSM 用法仅存档 |
 
 EC2 访问（无 SSH，走 SSM）：
 ```bash
@@ -44,8 +44,8 @@ Permission denied）；SSM 以非 ubuntu 用户跑会触发 git `safe.directory`
 | 面 | 怎么部署 | 备注 |
 |---|---|---|
 | PWA（GitHub Pages） | `git push origin main` 即部署 | **改 shell 文件必须先 bump `sw.js` 的 `CACHE_VERSION`**；纯文档不 bump |
-| EC2（crons + skills） | `cd ~/hermes-cyrus && git pull && bash deploy.sh`（或 SSM 注入） | deploy.sh 把 SOUL/config/skills/scripts 拷到 `~/.hermes/` |
-| Cloudflare Worker | `wrangler deploy`（独立面） | 持有 `SUPABASE_SERVICE_KEY` secret；见 §7 技术债 |
+| ~~EC2（crons + skills）~~ | — | **已退役**(v7.40.0) |
+| ~~Cloudflare Worker~~ | — | **代码已删**(v7.40.0,推送订阅数为 0);线上实例待 dashboard/`wrangler delete` 撤销(持有 service key),见 §7 |
 
 ### 系统图
 
@@ -66,6 +66,8 @@ Permission denied）；SSM 以非 ubuntu 用户跑会触发 git `safe.directory`
 └──────────────────────────────────────────────► Telegram             │
 ```
 
+> **v7.40.0 起系统图只剩两层:PWA ↔ Supabase。** 上图中 Cloudflare Worker(推送)与 EC2/Hermes(Telegram 战报)均已退役;服务端仅存 Supabase pg_cron(资产快照/周期交易/已完成清理;利息任务因利率归零变 no-op)。
+
 ---
 
 ## §2 前端模块地图
@@ -75,8 +77,7 @@ Permission denied）；SSM 以非 ubuntu 用户跑会触发 git `safe.directory`
 Supabase CDN → `supabase.js`(sb 客户端) → `state.js`(S/TODAY/常量/saveXX/dirty)
 → `vendor/`（gsap + ScrollTrigger + SplitText + lenis，UMD 本地化供离线；GSAP
 3.13 起全插件免费）→ 各功能模块（纯函数声明，互不执行）→ `sync.js` → `auth.js`
-→ `app.js`（末尾 `initAuth()` 启动一切）。ES module 例外：`lifetree.js`（仅
-sterile 时 theme.js 动态 import）与 `herocube.js`（importmap 'three'）。
+→ `app.js`（末尾 `initAuth()` 启动一切）。ES module 例外：`crest.js`（importmap 'three'）。
 
 ### init() 时序（app.js，auth 成功后 onAuthReady → init）
 
@@ -100,7 +101,9 @@ rMotivation → rMetrics → rpgAfterChange → attachRipples`
 交互时反复执行——**绝不在渲染函数里挂音效、弹窗、写库等副作用**。副作用只挂在
 用户手势的变异路径（toggleXX/addXX 等），且写在状态变更成功之后、守卫(`if(i)`)之内。
 
-### 模块一览（27 个，scripts/；行数会变，不在此维护——需要时 `wc -l`）
+### 模块一览（v7.40.0 减法后;行数会变，不在此维护——需要时 `wc -l`）
+
+> 减法说明:下表已随模块删除移除 notifications/markets/academics/japanese/hermes/fitness/ai/store/motivation 及早已不存在的 herocube/lifetree/ambient 各行;drawer.js 的导览由 7 频道减为 **3 频道(系统/财务/日历)**,其行内描述中的 7 频道/黄铜图标叙述为历史。
 
 | 文件 | 职责（关键导出 → 被谁用） |
 |---|---|
@@ -110,46 +113,34 @@ rMotivation → rMetrics → rpgAfterChange → attachRipples`
 | sync.js | `pullAll`+全部 `pullXX`、全部 `syncPushXX`、`replaceTable`、`subscribeRealtime`(rtCoalesce)、`rehydrateOnFocus`、`waitForPull`、`initialPullDone` |
 | auth.js | Magic Link 登录、session → `currentUser`、登录卡（用 CREED_VARIANTS 随机一条）、`onAuthReady` |
 | app.js | `init`/`renderAll`/`rDate`/`rMetrics`、时钟 `tick`、表单键盘导航(openFormNav/segSet/segPick)、`escH`、`attachRipples`、提醒检查 |
-| notifications.js | Web Push 订阅/权限横幅（VAPID public key） |
 | drawer.js | **SAO 导览抽屉**(v7.18.0，前身=Markets 抽屉)：`openDrawer/closeDrawer`(级联进/反序退 + SAO 菜单音 `sounds/sao-menu.mp3`)、`navOpen(which)`(选定音 `sao-menu-select.mp3` → 其余板淡出 + 选中板滑向荧幕正中 → 其 HUD 自带展开；`_navOpenMap/_navIdMap` 复用旧按钮 id 故 rCalDot/rAiDot 不变)、键盘(←开/↑↓选/Enter定/Esc关)、右缘左滑开启；`_navMuted()` 认 `cyrus_sfx_muted`；reduced-motion 退化即时切。**v7.23.0**：导览 7 频道(+第 7 格 `shop-btn` SHOP/心愿→openStore,占位矢量购物袋待换黄铜);6 频道图标换成用户自制**黄铜浮雕 PNG**(`icons/nav/*.png`,img 替原 inline SVG;切图法见徽标) |
-| markets.js | TradingView widgets + 财经日历 + 符号选择（**已退役**：导览不再挂 Markets，v7.18.0；文件保留，待并入 Trading Desk 专注页） |
 | morning.js | 晨间药丸（v7.7 身心灵 6 项：Water/Meditation/Bath·切换/Calisthenics/Bath·洗净/Men's work，MR_DEFAULT+cleanMorning 迁移在 state.js）；`rMR`/`toggleMR`（全清 quest 音按日闩锁 `_mrQuestDate`）；**完成态** `rMRReady`：全勾→面板玻璃遮罩 `#mr-ready` + 日随机短句(MR_READY_PHRASES,date-seeded)glassFlicker 闪现 + 双段穿线(CSS)，点遮罩 `mrDismissReady` 收起(当日不重弹除非破完成) |
-| academics.js | 课业任务 CRUD + 提醒（`rAC/toggleAC`） |
-| japanese.js | N2 清单；**完成即打卡**：`jpSettle()` 全勾→log[TODAY]，streak 由 `jpComputeStreak()` 从 log 推导（连续天数）；清单按日重置（jp.date）；ci-btn 仅展示 |
 | trading.js | 交易清单 + 偏向笔记（每日重置） |
 | todos.js | 待办 + 分类 + 重复 + 提醒（`toggleTd` 完成时生成下一次重复） |
 | the90.js | **赛季记分板**（v7.39.0 起 = S2 · 营收之季 2026-08-13→11-13，93 天）：文件头一个 **RENAME POINT 常量块**装下全部季名/日期/文案/四柱/计数器，换季只改那一块；四柱 `ai/jp/fit/ball` **全程分级打卡**（点一下升一级 1→2→3、第四下清空；`the90Graded()` 恒真，`the90Num` 兼容旧布尔 true→3/false→0；`the90ScoreMet` 对历史数据与旧的分阶段判定逐位等价）；三阶段（开局/加速/收成，31 天一段）只是标签+里程碑，仍照写 `meta.currentPhase`；三个销售计数器 `dm/follow/scan` 存**同一个 scores 对象**（数字键，靠「只按显式键访问」的红线与柱子及 `_amp` 等命名空间键共处）；`ensureThe90Defaults` 按 `startDate < SEASON_START` **每次渲染重迁**旧赛季 meta（pull/realtime 会把旧行灌回来）；网格列数走 CSS 变量 `--the90-n`/`--the90-days`；streak 门槛 `SEASON_ACTIVE_THRESHOLD`（低谷日 1）；旧赛季日行一行不删 |
 | goals.js | **目标面板**（v7.39.0）：title/说明/期限 + 倒数标签（Xd / 今天 / 逾期 Xd / 达成）、增删改、拖拽排序、达成沉底；**只存 localStorage**（`goals` 键，`saveLSRaw`，不进 SETTINGS_KEYS、不设 dirty）——Supabase 没有 goals 表，刻意不改 schema，代价是不跨设备同步 |
-| hermes.js | Hermes 通知列表；`_hermesSeen` id 差分 + `window._hermesPulled` 门 → 新通知才 `Sfx.notice()`；dismiss 幂等 |
 | finance.js | 记账全家桶：账户/分类/交易(插入式)/预算/目标/周期/隐私遮罩/CSV/主题日历与时间选择器；`finSubmitTx` 与 `finWizSave` 两条保存路径 |
 | finance-charts.js | Chart.js 分析图 |
-| fitness.js | 健身 HUD（克隆 finance 外壳）：今日/计划/趋势/饮食 4 tab；自重训练，计划驱动今日，`fitSettle` 完成全部计划组数→自动打卡（仿 jpSettle）；两个独立计时器（正计时 stopwatch + 组间/保持倒计时，time 动作点 pip 自动起倒计时）；`fitComputeStreak`（休息日不断签）；体征/饮食记录；暴露 `fitWorkoutCount/fitTotalReps/fitBodyLogged/fitPlanWeekComplete` 供成就软引用 |
-| ai.js | AI Automation HUD（克隆 finance 外壳，RPG v2 Phase 1）：产出/交付日志(构建/学会/交付)+streak/活跃天/总数+趋势(Chart.js 近12周)+滑动 tab；暴露 `aiStreak/aiActiveDays30/aiTotalOutputs` 供 Phase 2/3 软引用；**独立、暂不接经验/属性/成就** |
-| store.js | 心愿单/商店 HUD（克隆 calendar 外壳，v7.23.0）：想买的真实东西——`openStore/closeStore/rStore`(玻璃卷轴铁律照搬,`.store-closing` 保 furl)、CRUD modal(图片上传 `sb.storage.from('wishlist').upload(用户id/itemId.ext)`、显示 `createSignedUrl` 1h 缓存 `_storeImg`)、想要/已买 tab、统计条(想要/总价值≈/已买/已花,价格复用 `S.fin.baseCurrency`+`finMoney`)、商品卡(图/价/分类/描述/链接仅 http(s)/标记已买/编辑/删)、`rStoreDot` 点亮 shop-btn；`storeWants/storeBought` 派生 |
 | calendar.js | 专属日历 HUD（克隆 finance 外壳）：月历格（改编 finCalHtml，有项日显点）+ 选中日详情；**当日事项**=聚合 `S.todos`(未归档)+`S.ac` 同日只读（点击 `calJumpTo` 关闭并滚回原面板），**行程**=`S.cal`(cal_events) 可增删（复用 `finOpenCal` 选日 + 原生 time）；`openCalendar/closeCalendar` 逐字克隆 finance；`rCalDot` 主页按钮今日有项点亮 |
-| motivation.js | 动机视频墙（YouTube unlisted） |
 | sound.js | `Sfx` 合成音效引擎：17 个 cue（tick/untick/tab/open/close/toast/quest/perfect/levelup/rankup/achievement/notice/save/lowday/cross/blocked/penalty）；程序化混响、噪声声部、手势门闸 `interacted`、`gate()` 节流、静音 LS 键 `cyrus_sfx_muted`（无前缀） |
 | rpg.js | RPG 系统层：属性=真实数据计算（多对多矩阵）、EXP/等级单调、**47 个成就**（RPG_ACHIEVEMENTS，tier→EXP；含 fitness 体魄类 6 个）、每日挑战、庆祝弹窗（手动确认不自动关）、`rpgAfterChange` 全局结算钩子、`sysToast(msg,{silent})` |
 | lowday.js | 低谷日断路器：`_amp/_low/_lowx/_trig` 命名空间键写进 the90_daily.scores；协议弹窗、战略面封锁 `lowdayBlocked`、渡 `lowdayCross`、`adversityLedger()` |
 | principles.js | 信条与原则弹窗三模式（宣读/核查/修订）；`principlesAutoShow`/`principlesEveningAutoShow`（标记列见 §3 settings）；修订被低谷锁；核查草稿 `prDraft` 保存才落库 |
 | applock.js | 应用锁（PIN/生物识别可选） |
 | theme.js | 主题切换 **三态** `THEMES=['sovereign','terminal','notebook']`(`toggleTheme` 按数组循环 君主→终端→奶白 / `applyTheme(name,persist)` 落 LS+推 settings+reload 一次 / `currentTheme`);每个身份 = 一个 `data-theme` 值 + 一串 `data-fx` 能力标志(sovereign 全开、terminal 无 crest/flow-additive、**notebook 只留 glass** —— 深色重装饰打在奶油纸上会变灰雾);`THEME_FX` 与 index.html 预绘脚本里的副本**必须同步**;`updateThemeBtn` 标签 ♛君主/◈终端/✎奶白 |
-| ambient.js | sterile 主题环境音 |
-| lifetree.js | Three.js 粒子生命树（The 90 进度驱动生长；不可见自动暂停）；动态 import 加载，但**仍列在 APP_SHELL**（SW 缓存它，离线 sterile 才能用——别"清理"掉） |
 | dragsort.js | 通用拖拽排序 `makeSortable`（jp/tr/todos/principles 等共用） |
 | swipe.js | 手机滑动切换：`makeHudSwipe(viewId,opts)` 单窗格 follow-finger pager（财务/健身/系统 HUD 的 tab——拖当前 body 跟手、过阈滑出+滑入，raw switch 不走 withViewTransition 防双动画，reduced-motion 退化即时切，竖向手势放行原生滚动）；`initTriCarousel` 主页三栏（CSS scroll-snap）的圆点指示器 |
 | glass.js | v7.1 黄铜玻璃 maximalist 交互层（GSAP 栈）：Lenis 平滑滚动（内部滚动容器**必须**带 `data-lenis-prevent`）；文字一律**闪烁显形**（glassFlicker——信号灯式逐字符随机眨亮，无位移，用户钦定；英雄字符 revert 归还 brassFlow，标题滚动可逆熄灭/复燃）；**粘性堆叠卡**（glassInitStacking 用 JS 把四个顶层段落包进 .stack-card：sticky 钉顶+DOM 序覆盖+scrub 缩暗被埋卡——包装层不碰面板内部，renderAll 无感知）；指针 tilt（JS lerp ±3.2°，CSS transition 不得含 transform）+ 光斑；素描墨线 v2（15 走线、指针吸引）；sterile 与 reduced-motion 全跳过。v7.2 增：**高卡钉底**（卡比视口高→负 top 钉底边，内容先看完再被盖；refreshInit 时重算）、**3D 卡片翻转**（glassInitFlip，交易面板 front=清单/back=市场时段，子节点连 id 整体搬进面、tick() 无感知；扩展到其他面板照此模式）、**pageDepth(on)** 景深后退（信条/低谷/系统弹层打开时 .page-wrapper 退后——新全屏层记得调它）。v7.4 改：**Focus Spaces 无按钮版**——点卡任意空白即聚焦（10px/600ms 触摸阈值防滚动误触 + FOCUS_INTERACTIVE 选择器豁免交互元素）；退出只有背板/Esc/系统返回。v7.5 改：**聚焦飞行 = View Transitions API 优先**（合成器线程对快照做 FLIP——起飞帧再贵也吞不掉动画；view-transition-name 开飞前挂、finished 后摘，否则退化成中央淡入；CSS `::view-transition-group(focus-card)` 配速）；GSAP 手动 FLIP 仅作老浏览器回退（lagSmoothing(100,16) + 背板/景深推迟 90ms 出起飞帧）；`.in-flight` 飞行中停玻璃滤镜（顺滑关键）；粗指针设备玻璃降至 blur(13px)。**财务 HUD 统一**：glassInitFinanceHUD 把 #finance-view 包成 .sys-backdrop+.sys-window.fin-hud，复用系统卷轴开合 keyframes（finance.css 末段）；closeFinance 拆出 _closeFinanceCore 以播收卷动画；全局无 ×（.sys-back关闭/.fin-back 均隐藏）。"空间内细化功能"逐板块待填。**坑：改 glass.js 后预览必须 bump CACHE_VERSION 或清 caches——SW 缓存优先会喂旧文件** |
-| herocube.js | v7.0 五柱黄铜立方（ES module，importmap three）：六面 canvas 纹理（Ⅰ–Ⅴ+◆，HUD 角标边框），固定定位 z:-1 翻滚，滚动速度加转、指针拉拽、浮沉；sterile/terminal/reduced-motion 跳过（v7.18.0 加 terminal） |
 | energyflow.js | v7.25 流动能量背景（自启 IIFE，仿 herocube 模式）：全屏 canvas `#energy-flow`（z:-2 最深层）画缓慢漂移发光能量丝带（Solo Leveling 系统氛围）；**三主题都显示**，取 `--brass-soft` 着色（MutationObserver 听 data-theme 重着色），深色 additive(`lighter`)/浅色普通混合；CSS（components.css）管每主题 opacity + 全屏 HUD 时 display:none；reduced-motion 只一帧静态；`init` 等 load、resize 宽度有 `innerWidth||clientWidth||screen.width||1280` 兜底 |
 
-### styles/（16 个）
+### styles/（12 个,v7.40.0 减法后）
 
 tokens（全部变量源；v7.32.0 起含 `--z-*` 全局层叠梯度）→ fonts（v7.32.0 自托管
 @font-face,字体文件在 `vendor/fonts/`）→ base → components（含 v6.47+ 主页 HUD 化：面板角标
 background-gradient、todo/.row 行角标、定制 `.row-cb` 勾选框、`brassFlow` 液态流光
 打在 `.creed-pillars/#dateline/#the90-tagline`；v7.18.0 末段附 SAO 导览样式
 `.nav-arrow`/`.drawer-nav`/`.navd-list`/`.navd-item`/`.hn-item` + 进/退/选 keyframes）→
-animations → finance → fitness → calendar → ai → store → motivation → system（RPG HUD：
+animations → finance → calendar → system（RPG HUD：
 角标/扫描线/辉光/庆祝弹窗/段位流光）→ lowday → principles → fonts →
 **主题 overlay 必须最后加载**（同权重时才赢得过 components）：
 **theme-terminal**（v7.18.0，作用域 `html[data-theme="terminal"]`，深色 token 重映射）→
@@ -168,6 +159,8 @@ animations → finance → fitness → calendar → ai → store → motivation 
 
 ## §3 数据层（Supabase，全表 RLS = `auth.uid() = user_id`）
 
+> **❄ = v7.40.0 冻结表**:历史数据原样保留(供复盘/成长回顾),前端已不再读写,realtime 不再订阅。解冻=按 §4 R1 重新接线。
+
 四种存储原型（新表先决定原型再写代码，配方见 §4）：
 
 - **A 单行每用户**：upsert by user_id
@@ -180,16 +173,16 @@ animations → finance → fitness → calendar → ai → store → motivation 
 |---|---|---|---|---|
 | settings | A | 列：creed_idx, creed_open, show_done, symbols, subjects, notif_banner_dismissed, theme, fin_base_currency, fin_fx_rates, **principles_last_shown**(晨间宣读标记), **principles_review_prompted**(晚间核查弹出标记) | SETTINGS_KEYS 所列 9 键走 LS 镜像；fin 两列直接进 S.fin 不镜像 | ✓ |
 | morning | B | list jsonb | mr | ✓ |
-| academics | C | 任务行 | ac | ✓ |
-| japanese | A | **date**(清单归属日，跨设备重置), streak(派生), last_date, log jsonb(打卡史), note, list | jp | ✓ |
+| academics ❄ | C | 任务行 | ac | ✓ |
+| japanese ❄ | A | **date**(清单归属日，跨设备重置), streak(派生), last_date, log jsonb(打卡史), note, list | jp | ✓ |
 | trading | B | bias, list, **sealed/sealed_at/broke**(盘前封条) | tr | ✓ |
 | categories | C | name | cats | ✓ |
 | todos | C | text/cat/date/time/pri/remind/repeat/done…, **no_carry/archived/archived_at**(过期不顺延→跨日 sweepExpiredTodos 自动归档) | todos | ✓ |
-| push_subscriptions | – | 每设备一行（notifications.js 写） | – | ✗ |
+| push_subscriptions ❄ | – | 每设备一行（notifications.js 写） | – | ✗ |
 | the90_meta | A | targets jsonb（含 standard/twoMin/badDay）, start_date, current_phase | the90_meta | ✓ |
 | the90_daily | B | **scores jsonb：目标键 I–V + 命名空间键 `_amp`(振幅1-5) `_low`(低谷日) `_lowx`(已渡) `_trig`(诱因)**, note | the90_daily | ✓ |
-| hermes_notices | D | Hermes 写（kind: insight/reminder/nudge），客户端只 dismiss | – | ✓ |
-| motivation_videos | C | videoId/title/position | –(motiv 内存) | ✓ |
+| hermes_notices ❄ | D | Hermes 写（kind: insight/reminder/nudge），客户端只 dismiss | – | ✓ |
+| motivation_videos ❄ | C | videoId/title/position | –(motiv 内存) | ✓ |
 | rpg_state | A | seen_level, achievements jsonb(**append-only**), bonus_exp, daily | rpg | ✓ |
 | principles | C | kind('creed'/'principle'), text, why, position, active | principles | ✓ |
 | principles_daily | B | checks jsonb{id:'kept'/'broke'/'na'}, revise jsonb, note | principles_daily | ✓ |
@@ -198,15 +191,15 @@ animations → finance → fitness → calendar → ai → store → motivation 
 | fin_transactions | **插入式** | 单行 insert/update/delete 函数，**永不整替、永不改史**（更正=冲销行） | fin_transactions | ✓ |
 | fin_budgets / fin_goals / fin_recurring | C | – | 各自键 | ✓ |
 | fin_asset_snapshots | D | pg_cron 夜间快照 | – | ✗ |
-| fit_exercises | C | 动作库 name/kind('reps'/'time')/sort/archived；首次开健身页注入预设 | fit_exercises | ✓ |
-| fit_plan | A | week jsonb{mon..sun:[{exId,sets,target}]}, rest_default（计划驱动今日） | fit_plan | ✓ |
-| fit_log | B | entries jsonb[{exId,sets,target,done:[reps...]}], done, duration_sec | fit_log | ✓ |
-| fit_body | B | weight, metrics jsonb(waist/chest/arm/thigh) | fit_body | ✓ |
-| fit_diet | B | meals jsonb[{name,kcal,time}] | fit_diet | ✓ |
+| fit_exercises ❄ | C | 动作库 name/kind('reps'/'time')/sort/archived；首次开健身页注入预设 | fit_exercises | ✓ |
+| fit_plan ❄ | A | week jsonb{mon..sun:[{exId,sets,target}]}, rest_default（计划驱动今日） | fit_plan | ✓ |
+| fit_log ❄ | B | entries jsonb[{exId,sets,target,done:[reps...]}], done, duration_sec | fit_log | ✓ |
+| fit_body ❄ | B | weight, metrics jsonb(waist/chest/arm/thigh) | fit_body | ✓ |
+| fit_diet ❄ | B | meals jsonb[{name,kcal,time}] | fit_diet | ✓ |
 | cal_events | C | 行程 title/date/start_time/end_time/location/notes/position（当日事项=渲染时聚合 todos+academics 只读，不入此表） | cal_events | ✓ |
-| ai_outputs | C | AI Automation 产出日志 title/date/kind(built/learned/shipped)/notes/link/position（RPG v2 信号源；streak/活跃天/总数 派生；Phase 1 暂不喂进度） | ai_outputs | ✓ |
-| wishlist | C | 心愿单 name/description/price/currency/image_path/link/category/priority(0随缘/1一般/2很想)/status(want/bought)/bought_at/actual_paid/position（v7.23.0；**CyrusOS 首次用 Supabase Storage**：私有桶 `wishlist`,5MB+image/* 白名单,`storage.objects` 四策略限每用户 `用户id/` 文件夹,签名链接显示；RLS 四策略用 `(select auth.uid())`） | wishlist | ✓ |
-| system_push_log | D | worker 推送去重（slot 占位） | – | ✗ |
+| ai_outputs ❄ | C | AI Automation 产出日志 title/date/kind(built/learned/shipped)/notes/link/position（RPG v2 信号源；streak/活跃天/总数 派生；Phase 1 暂不喂进度） | ai_outputs | ✓ |
+| wishlist ❄ | C | 心愿单 name/description/price/currency/image_path/link/category/priority(0随缘/1一般/2很想)/status(want/bought)/bought_at/actual_paid/position（v7.23.0；**CyrusOS 首次用 Supabase Storage**：私有桶 `wishlist`,5MB+image/* 白名单,`storage.objects` 四策略限每用户 `用户id/` 文件夹,签名链接显示；RLS 四策略用 `(select auth.uid())`） | wishlist | ✓ |
+| system_push_log ❄ | D | worker 推送去重（slot 占位） | – | ✗ |
 
 pg_cron 服务端任务：周期交易生成、资产快照、已完成 todo 清理。
 迁移一律走 MCP `apply_migration`（项目 id `whmdrabescmchkupazjh`）；**本项目
@@ -280,7 +273,7 @@ synced settings date 列 + SETTINGS_KEYS 镜像；**先写标记再弹**（backd
   rpg.js 无 TARGET_LABEL，前端柱名走 the90_meta.targets） ·
   `ATTR_ORDER[STR,AGI,INT,WIS,VIT,CRE]`（v7.15.0 加第6属性 创造） ·
   `THE90_START`（应随之变为 `SEASON_START=2026-08-13`）
-  **⚠️ v7.39.0 只改了前端；服务端 rpg-stats.py 尚未同步（见 §7.6）**
+  **(v7.40.0:EC2/Hermes 已退役,rpg-stats.py 不再运行——本镜像律失效存档,若日后复活服务端战报再启用)**
 - **finBalance 的 transfer 不对称**（toAmount vs amount）字节级保留；不就地 sort
   `S.fin.transactions`
 - 隐私遮罩 = 值**不进 DOM**，不是 CSS 隐藏
@@ -290,7 +283,9 @@ synced settings date 列 + SETTINGS_KEYS 镜像；**先写标记再弹**（backd
 
 ---
 
-## §6 服务端（hermes-cyrus 仓库 → EC2 `~/.hermes/`）
+## §6 服务端（hermes-cyrus 仓库 → EC2 `~/.hermes/`）——**已整体退役(v7.40.0)**
+
+> 2026-08-25:EC2 实例 SSM 已探不到(hermes_notices 最后一条 2026-06-28),Hermes/Telegram 战报停用,由云端「早间简报」定时任务取代。以下为存档;AWS 帐单侧确认实例已终止(而非仅 stopped)由 Cyrus 自查。
 
 ```
 hermes-cyrus/
@@ -319,19 +314,16 @@ hermes-cyrus/
 
 ## §7 已知技术债（修掉就从这里删）
 
-1. **cloudflare/worker.js 旧映射**（`SYS_TARGETS` ~301 行：II=篮球/III=赚钱/IV=日语
-   ——应为 II=冥想/III=AI Automation/IV=健身/V=性能量 per §5 TARGET_LABEL）：早晚 RPG 推送
-   会报错误的目标名。属性计算本身正确，仅文案错。待决定：更新 or 删除该推送功能
+1. **Cloudflare Worker 线上实例待撤销**:代码已随 v7.40.0 从 repo 删除(推送订阅 0、旧映射问题随之作废),
+   但线上 worker 仍部署着且持有 `SUPABASE_SERVICE_KEY`——需 Cyrus 在 Cloudflare dashboard 删除(或 `wrangler delete`),
+   删除后顺手在 Supabase 轮换 service key 更稳妥
 2. **README.md 模块/数据表清单停在 v6.2**（已替换为指向本文档的摘要——若再见到
    旧清单复活即为腐烂）
 3. **auth 里有第二个账号**（kuang.lo433@gmail.com，2026-05-23 注册，零数据）——
    待用户确认是否清除
-4. 财务**利息计算疑似不正确**（用户报告，未排查；fin_accounts.interestRate 相关）
+4. ~~财务利息计算疑似不正确~~ **已了结(2026-08-25)**:每日计息为 pg_cron `fin_accrue_interest` 所写(共 74 笔「利息」行,2026-06-14 起),现已把全部账户 interest_rate 归零使其 no-op;历史利息行保留。若重启计息先修算法再开利率
 5. ~~creed.js 死文件~~ **已删（v7.17.0）**：文件 + index.html 脚本标签 + APP_SHELL 条目均移除；CREED_VARIANTS(state.js) 与 #creed-trigger/#creed-wrap 标记保留(principles.js 用)
-6. **rpg-stats.py 仍停在上一季的柱子**（v7.39.0 换季只动了前端）：`ACTIVITY_ATTR` /
-   `TARGET_LABEL` / `THE90_START` 还是 `I–V` + `2026-05-11`，于是 EC2 的早/晚战报会
-   按不存在的柱子算属性、日报里的目标名也是旧的。需按 §5 的新映射改 hermes-cyrus
-   仓库的 `scripts/rpg-stats.py` 并重新部署到 EC2。前端不受影响。
+6. ~~rpg-stats.py 停在上一季~~ **随 EC2/Hermes 退役作废(v7.40.0)**——服务端战报不再运行。
 7. **rpg.js 的 `day30/day60/day90` 成就与 `comeback` 的硬编码 `3`**：里程碑成就的文案
    仍写「The 90 第 30 天」，且 day 计数已随 S2 重新从 1 开始（成就 append-only，已解锁的
    不会被撤销，会在 S2 第 30/60/90 天再次达成）；`comeback` 里的门槛 `3` 没有跟着

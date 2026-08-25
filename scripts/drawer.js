@@ -50,8 +50,8 @@ function closeDrawer(){
    3. the real module HUD then opens from there with its OWN unfurl (sysScrollOpen),
       and closes later with its own furl — we no longer suppress those animations.
    Reduced-motion → plain open. */
-const _navOpenMap = { fin:'openFinance', fit:'openFitness', ai:'openAi', cal:'openCalendar', sys:'openSystem', motiv:'openMotivation', shop:'openStore' };
-const _navIdMap   = { fin:'fin-btn', fit:'fit-btn', ai:'ai-btn', cal:'cal-btn', sys:'sys-btn', motiv:'motiv-btn', shop:'shop-btn' };
+const _navOpenMap = { fin:'openFinance', cal:'openCalendar', sys:'openSystem' };   // v7.40.0 减法后三频道
+const _navIdMap   = { fin:'fin-btn', cal:'cal-btn', sys:'sys-btn' };
 function navOpen(which){
   _navPlay(_saoSel);
   const fn = window[_navOpenMap[which]];

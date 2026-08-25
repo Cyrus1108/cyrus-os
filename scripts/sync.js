@@ -58,60 +58,6 @@ async function pullMorning(){
   if(cleanMorning()) saveMR();
 }
 
-async function pullAcademics(){
-  // Don't .order('position') here — if the column doesn't exist yet the query
-  // errors and returns null, blanking the panel. rAC sorts by position in JS.
-  const { data } = await sb.from('academics').select('*')
-    .eq('user_id', currentUser.id);
-  S.ac = (data || []).map(r => ({
-    id: r.id, sub: r.sub, name: r.name,
-    date: r.date,
-    // Postgres time returns 'HH:MM:SS' — normalize to 'HH:MM' so existing UI code that does `${time}:00` works
-    time: r.time ? r.time.slice(0,5) : null,
-    pri: r.pri,
-    remind: r.remind || 0, done: r.done,
-    position: r.position || 0,
-  }));
-}
-
-/* Union two JP check-in logs: a day recorded on EITHER side is never dropped. The log is
-   append-only history keyed by date, so BOTH pull and push union (never replace) it —
-   that is what stops a stale/thin copy on any device from shrinking the streak (the
-   recurring "连续打卡消失" data-loss bug). Per-key local wins; TODAY authority handled
-   explicitly by the push (the active device owns same-day check / un-check). */
-function jpUnionLog(cloudLog, localLog){
-  return Object.assign({}, cloudLog || {}, localLog || {});
-}
-let jpPulled = false;   // true once this device has pulled the cloud JP row this session
-async function pullJapanese(){
-  const { data } = await sb.from('japanese').select('*')
-    .eq('user_id', currentUser.id).maybeSingle();
-  jpPulled = true;   // we now know the authoritative cloud state → safe to own TODAY on push
-  if(data){
-    S.jp = {
-      date: data.date || null,
-      streak: data.streak || 0,
-      last: data.last_date || null,
-      // union, never replace — a pull must not drop days this device logged but hasn't
-      // pushed yet (the original loss vector); post-fix the cloud is itself the union.
-      log: jpUnionLog(data.log, S.jp.log),
-      note: data.note || '',
-      // Keep the LS-hydrated/in-memory list when the cloud column is empty (matches
-      // pullMorning/pullTrading) instead of clobbering it with the empty default.
-      list: (Array.isArray(data.list) && data.list.length) ? data.list : S.jp.list,
-    };
-    // daily reset on pull too — another device's yesterday must not arrive
-    // as today's checks (log keeps history; flags belong to one day)
-    if(S.jp.date !== TODAY){
-      S.jp.date = TODAY;
-      S.jp.list = S.jp.list.map(i=>({...i,d:false}));
-    }
-  }
-  // Retire legacy seeded presets on the realtime/pull path too, so it self-heals
-  // (mirrors pullMorning's cleanMorning call). cleanJapanese is idempotent.
-  if(cleanJapanese()) saveJP();
-}
-
 async function pullTrading(){
   const { data } = await sb.from('trading').select('*')
     .eq('user_id', currentUser.id).eq('date', TODAY).maybeSingle();
@@ -173,7 +119,7 @@ async function pullThe90Daily(){
 }
 
 async function pullTodos(){
-  // Don't .order('position') here — see pullAcademics note. rTodos sorts in JS.
+  // Don't .order('position') here — if the column doesn't exist yet the query errors and blanks the list. rTodos sorts in JS.
   const { data } = await sb.from('todos').select('*')
     .eq('user_id', currentUser.id);
   S.todos = (data || []).map(r => ({
@@ -212,67 +158,6 @@ async function pullCalEvents(){
   saveLSRaw('cal_events', S.cal);   // mirror to the fast-boot LS cache
 }
 
-async function pullAiOutputs(){
-  const { data } = await sb.from('ai_outputs').select('*')
-    .eq('user_id', currentUser.id);
-  S.ai = (data || []).map(r => ({
-    id: r.id,
-    date: r.date,
-    title: r.title || '',
-    kind: r.kind || 'built',
-    notes: r.notes || '',
-    link: r.link || '',
-    position: r.position || 0,
-  }));
-  saveLSRaw('ai_outputs', S.ai);
-}
-
-async function pullWishlist(){
-  const { data } = await sb.from('wishlist').select('*')
-    .eq('user_id', currentUser.id);
-  S.store = (data || []).map(r => ({
-    id: r.id,
-    name: r.name || '',
-    description: r.description || '',
-    price: r.price,
-    currency: r.currency || '',
-    image_path: r.image_path || '',
-    link: r.link || '',
-    category: r.category || '',
-    priority: r.priority || 0,
-    status: r.status || 'want',
-    bought_at: r.bought_at || null,
-    actual_paid: r.actual_paid,
-    position: r.position || 0,
-  }));
-  saveLSRaw('wishlist', S.store);
-}
-
-async function pullHermes(){
-  // Only un-dismissed notices; cap to a sane number, newest first.
-  const { data } = await sb.from('hermes_notices').select('*')
-    .eq('user_id', currentUser.id)
-    .is('dismissed_at', null)
-    .order('created_at', { ascending: false })
-    .limit(50);
-  S.hermes = (data || []).map(r => ({
-    id: r.id,
-    text: r.text,
-    kind: r.kind || 'insight',
-    createdAt: r.created_at ? new Date(r.created_at).getTime() : null,
-    dismissedAt: r.dismissed_at ? new Date(r.dismissed_at).getTime() : null,
-  }));
-  window._hermesPulled = true;   // rHermes only seeds/diffs its sound guard after real data
-}
-
-async function pullMotiv(){
-  const { data } = await sb.from('motivation_videos').select('*')
-    .eq('user_id', currentUser.id).order('position');
-  S.motiv.videos = (data || []).map(r => ({
-    id: r.id, videoId: r.video_id, title: r.title || '', position: r.position || 0,
-  }));
-}
-
 async function pullRPG(){
   const { data } = await sb.from('rpg_state').select('*')
     .eq('user_id', currentUser.id).maybeSingle();
@@ -303,56 +188,6 @@ async function pullPrinciplesDaily(){
     S.principles.daily[row.date] = { checks: row.checks || {}, revise: row.revise || {}, note: row.note || '' };
   }
   saveLSRaw('principles_daily', S.principles.daily);
-}
-
-/* ════════════ 健身 Fitness (v7.11) ════════════
-   exercises = replace-all list; plan = single row; log/body/diet = (user_id,date). */
-async function pullFitExercises(){
-  const { data } = await sb.from('fit_exercises').select('*')
-    .eq('user_id', currentUser.id).order('sort');
-  S.fit.exercises = (data || []).map(r => ({
-    id:r.id, name:r.name, kind:r.kind||'reps',
-    isPreset:!!r.is_preset, sort:r.sort||0, archived:!!r.archived,
-  }));
-  saveLSRaw('fit_exercises', S.fit.exercises);
-}
-async function pullFitPlan(){
-  const { data } = await sb.from('fit_plan').select('*')
-    .eq('user_id', currentUser.id).maybeSingle();
-  if(data) S.fit.plan = { week: data.week || {}, restDefault: data.rest_default || 90 };
-  saveLSRaw('fit_plan', S.fit.plan);
-}
-async function pullFitLog(){
-  const since = new Date(Date.now() - 95 * 86400000).toISOString().slice(0,10);
-  const { data } = await sb.from('fit_log').select('*')
-    .eq('user_id', currentUser.id).gte('date', since);
-  S.fit.log = {};
-  for(const row of (data || [])){
-    S.fit.log[row.date] = { entries: row.entries || [], done: !!row.done,
-      durationSec: row.duration_sec || 0, note: row.note || '' };
-  }
-  saveLSRaw('fit_log', S.fit.log);
-}
-async function pullFitBody(){
-  // body trends want a long history (weight/dimension lines)
-  const since = new Date(Date.now() - 400 * 86400000).toISOString().slice(0,10);
-  const { data } = await sb.from('fit_body').select('*')
-    .eq('user_id', currentUser.id).gte('date', since);
-  S.fit.body = {};
-  for(const row of (data || [])){
-    S.fit.body[row.date] = { weight: row.weight!=null?Number(row.weight):null, metrics: row.metrics || {} };
-  }
-  saveLSRaw('fit_body', S.fit.body);
-}
-async function pullFitDiet(){
-  const since = new Date(Date.now() - 95 * 86400000).toISOString().slice(0,10);
-  const { data } = await sb.from('fit_diet').select('*')
-    .eq('user_id', currentUser.id).gte('date', since);
-  S.fit.diet = {};
-  for(const row of (data || [])){
-    S.fit.diet[row.date] = { meals: row.meals || [] };
-  }
-  saveLSRaw('fit_diet', S.fit.diet);
 }
 
 /* ════════════ Finance (Phase 1) ════════════
@@ -489,14 +324,12 @@ async function pullAll(force){
   pullAllPromise = (async () => {
     try{
       await Promise.all([
-        pullSettings(), pullMorning(), pullAcademics(),
-        pullJapanese(), pullTrading(), pullCategories(), pullTodos(),
-        pullThe90Meta(), pullThe90Daily(), pullHermes(), pullMotiv(), pullRPG(),
+        pullSettings(), pullMorning(), pullTrading(), pullCategories(), pullTodos(),
+        pullThe90Meta(), pullThe90Daily(), pullRPG(),
         pullPrinciples(), pullPrinciplesDaily(),
-        pullFitExercises(), pullFitPlan(), pullFitLog(), pullFitBody(), pullFitDiet(),
         pullFinAccounts(), pullFinCategories(), pullFinTransactions(), pullFinBudgets(),
         pullFinGoals(), pullFinRecurring(), pullFinSnapshots(),
-        pullCalEvents(), pullAiOutputs(), pullWishlist(),
+        pullCalEvents(),
       ]);
       initialPullDone = true;
       console.log('[sync] initial pull complete');
@@ -551,41 +384,6 @@ async function syncPushMorning(){
   if(!res.error) dirty.morning = false;
 }
 
-async function syncPushJP(){
-  if(!currentUser) return;
-  await waitForPull();
-  // MERGE, never replace: re-read the cloud log and union it with local so a concurrent
-  // device's days are never overwritten. The active device is authoritative for TODAY
-  // ONLY (same-day check / un-check); all earlier days are append-only and unioned.
-  let log = S.jp.log || {};
-  try{
-    const { data: cur } = await sb.from('japanese').select('log')
-      .eq('user_id', currentUser.id).maybeSingle();
-    if(cur && cur.log && typeof cur.log === 'object'){
-      const merged = jpUnionLog(cur.log, log);
-      // TODAY is locally authoritative ONLY after this device has pulled this session, so
-      // an absent TODAY means an intentional un-check (not a not-yet-synced device). Before
-      // any pull → pure union, so a stale device can never wipe today's check-in.
-      if(jpPulled){ if(log[TODAY]) merged[TODAY] = true; else delete merged[TODAY]; }
-      log = merged;
-    }
-  }catch(e){ /* cloud read failed → push local log as-is (no worse than the old behaviour) */ }
-  S.jp.log = log;                                              // heal local with the union
-  if(typeof jpComputeStreak === 'function') S.jp.streak = jpComputeStreak();
-  S.jp.last = Object.keys(log).sort().reverse()[0] || null;
-  const res = await sb.from('japanese').upsert({
-    user_id: currentUser.id,
-    date: S.jp.date || TODAY,
-    streak: S.jp.streak,
-    last_date: S.jp.last || null,
-    log: log,
-    note: S.jp.note || '',
-    list: S.jp.list,
-  });
-  logIfError('push jp', res);
-  if(!res.error) dirty.japanese = false;
-}
-
 async function syncPushTrading(){
   if(!currentUser) return;
   await waitForPull();
@@ -622,19 +420,6 @@ async function replaceTable(table, rows, mapFn){
     if(upRes.error) return false;
   }
   return true;
-}
-
-async function syncPushAcademics(){
-  if(!currentUser) return;
-  await waitForPull();
-  const ok = await replaceTable('academics', S.ac, t => ({
-    id: t.id, user_id: currentUser.id,
-    sub: t.sub, name: t.name,
-    date: t.date || null, time: t.time || null,
-    pri: t.pri, remind: t.remind || 0, done: t.done,
-    position: t.position || 0,
-  }));
-  if(ok) dirty.academics = false;
 }
 
 async function syncPushCategories(){
@@ -713,53 +498,6 @@ async function syncPushCalEvents(){
   if(ok) dirty.calEvents = false;
 }
 
-async function syncPushAiOutputs(){
-  if(!currentUser) return;
-  await waitForPull();
-  const ok = await replaceTable('ai_outputs', S.ai, o => ({
-    id: o.id, user_id: currentUser.id,
-    date: o.date,
-    title: o.title || '',
-    kind: o.kind || 'built',
-    notes: o.notes || null,
-    link: o.link || null,
-    position: o.position || 0,
-  }));
-  if(ok) dirty.aiOutputs = false;
-}
-
-async function syncPushWishlist(){
-  if(!currentUser) return;
-  await waitForPull();
-  const ok = await replaceTable('wishlist', S.store, i => ({
-    id: i.id, user_id: currentUser.id,
-    name: i.name || '',
-    description: i.description || null,
-    price: (i.price===''||i.price==null) ? null : Number(i.price),
-    currency: i.currency || null,
-    image_path: i.image_path || null,
-    link: i.link || null,
-    category: i.category || null,
-    priority: i.priority || 0,
-    status: i.status || 'want',
-    bought_at: i.bought_at || null,
-    actual_paid: (i.actual_paid===''||i.actual_paid==null) ? null : Number(i.actual_paid),
-    position: i.position || 0,
-  }));
-  if(ok) dirty.store = false;
-}
-
-async function syncPushMotiv(){
-  if(!currentUser) return;
-  await waitForPull();
-  const ok = await replaceTable('motivation_videos', S.motiv.videos, v => ({
-    id: v.id, user_id: currentUser.id,
-    video_id: v.videoId, title: v.title || null,
-    position: v.position || 0,
-  }));
-  if(ok) dirty.motiv = false;
-}
-
 async function syncPushRPG(){
   if(!currentUser) return;
   await waitForPull();
@@ -800,83 +538,6 @@ async function syncPushPrinciplesDaily(){
   }, { onConflict: 'user_id,date' });
   logIfError('push principles_daily', res);
   if(!res.error) dirty.principlesDaily = false;
-}
-
-/* ════════════ 健身 Fitness push ════════════ */
-async function syncPushFitExercises(){
-  if(!currentUser) return;
-  await waitForPull();
-  const ok = await replaceTable('fit_exercises', S.fit.exercises, e => ({
-    id:e.id, user_id:currentUser.id, name:e.name, kind:e.kind||'reps',
-    is_preset:!!e.isPreset, sort:e.sort||0, archived:!!e.archived,
-  }));
-  if(ok) dirty.fitExercises = false;
-}
-async function syncPushFitPlan(){
-  if(!currentUser) return;
-  await waitForPull();
-  const res = await sb.from('fit_plan').upsert({
-    user_id: currentUser.id,
-    week: S.fit.plan.week || {},
-    rest_default: S.fit.plan.restDefault || 90,
-    updated_at: new Date().toISOString(),
-  }, { onConflict: 'user_id' });
-  logIfError('push fit_plan', res);
-  if(!res.error) dirty.fitPlan = false;
-}
-async function syncPushFitLog(date){
-  if(!currentUser) return;
-  await waitForPull();
-  const d = date || TODAY;
-  const day = S.fit.log[d];
-  if(!day) return;
-  const res = await sb.from('fit_log').upsert({
-    user_id: currentUser.id, date: d,
-    entries: day.entries || [], done: !!day.done,
-    duration_sec: day.durationSec || 0, note: day.note || '',
-    updated_at: new Date().toISOString(),
-  }, { onConflict: 'user_id,date' });
-  logIfError('push fit_log', res);
-  if(!res.error) dirty.fitLog = false;
-}
-async function syncPushFitBody(date){
-  if(!currentUser) return;
-  await waitForPull();
-  const d = date || TODAY;
-  const day = S.fit.body[d];
-  if(!day) return;
-  const res = await sb.from('fit_body').upsert({
-    user_id: currentUser.id, date: d,
-    weight: day.weight!=null?day.weight:null, metrics: day.metrics || {},
-    updated_at: new Date().toISOString(),
-  }, { onConflict: 'user_id,date' });
-  logIfError('push fit_body', res);
-  if(!res.error) dirty.fitBody = false;
-}
-async function syncPushFitDiet(date){
-  if(!currentUser) return;
-  await waitForPull();
-  const d = date || TODAY;
-  const day = S.fit.diet[d];
-  if(!day) return;
-  const res = await sb.from('fit_diet').upsert({
-    user_id: currentUser.id, date: d,
-    meals: day.meals || [],
-    updated_at: new Date().toISOString(),
-  }, { onConflict: 'user_id,date' });
-  logIfError('push fit_diet', res);
-  if(!res.error) dirty.fitDiet = false;
-}
-
-/* Hermes notices are read+dismiss only on the client — no full push.
-   Dismiss stamps dismissed_at; the row stays for history but drops off the panel. */
-async function syncDismissHermes(id){
-  if(!currentUser) return;
-  await waitForPull();
-  const res = await sb.from('hermes_notices')
-    .update({ dismissed_at: new Date().toISOString() })
-    .eq('id', id).eq('user_id', currentUser.id);
-  logIfError('dismiss hermes notice', res);
 }
 
 /* ── Finance writes ──
@@ -953,20 +614,12 @@ function subscribeRealtime(){
   realtimeChannel = sb.channel('cyrus-os-' + uid)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'morning', filter: `user_id=eq.${uid}` },
       () => rtCoalesce('morning', async () => { await pullMorning(); rMR(); }))
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'academics', filter: `user_id=eq.${uid}` },
-      () => rtCoalesce('academics', async () => { await pullAcademics(); rAC(); rMetrics(); }))
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'japanese', filter: `user_id=eq.${uid}` },
-      () => rtCoalesce('japanese', async () => { await pullJapanese(); rJP(); rMetrics(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'trading', filter: `user_id=eq.${uid}` },
       () => rtCoalesce('trading', async () => { await pullTrading(); rTR(); rMetrics(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'categories', filter: `user_id=eq.${uid}` },
       () => rtCoalesce('categories', async () => { await pullCategories(); rCats(); rTodos(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'todos', filter: `user_id=eq.${uid}` },
       () => rtCoalesce('todos', async () => { await pullTodos(); rTodos(); rMetrics(); }))
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'hermes_notices', filter: `user_id=eq.${uid}` },
-      () => rtCoalesce('hermes_notices', async () => { await pullHermes(); rHermes(); }))
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'motivation_videos', filter: `user_id=eq.${uid}` },
-      () => rtCoalesce('motivation_videos', async () => { await pullMotiv(); if(typeof rMotivation==='function') rMotivation(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'rpg_state', filter: `user_id=eq.${uid}` },
       () => rtCoalesce('rpg_state', async () => { await pullRPG(); if(typeof rSystem==='function') rSystem(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'principles', filter: `user_id=eq.${uid}` },
@@ -991,22 +644,8 @@ function subscribeRealtime(){
       () => rtCoalesce('fin_goals', async () => { await pullFinGoals(); if(typeof rFinance==='function') rFinance(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'fin_recurring', filter: `user_id=eq.${uid}` },
       () => rtCoalesce('fin_recurring', async () => { await pullFinRecurring(); if(typeof rFinance==='function') rFinance(); }))
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'fit_exercises', filter: `user_id=eq.${uid}` },
-      () => rtCoalesce('fit_exercises', async () => { await pullFitExercises(); if(typeof rFitness==='function') rFitness(); }))
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'fit_plan', filter: `user_id=eq.${uid}` },
-      () => rtCoalesce('fit_plan', async () => { await pullFitPlan(); if(typeof rFitness==='function') rFitness(); }))
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'fit_log', filter: `user_id=eq.${uid}` },
-      () => rtCoalesce('fit_log', async () => { await pullFitLog(); if(typeof rFitness==='function') rFitness(); }))   // no rpgAfterChange here — the rpg_state realtime handler carries cross-device RPG state without re-firing celebrations
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'fit_body', filter: `user_id=eq.${uid}` },
-      () => rtCoalesce('fit_body', async () => { await pullFitBody(); if(typeof rFitness==='function') rFitness(); }))
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'fit_diet', filter: `user_id=eq.${uid}` },
-      () => rtCoalesce('fit_diet', async () => { await pullFitDiet(); if(typeof rFitness==='function') rFitness(); }))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'cal_events', filter: `user_id=eq.${uid}` },
       () => rtCoalesce('cal_events', async () => { await pullCalEvents(); if(typeof calUI!=='undefined' && calUI.open && typeof rCalendar==='function') rCalendar(); if(typeof rCalDot==='function') rCalDot(); }))
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'ai_outputs', filter: `user_id=eq.${uid}` },
-      () => rtCoalesce('ai_outputs', async () => { await pullAiOutputs(); if(typeof aiUI!=='undefined' && aiUI.open && typeof rAi==='function') rAi(); if(typeof rAiDot==='function') rAiDot(); }))
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'wishlist', filter: `user_id=eq.${uid}` },
-      () => rtCoalesce('wishlist', async () => { await pullWishlist(); if(typeof storeUI!=='undefined' && storeUI.open && typeof rStore==='function') rStore(); if(typeof rStoreDot==='function') rStoreDot(); }))
     .subscribe((status, err) => {
       console.log('[realtime]', status);
       if(err) console.error('[realtime] error', err);
@@ -1044,26 +683,16 @@ async function rehydrateOnFocus(){
     console.log('[sync] flushing dirty:', dirtyTables.join(','));
     const pushes = [];
     if(dirty.morning) pushes.push(syncPushMorning());
-    if(dirty.academics) pushes.push(syncPushAcademics());
-    if(dirty.japanese) pushes.push(syncPushJP());
     if(dirty.trading) pushes.push(syncPushTrading());
     if(dirty.categories) pushes.push(syncPushCategories());
     if(dirty.todos) pushes.push(syncPushTodos());
     if(dirty.settings) pushes.push(syncPushSettings());
     if(dirty.the90Meta) pushes.push(syncPushThe90Meta());
     if(dirty.the90Daily) pushes.push(syncPushThe90Daily());
-    if(dirty.motiv) pushes.push(syncPushMotiv());
     if(dirty.rpg) pushes.push(syncPushRPG());
     if(dirty.principles) pushes.push(syncPushPrinciples());
     if(dirty.principlesDaily) pushes.push(syncPushPrinciplesDaily());
-    if(dirty.fitExercises) pushes.push(syncPushFitExercises());
-    if(dirty.fitPlan) pushes.push(syncPushFitPlan());
-    if(dirty.fitLog) pushes.push(syncPushFitLog());
-    if(dirty.fitBody) pushes.push(syncPushFitBody());
-    if(dirty.fitDiet) pushes.push(syncPushFitDiet());
     if(dirty.calEvents) pushes.push(syncPushCalEvents());
-    if(dirty.aiOutputs) pushes.push(syncPushAiOutputs());
-    if(dirty.store) pushes.push(syncPushWishlist());
     if(dirty.finAccounts) pushes.push(finSaveAccounts());
     if(dirty.finCategories) pushes.push(finSaveCategories());
     if(dirty.finBudgets) pushes.push(finSaveBudgets());

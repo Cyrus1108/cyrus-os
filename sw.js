@@ -5,7 +5,7 @@
    - TradingView widgets and external CDNs: stale-while-revalidate.
    Bump CACHE_VERSION on every shell change to force clients to drop the old cache. */
 
-const CACHE_VERSION = 'cyrus-os-v7.39.0';
+const CACHE_VERSION = 'cyrus-os-v7.40.0';
 const APP_SHELL = [
   './',
   './index.html',
@@ -25,36 +25,24 @@ const APP_SHELL = [
   './styles/theme-notebook.css?v=7.39.0',
   './styles/animations.css',
   './styles/finance.css',
-  './styles/fitness.css',
   './styles/calendar.css',
-  './styles/ai.css',
-  './styles/motivation.css',
   './styles/system.css',
   './styles/lowday.css',
   './styles/principles.css',
-  './styles/store.css',
   './scripts/supabase.js',
   './scripts/state.js',
   './scripts/render-core.js',
   './scripts/beat.js',
   './scripts/sovereign.js',
-  './scripts/notifications.js',
   './scripts/drawer.js',
   './scripts/morning.js',
-  './scripts/academics.js',
-  './scripts/japanese.js',
   './scripts/trading.js',
   './scripts/todos.js',
   './scripts/the90.js',
   './scripts/goals.js',
-  './scripts/hermes.js',
   './scripts/finance.js',
   './scripts/finance-charts.js',
-  './scripts/fitness.js',
   './scripts/calendar.js',
-  './scripts/ai.js',
-  './scripts/store.js',
-  './scripts/motivation.js',
   './scripts/sound.js',
   './scripts/rpg.js',
   './scripts/lowday.js',
@@ -158,45 +146,6 @@ self.addEventListener('fetch', (event) => {
         return cached;
       }
       return fetch(req);
-    })
-  );
-});
-
-/* ════════════ Web Push (Stage 4) ════════════ */
-
-self.addEventListener('push', (event) => {
-  let payload = {};
-  try {
-    payload = event.data ? event.data.json() : {};
-  } catch (e) {
-    payload = { title: 'Cyrus OS', body: event.data ? event.data.text() : '' };
-  }
-  const title = payload.title || 'Cyrus OS';
-  const options = {
-    body: payload.body || '',
-    icon: './icons/icon-192.png',
-    badge: './icons/icon-192.png',
-    tag: payload.tag || 'cyrus-os',
-    requireInteraction: false,
-    data: { url: payload.url || './' },
-  };
-  event.waitUntil(self.registration.showNotification(title, options));
-});
-
-/* Clicking a notification focuses an existing PWA window or opens a new one */
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  const target = (event.notification.data && event.notification.data.url) || './';
-  event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
-      for (const c of clients) {
-        if ('focus' in c) {
-          // navigate the existing window to the payload URL before focusing
-          if ('navigate' in c && target) { return c.navigate(target).then((cl) => (cl || c).focus()).catch(() => c.focus()); }
-          return c.focus();
-        }
-      }
-      if (self.clients.openWindow) return self.clients.openWindow(target);
     })
   );
 });
